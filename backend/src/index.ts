@@ -38,9 +38,9 @@ app.use('/api/rules', rulesRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
-// Serve frontend in production
+// Serve frontend in production (cwd = repo root on Railway)
 if (process.env.NODE_ENV === 'production') {
-  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  const frontendPath = path.join(process.cwd(), 'frontend/dist');
   app.use(express.static(frontendPath));
   app.get('*', (_req, res) => res.sendFile(path.join(frontendPath, 'index.html')));
 }
