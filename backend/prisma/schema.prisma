@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Employee {
+  id             Int       @id @default(autoincrement())
+  employeeNumber String?   @map("employee_number")
+  name           String
+  email          String    @unique
+  organisation   String?
+  entity         String?
+  department     String?
+  designation    String?
+  joiningDate    DateTime? @map("joining_date")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  attendanceRecords AttendanceRecord[]
+  emailDrafts       EmailDraft[]
+  emailHistory      EmailHistory[]
+  salaryConfigs     SalaryConfig[]
+
+  @@map("employees")
+}
+
+model AttendanceUpload {
+  id          Int      @id @default(autoincrement())
+  filename    String
+  periodMonth String   @map("period_month")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at")
+  rowCount    Int      @default(0) @map("row_count")
+  status      String   @default("processed")
+
+  records      AttendanceRecord[]
+  emailDrafts  EmailDraft[]
+  emailHistory EmailHistory[]
+
+  @@map("attendance_uploads")
+}
+
+model AttendanceRecord {
+  id         Int              @id @default(autoincrement())
+  uploadId   Int              @map("upload_id")
+  employeeId Int              @map("employee_id")
+  recordDate String           @map("record_date")
+  status     String
+  timeIn     String?          @map("time_in")
+  timeOut    String?          @map("time_out")
+
+  upload   AttendanceUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  employee Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("attendance_records")
+}
+
+model EmailDraft {
+  id           Int      @id @default(autoincrement())
+  uploadId     Int      @map("upload_id")
+  employeeId   Int      @map("employee_id")
+  templateType String   @default("initial") @map("template_type")
+  subject      String   @default("")
+  body         String   @default("")
+  isEdited     Boolean  @default(false) @map("is_edited")
+  status       String   @default("pending")
+  sentAt       DateTime? @map("sent_at")
+  errorMessage String?  @map("error_message")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  upload   AttendanceUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  employee Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([uploadId, employeeId])
+  @@map("email_drafts")
+}
+
+model EmailHistory {
+  id           Int       @id @default(autoincrement())
+  employeeId   Int       @map("employee_id")
+  uploadId     Int?      @map("upload_id")
+  subject      String
+  body         String
+  sentAt       DateTime  @map("sent_at")
+  status       String
+  errorMessage String?   @map("error_message")
+
+  employee Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  upload   AttendanceUpload? @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+
+  @@map("email_history")
+}
+
+model SalaryConfig {
+  id             Int      @id @default(autoincrement())
+  employeeId     Int      @map("employee_id")
+  basicSalary    Float    @default(0) @map("basic_salary")
+  effectiveMonth String   @map("effective_month")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, effectiveMonth])
+  @@map("salary_configs")
+}
+
+model Setting {
+  key   String @id
+  value String
+
+  @@map("settings")
+}
+
+model EmailTemplate {
+  id      Int    @id @default(autoincrement())
+  type    String @unique
+  subject String
+  body    String
+
+  @@map("email_templates")
+}
+
+model Sop {
+  id        Int      @id @default(autoincrement())
+  title     String
+  category  String
+  content   String
+  tags      String[] @default([])
+  isActive  Boolean  @default(true) @map("is_active")
+  version   Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("sops")
+}
+
+model AttendanceRule {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  ruleType    String   @map("rule_type")
+  conditions  Json
+  actions     Json
+  isActive    Boolean  @default(true) @map("is_active")
+  priority    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("attendance_rules")
+}
+
+model AiInsight {
+  id          Int      @id @default(autoincrement())
+  uploadId    Int?     @map("upload_id")
+  insightType String   @map("insight_type")
+  title       String
+  content     String
+  severity    String   @default("info")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("ai_insights")
+}

@@ -1,0 +1,51 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 📋
+      - generic [ref=e8]:
+        - generic [ref=e9]: HRPulse
+        - generic [ref=e10]: Attendance Dispatcher
+    - navigation [ref=e11]:
+      - link "📋 Dispatcher" [ref=e12] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e13]: 📋
+        - text: Dispatcher
+      - link "💰 Salary / LOP" [ref=e14] [cursor=pointer]:
+        - /url: /salary
+        - generic [ref=e15]: 💰
+        - text: Salary / LOP
+      - link "📨 Email History" [ref=e16] [cursor=pointer]:
+        - /url: /history
+        - generic [ref=e17]: 📨
+        - text: Email History
+      - link "⚙️ Settings" [ref=e18] [cursor=pointer]:
+        - /url: /settings
+        - generic [ref=e19]: ⚙️
+        - text: Settings
+    - generic [ref=e20]: On-premises AI · Ollama
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - heading "Attendance Dispatcher AI" [level=2] [ref=e25]
+          - paragraph [ref=e26]: Powered by local Ollama
+        - generic [ref=e28] [cursor=pointer]:
+          - button "Choose File" [ref=e29]
+          - generic [ref=e30]: 📂
+          - generic [ref=e31]:
+            - paragraph [ref=e32]: Upload Attendance File
+            - paragraph [ref=e33]: Drop Excel (.xlsx) here
+        - generic [ref=e34]:
+          - generic [ref=e35]: Custom Email Draft Guide
+          - 'textbox "Optional: add specific instructions for the AI draft..." [ref=e36]'
+        - button "✨ Process with AI" [disabled] [ref=e38]:
+          - generic [ref=e39]: ✨
+          - text: Process with AI
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - heading "Records Preview" [level=3] [ref=e43]
+          - textbox "Search employee..." [ref=e45]
+        - generic [ref=e47]:
+          - generic [ref=e48]: 📂
+          - paragraph [ref=e49]: Upload an attendance Excel to get started
+          - paragraph [ref=e50]: SmartTime GDHR format supported

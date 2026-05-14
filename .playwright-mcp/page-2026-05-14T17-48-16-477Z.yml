@@ -1,0 +1,56 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 📋
+      - generic [ref=e8]:
+        - generic [ref=e9]: HRPulse
+        - generic [ref=e10]: Attendance Dispatcher
+    - navigation [ref=e11]:
+      - link "📋 Dispatcher" [ref=e12] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e13]: 📋
+        - text: Dispatcher
+      - link "💰 Salary / LOP" [ref=e14] [cursor=pointer]:
+        - /url: /salary
+        - generic [ref=e15]: 💰
+        - text: Salary / LOP
+      - link "📨 Email History" [ref=e16] [cursor=pointer]:
+        - /url: /history
+        - generic [ref=e17]: 📨
+        - text: Email History
+      - link "⚙️ Settings" [ref=e18] [cursor=pointer]:
+        - /url: /settings
+        - generic [ref=e19]: ⚙️
+        - text: Settings
+    - generic [ref=e20]: On-premises AI · Ollama
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - heading "Settings" [level=1] [ref=e23]
+      - paragraph [ref=e24]: Configure SMTP, Ollama, email templates and company info
+      - generic [ref=e25]:
+        - button "SMTP Email" [ref=e26] [cursor=pointer]
+        - button "Ollama AI" [ref=e27] [cursor=pointer]
+        - button "Email Templates" [ref=e28] [cursor=pointer]
+        - button "Company Info" [ref=e29] [cursor=pointer]
+      - generic [ref=e31]:
+        - heading "SMTP Configuration" [level=2] [ref=e32]
+        - generic [ref=e33]:
+          - generic [ref=e34]:
+            - generic [ref=e35]: SMTP Host
+            - textbox "smtp.gmail.com" [ref=e36]
+          - generic [ref=e37]:
+            - generic [ref=e38]: Port
+            - textbox "587" [ref=e39]
+          - generic [ref=e40]:
+            - generic [ref=e41]: Username
+            - textbox "hr@company.com" [ref=e42]: hr@yourcompany.com
+          - generic [ref=e43]:
+            - generic [ref=e44]: Password
+            - textbox "App password" [ref=e45]: ••••••••
+        - generic [ref=e46]:
+          - checkbox "Use SSL/TLS (port 465)" [ref=e47]
+          - generic [ref=e48]: Use SSL/TLS (port 465)
+        - paragraph [ref=e49]: "For Gmail: use an App Password. Go to Google Account → Security → 2-Step Verification → App Passwords"
+        - generic [ref=e50]:
+          - button "Save" [ref=e51] [cursor=pointer]
+          - button "Test Connection" [ref=e52] [cursor=pointer]

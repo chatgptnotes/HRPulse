@@ -1,0 +1,186 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: corporate_fare
+      - generic [ref=e7]: HRPulse
+    - button "Launch App" [ref=e8] [cursor=pointer]
+  - generic [ref=e10]:
+    - generic [ref=e11]:
+      - generic [ref=e12]: lock
+      - text: 100% On-Premises · No data leaves your server
+    - heading "AI-Powered HR Attendance Email Dispatcher" [level=1] [ref=e13]:
+      - text: AI-Powered HR Attendance
+      - text: Email Dispatcher
+    - paragraph [ref=e14]: Upload your GDHR SmartTime Excel, let local AI draft personalized absence notifications, and dispatch to your entire team — all without an internet connection.
+    - generic [ref=e15]:
+      - button "rocket_launch Launch Dispatcher" [ref=e16] [cursor=pointer]:
+        - generic [ref=e17]:
+          - generic [ref=e18]: rocket_launch
+          - text: Launch Dispatcher
+      - link "See Features" [ref=e19] [cursor=pointer]:
+        - /url: "#features"
+  - generic [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e23]: 100+
+      - generic [ref=e24]: Employees per dispatch
+    - generic [ref=e25]:
+      - generic [ref=e26]: 0 AED
+      - generic [ref=e27]: Cloud subscription cost
+    - generic [ref=e28]:
+      - generic [ref=e29]: 100%
+      - generic [ref=e30]: Data stays on your server
+    - generic [ref=e31]:
+      - generic [ref=e32]: Offline
+      - generic [ref=e33]: AI works without internet
+  - generic [ref=e35]:
+    - heading "Everything HR teams need" [level=2] [ref=e36]
+    - paragraph [ref=e37]: Built for UAE & GCC organizations using GDHR SmartTime attendance systems.
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]: upload_file
+        - heading "GDHR SmartTime Integration" [level=3] [ref=e41]
+        - paragraph [ref=e42]: Upload your SmartTime Excel export and HRPulse instantly parses all 15+ column variants — no config needed.
+      - generic [ref=e43]:
+        - generic [ref=e44]: psychology
+        - heading "Local AI Email Drafting" [level=3] [ref=e45]
+        - paragraph [ref=e46]: Ollama + llama3.1:8b generates personalized, empathetic attendance notification emails offline. Zero cloud dependency.
+      - generic [ref=e47]:
+        - generic [ref=e48]: payments
+        - heading "Loss of Pay Calculator" [level=3] [ref=e49]
+        - paragraph [ref=e50]: "Configurable LOP formula: basic salary / working days × effective absent days with adjustable missed-swipe weights."
+      - generic [ref=e51]:
+        - generic [ref=e52]: send
+        - heading "Bulk SMTP Dispatch" [level=3] [ref=e53]
+        - paragraph [ref=e54]: Preview, edit, and dispatch emails to 100+ employees in one click via your corporate SMTP server.
+      - generic [ref=e55]:
+        - generic [ref=e56]: bar_chart
+        - heading "Attendance Analytics" [level=3] [ref=e57]
+        - paragraph [ref=e58]: Trend charts, top offenders, monthly comparisons, and AI-powered anomaly detection across all periods.
+      - generic [ref=e59]:
+        - generic [ref=e60]: rule
+        - heading "Rules & SOPs Engine" [level=3] [ref=e61]
+        - paragraph [ref=e62]: Define HR policy rules and maintain standard operating procedures in a searchable knowledge base.
+      - generic [ref=e63]:
+        - generic [ref=e64]: security
+        - heading "100% On-Premises" [level=3] [ref=e65]
+        - paragraph [ref=e66]: All data stays on your server. No SaaS subscription, no data leaving your premises, no internet required.
+      - generic [ref=e67]:
+        - generic [ref=e68]: history
+        - heading "Full Audit Trail" [level=3] [ref=e69]
+        - paragraph [ref=e70]: Complete email dispatch history with per-employee records, reminder logic for repeat offenders.
+  - generic [ref=e72]:
+    - heading "vs. the competition" [level=2] [ref=e73]
+    - paragraph [ref=e74]: Why HRPulse wins for on-premises UAE deployments.
+    - table [ref=e76]:
+      - rowgroup [ref=e77]:
+        - row "Feature HRPulse Bayzat Keka greytHR Zoho People" [ref=e78]:
+          - columnheader "Feature" [ref=e79]
+          - columnheader "HRPulse" [ref=e80]
+          - columnheader "Bayzat" [ref=e81]
+          - columnheader "Keka" [ref=e82]
+          - columnheader "greytHR" [ref=e83]
+          - columnheader "Zoho People" [ref=e84]
+      - rowgroup [ref=e85]:
+        - row "Local AI (no cloud) check_circle cancel cancel cancel cancel" [ref=e86]:
+          - cell "Local AI (no cloud)" [ref=e87]
+          - cell "check_circle" [ref=e88]:
+            - generic [ref=e89]: check_circle
+          - cell "cancel" [ref=e90]:
+            - generic [ref=e91]: cancel
+          - cell "cancel" [ref=e92]:
+            - generic [ref=e93]: cancel
+          - cell "cancel" [ref=e94]:
+            - generic [ref=e95]: cancel
+          - cell "cancel" [ref=e96]:
+            - generic [ref=e97]: cancel
+        - row "On-premises deployment check_circle cancel cancel cancel cancel" [ref=e98]:
+          - cell "On-premises deployment" [ref=e99]
+          - cell "check_circle" [ref=e100]:
+            - generic [ref=e101]: check_circle
+          - cell "cancel" [ref=e102]:
+            - generic [ref=e103]: cancel
+          - cell "cancel" [ref=e104]:
+            - generic [ref=e105]: cancel
+          - cell "cancel" [ref=e106]:
+            - generic [ref=e107]: cancel
+          - cell "cancel" [ref=e108]:
+            - generic [ref=e109]: cancel
+        - row "GDHR SmartTime Excel parser check_circle cancel cancel cancel cancel" [ref=e110]:
+          - cell "GDHR SmartTime Excel parser" [ref=e111]
+          - cell "check_circle" [ref=e112]:
+            - generic [ref=e113]: check_circle
+          - cell "cancel" [ref=e114]:
+            - generic [ref=e115]: cancel
+          - cell "cancel" [ref=e116]:
+            - generic [ref=e117]: cancel
+          - cell "cancel" [ref=e118]:
+            - generic [ref=e119]: cancel
+          - cell "cancel" [ref=e120]:
+            - generic [ref=e121]: cancel
+        - row "Bulk attendance email dispatch check_circle check_circle check_circle check_circle check_circle" [ref=e122]:
+          - cell "Bulk attendance email dispatch" [ref=e123]
+          - cell "check_circle" [ref=e124]:
+            - generic [ref=e125]: check_circle
+          - cell "check_circle" [ref=e126]:
+            - generic [ref=e127]: check_circle
+          - cell "check_circle" [ref=e128]:
+            - generic [ref=e129]: check_circle
+          - cell "check_circle" [ref=e130]:
+            - generic [ref=e131]: check_circle
+          - cell "check_circle" [ref=e132]:
+            - generic [ref=e133]: check_circle
+        - row "LOP calculation check_circle check_circle check_circle check_circle check_circle" [ref=e134]:
+          - cell "LOP calculation" [ref=e135]
+          - cell "check_circle" [ref=e136]:
+            - generic [ref=e137]: check_circle
+          - cell "check_circle" [ref=e138]:
+            - generic [ref=e139]: check_circle
+          - cell "check_circle" [ref=e140]:
+            - generic [ref=e141]: check_circle
+          - cell "check_circle" [ref=e142]:
+            - generic [ref=e143]: check_circle
+          - cell "check_circle" [ref=e144]:
+            - generic [ref=e145]: check_circle
+        - row "AI email personalization check_circle cancel cancel cancel cancel" [ref=e146]:
+          - cell "AI email personalization" [ref=e147]
+          - cell "check_circle" [ref=e148]:
+            - generic [ref=e149]: check_circle
+          - cell "cancel" [ref=e150]:
+            - generic [ref=e151]: cancel
+          - cell "cancel" [ref=e152]:
+            - generic [ref=e153]: cancel
+          - cell "cancel" [ref=e154]:
+            - generic [ref=e155]: cancel
+          - cell "cancel" [ref=e156]:
+            - generic [ref=e157]: cancel
+        - row "Anomaly detection check_circle cancel cancel cancel cancel" [ref=e158]:
+          - cell "Anomaly detection" [ref=e159]
+          - cell "check_circle" [ref=e160]:
+            - generic [ref=e161]: check_circle
+          - cell "cancel" [ref=e162]:
+            - generic [ref=e163]: cancel
+          - cell "cancel" [ref=e164]:
+            - generic [ref=e165]: cancel
+          - cell "cancel" [ref=e166]:
+            - generic [ref=e167]: cancel
+          - cell "cancel" [ref=e168]:
+            - generic [ref=e169]: cancel
+        - row "Zero data cost check_circle cancel cancel cancel cancel" [ref=e170]:
+          - cell "Zero data cost" [ref=e171]
+          - cell "check_circle" [ref=e172]:
+            - generic [ref=e173]: check_circle
+          - cell "cancel" [ref=e174]:
+            - generic [ref=e175]: cancel
+          - cell "cancel" [ref=e176]:
+            - generic [ref=e177]: cancel
+          - cell "cancel" [ref=e178]:
+            - generic [ref=e179]: cancel
+          - cell "cancel" [ref=e180]:
+            - generic [ref=e181]: cancel
+  - generic [ref=e183]:
+    - heading "Ready to automate your HR emails?" [level=2] [ref=e184]
+    - paragraph [ref=e185]: Your GDHR SmartTime Excel + Ollama + HRPulse = attendance emails done in minutes.
+    - button "rocket_launch Open HRPulse" [ref=e186] [cursor=pointer]:
+      - generic [ref=e187]: rocket_launch
+      - text: Open HRPulse
+  - contentinfo [ref=e188]: HRPulse · On-premises AI for UAE & GCC HR teams · Powered by Ollama + llama3.1:8b
