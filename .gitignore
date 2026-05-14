@@ -1,5 +1,11 @@
 node_modules/
 dist/
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
 .env
 frontend/dist/
+backend/dist/
+.playwright-mcp/
+prisma/migrations/dev.db*
