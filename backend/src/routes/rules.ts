@@ -35,24 +35,41 @@ router.patch('/:id/toggle', async (req: Request, res: Response) => {
   res.json(await prisma.attendanceRule.update({ where: { id: rule.id }, data: { isActive: !rule.isActive } }));
 });
 
+// Template to use when previous month had an unresolved email
+const ESCALATION_MAP: Record<string, 'initial' | 'reminder' | 'escalation'> = {
+  initial: 'reminder',
+  reminder: 'escalation',
+  escalation: 'escalation',
+};
+
 // POST /api/rules/evaluate/:uploadId
 // Evaluates all active rules against an upload's attendance data.
 // Returns rule matches per employee AND auto-creates email drafts based on the highest triggered severity.
+// Includes: specific dates in email body, cross-month escalation, Dubai policy citations.
 router.post('/evaluate/:uploadId', async (req: Request, res: Response) => {
   const uploadId = parseInt(req.params.uploadId);
   const autoCreateDrafts = req.body.autoCreateDrafts !== false;
 
-  const settings = Object.fromEntries(
-    (await prisma.setting.findMany()).map(r => [r.key, r.value])
-  );
+  const [settings, upload] = await Promise.all([
+    prisma.setting.findMany().then(rows => Object.fromEntries(rows.map(r => [r.key, r.value]))),
+    prisma.attendanceUpload.findUnique({ where: { id: uploadId } }),
+  ]);
+
+  if (!upload) { res.status(404).json({ error: 'Upload not found' }); return; }
+
+  const periodMonth = upload.periodMonth;
   const workingDays = parseFloat(settings['working_days'] || '26');
   const missedSwipeWeight = parseFloat(settings['missed_swipe_weight'] || '0.5');
 
-  // Build summaries from DB
+  // Compute previous month string (yyyy-MM)
+  const [y, m] = periodMonth.split('-').map(Number);
+  const prevDate = new Date(y, m - 2, 1);
+  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
   const employees = await prisma.employee.findMany({
     where: { attendanceRecords: { some: { uploadId } } },
     include: {
-      attendanceRecords: { where: { uploadId } },
+      attendanceRecords: { where: { uploadId }, orderBy: { recordDate: 'asc' } },
       salaryConfigs: { orderBy: { effectiveMonth: 'desc' }, take: 1 },
     },
   });
@@ -69,46 +86,69 @@ router.post('/evaluate/:uploadId', async (req: Request, res: Response) => {
     const salary = emp.salaryConfigs[0];
     const { lopDays } = salary
       ? calculateLOP(salary.basicSalary, absentDays, missedSwipeDays, workingDays, missedSwipeWeight)
-      : { lopDays: 0, lopAmount: 0 };
+      : { lopDays: 0 };
     return { employeeId: emp.id, employeeName: emp.name, employeeEmail: emp.email, absentDays, missedSwipeDays, lateComingDays, earlyLeavingDays, flaggedTotal, lopDays };
   });
 
   const matches = await evaluateRulesForUpload(uploadId, summaries);
 
-  // Auto-create email drafts based on rule evaluation
   let draftsCreated = 0;
   if (autoCreateDrafts) {
     const templates = Object.fromEntries(
       (await prisma.emailTemplate.findMany()).map(t => [t.type, t])
     );
 
-    for (const match of matches) {
-      const tpl = templates[match.recommendedTemplate] || templates['initial'];
-      if (!tpl) continue;
+    // Check email history for all matched employees in one query (for cross-month escalation)
+    const employeeIds = matches.map(match => match.employeeId);
+    const prevHistory = await prisma.emailHistory.findMany({
+      where: {
+        employeeId: { in: employeeIds },
+        status: 'sent',
+        sentAt: { gte: new Date(`${prevMonth}-01`), lt: new Date(`${periodMonth}-01`) },
+      },
+      select: { employeeId: true },
+    });
+    const hadPreviousEmail = new Set(prevHistory.map(h => h.employeeId));
 
+    for (const match of matches) {
       const emp = employees.find(e => e.id === match.employeeId)!;
       const summary = summaries.find(s => s.employeeId === match.employeeId)!;
+
+      // Escalate template if employee had an unresolved email last month
+      const wasEscalated = hadPreviousEmail.has(match.employeeId);
+      const templateKey = wasEscalated ? ESCALATION_MAP[match.recommendedTemplate] : match.recommendedTemplate;
+      const tpl = templates[templateKey] || templates['initial'];
+      if (!tpl) continue;
+
+      // Build date-by-date attendance table (specific dates, as requested)
+      const flaggedRecords = emp.attendanceRecords.filter(r =>
+        ['Absent', 'Missed Swipe', 'Late Coming', 'Early Leaving'].includes(r.status)
+      );
+      const dateTable = flaggedRecords
+        .map(r => `  ${String(r.recordDate).substring(0, 10)}  |  ${r.status}`)
+        .join('\n');
 
       const ruleFlags = match.flags.awol ? '\n⚠ AWOL NOTICE: This constitutes Absence Without Official Leave.' : '';
       const disciplinary = match.flags.disciplinaryRisk ? '\n⚠ DISCIPLINARY RISK: This case has been flagged for potential disciplinary action.' : '';
       const managerCC = match.flags.notifyManager ? '\n(HR Manager has been notified)' : '';
       const directorCC = match.flags.notifyHRDirector ? '\n(HR Director has been notified)' : '';
+      const escalationNote = wasEscalated
+        ? '\n⚠ NOTE: A previous notice was sent last month. This is an escalated reminder as the matter remains unresolved.\n'
+        : '';
 
       const rulesTriggered = match.triggeredRules.map(r => `• ${r.name}`).join('\n');
-      const flagsSummary = [
-        summary.absentDays > 0 ? `Absent: ${summary.absentDays} day(s)` : '',
-        summary.missedSwipeDays > 0 ? `Missed Biometric: ${summary.missedSwipeDays} time(s)` : '',
-        summary.lateComingDays > 0 ? `Late Arrival: ${summary.lateComingDays} time(s)` : '',
-        summary.earlyLeavingDays > 0 ? `Early Departure: ${summary.earlyLeavingDays} time(s)` : '',
-      ].filter(Boolean).join('\n');
 
       const body = `Dear ${emp.name},
 
 This notice is issued in accordance with Dubai Government Human Resources Policy and UAE Federal Civil Service Law No. 11 of 2008.
+${escalationNote}
+Our records indicate the following attendance issues for the period ${periodMonth}:
 
-Our records indicate the following attendance issues for the period ${new Date().toLocaleDateString('en-AE', { month: 'long', year: 'numeric' })}:
+Date         | Status
+-------------|------------------
+${dateTable}
 
-${flagsSummary}
+Summary: Absent ${summary.absentDays}d | Missed Biometric ${summary.missedSwipeDays}x | Late Arrival ${summary.lateComingDays}x | Early Departure ${summary.earlyLeavingDays}x
 
 Policy Rules Triggered:
 ${rulesTriggered}
@@ -128,10 +168,14 @@ Regards,
 ${settings['hr_name'] || 'HR Department'}
 ${settings['company_name'] || ''}`;
 
+      const subjectStr = tpl.subject
+        .replace('{{flagged_count}}', String(summary.flaggedTotal))
+        .replace('{{period_month}}', periodMonth);
+
       await prisma.emailDraft.upsert({
         where: { uploadId_employeeId: { uploadId, employeeId: emp.id } },
-        update: { subject: tpl.subject.replace('{{flagged_count}}', String(summary.flaggedTotal)).replace('{{period_month}}', new Date().toLocaleDateString('en-AE', { month: 'long', year: 'numeric' })), body, templateType: match.recommendedTemplate, isEdited: false },
-        create: { uploadId, employeeId: emp.id, subject: tpl.subject.replace('{{flagged_count}}', String(summary.flaggedTotal)).replace('{{period_month}}', new Date().toLocaleDateString('en-AE', { month: 'long', year: 'numeric' })), body, templateType: match.recommendedTemplate },
+        update: { subject: subjectStr, body, templateType: templateKey, isEdited: false },
+        create: { uploadId, employeeId: emp.id, subject: subjectStr, body, templateType: templateKey },
       });
       draftsCreated++;
     }

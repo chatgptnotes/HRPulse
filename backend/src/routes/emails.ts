@@ -160,6 +160,83 @@ router.post('/send-bulk', async (req: Request, res: Response) => {
   res.json({ results });
 });
 
+// POST /api/emails/remind-pending
+// Creates reminder drafts for employees whose initial email was sent 7+ days ago with no follow-up.
+router.post('/remind-pending', async (req: Request, res: Response) => {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const reminderTemplate = await prisma.emailTemplate.findUnique({ where: { type: 'reminder' } });
+  if (!reminderTemplate) { res.json({ created: 0, checked: 0 }); return; }
+
+  const settings = await getSettings();
+
+  // Get the most recent sent email per employee in the 7–30 day window
+  const oldSent = await prisma.emailHistory.findMany({
+    where: { status: 'sent', sentAt: { gte: thirtyDaysAgo, lte: sevenDaysAgo } },
+    include: { employee: true },
+    orderBy: { sentAt: 'desc' },
+    distinct: ['employeeId'],
+  });
+
+  let created = 0;
+  for (const hist of oldSent) {
+    // Skip if a follow-up email was already sent after this one
+    const followUp = await prisma.emailHistory.findFirst({
+      where: { employeeId: hist.employeeId, sentAt: { gt: hist.sentAt } },
+    });
+    if (followUp) continue;
+
+    // Skip if a pending reminder draft already exists
+    const existingDraft = await prisma.emailDraft.findFirst({
+      where: { employeeId: hist.employeeId, status: 'pending', templateType: 'reminder' },
+    });
+    if (existingDraft) continue;
+
+    // Use the same upload as the original email
+    const latestRecord = await prisma.attendanceRecord.findFirst({
+      where: { employeeId: hist.employeeId, uploadId: hist.uploadId! },
+    });
+    if (!latestRecord) continue;
+
+    const periodLabel = new Date(hist.sentAt).toLocaleDateString('en-AE', { month: 'long', year: 'numeric' });
+    const subject = reminderTemplate.subject
+      .replace('{{period_month}}', periodLabel)
+      .replace('{{flagged_count}}', '');
+
+    const body = `Dear ${hist.employee.name},
+
+This is a formal reminder regarding the attendance notice sent to you on ${hist.sentAt.toLocaleDateString('en-AE', { day: 'numeric', month: 'long', year: 'numeric' })}.
+
+As of today, we have not received any leave application, written justification, or supporting documentation from you in response to that notice.
+
+Original notice summary:
+---
+${hist.body.split('\n').slice(0, 20).join('\n')}
+---
+
+You are hereby requested to respond within 3 working days. Continued non-compliance will result in formal disciplinary action as per Dubai Government HR Policy and UAE Federal Civil Service Law No. 11 of 2008.
+
+Regards,
+${settings['hr_name'] || 'HR Department'}
+${settings['company_name'] || ''}`;
+
+    await prisma.emailDraft.create({
+      data: {
+        uploadId: hist.uploadId!,
+        employeeId: hist.employeeId,
+        subject,
+        body,
+        templateType: 'reminder',
+        status: 'pending',
+      },
+    });
+    created++;
+  }
+
+  res.json({ created, checked: oldSent.length });
+});
+
 router.get('/history', async (req: Request, res: Response) => {
   const { month, employeeId } = req.query;
   const where: Record<string, unknown> = {};

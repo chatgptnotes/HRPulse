@@ -20,6 +20,8 @@ export const sendEmail = (draftId: number) => api.post(`/emails/send/${draftId}`
 export const sendBulk = (draftIds: number[]) => api.post('/emails/send-bulk', { draftIds });
 export const getEmailHistory = (month?: string, employeeId?: number) =>
   api.get('/emails/history', { params: { month, employeeId } });
+export const checkPendingReminders = () =>
+  api.post<{ created: number; checked: number }>('/emails/remind-pending');
 
 // Salary
 export const getSalaryConfigs = (month?: string) => api.get('/salary/configs', { params: { month } });

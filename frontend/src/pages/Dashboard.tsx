@@ -51,6 +51,8 @@ export default function Dashboard() {
   const [sending, setSending] = useState(false);
   const [applyingRules, setApplyingRules] = useState(false);
   const [ruleResult, setRuleResult] = useState<{ draftsCreated: number; evaluated: number } | null>(null);
+  const [checkingReminders, setCheckingReminders] = useState(false);
+  const [reminderResult, setReminderResult] = useState<{ created: number; checked: number } | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
 
   const showToast = (msg: string, type: 'ok' | 'err' = 'ok') => {
@@ -135,6 +137,26 @@ export default function Dashboard() {
       setGenProgress(null);
       qc.invalidateQueries({ queryKey: ['summary', uploadId] });
       qc.invalidateQueries({ queryKey: ['drafts', uploadId] });
+    }
+  };
+
+  const handleCheckReminders = async () => {
+    setCheckingReminders(true);
+    setReminderResult(null);
+    try {
+      const { data } = await api.checkPendingReminders();
+      setReminderResult(data);
+      if (data.created > 0) {
+        showToast(`${data.created} reminder draft${data.created !== 1 ? 's' : ''} created for overdue employees`);
+        qc.invalidateQueries({ queryKey: ['drafts', uploadId] });
+        qc.invalidateQueries({ queryKey: ['summary', uploadId] });
+      } else {
+        showToast(`Checked ${data.checked} employees — no reminders needed yet`);
+      }
+    } catch {
+      showToast('Reminder check failed', 'err');
+    } finally {
+      setCheckingReminders(false);
     }
   };
 
@@ -325,6 +347,23 @@ export default function Dashboard() {
             <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center gap-1.5">
               <span className="material-icons text-xs">check_circle</span>
               {ruleResult.draftsCreated} draft{ruleResult.draftsCreated !== 1 ? 's' : ''} from {ruleResult.evaluated} employees
+            </div>
+          )}
+
+          <button
+            onClick={handleCheckReminders}
+            disabled={checkingReminders}
+            className="w-full mt-2 text-rose-800 bg-rose-50 border border-rose-200 hover:bg-rose-100 disabled:opacity-50 text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            {checkingReminders
+              ? <><span className="material-icons text-base animate-spin">sync</span> Checking...</>
+              : <><span className="material-icons text-base">alarm</span> Check 7-Day Reminders</>
+            }
+          </button>
+          {reminderResult && reminderResult.created > 0 && (
+            <div className="mt-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 flex items-center gap-1.5">
+              <span className="material-icons text-xs">mark_email_unread</span>
+              {reminderResult.created} reminder{reminderResult.created !== 1 ? 's' : ''} queued
             </div>
           )}
         </div>

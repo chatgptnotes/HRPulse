@@ -85,7 +85,7 @@ export async function evaluateRulesForUpload(uploadId: number, summaries: Employ
 
     for (const rule of rules) {
       const conditions = rule.conditions as RuleConditions;
-      const actions = rule.actions as RuleActions;
+      const actions = rule.actions as unknown as RuleActions;
       if (evaluateRule(emp, conditions)) {
         triggered.push({ id: rule.id, name: rule.name, severity: actions.severity, actions });
       }
