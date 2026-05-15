@@ -59,6 +59,8 @@ export const createRule = (data: { name: string; description: string; ruleType: 
 export const updateRule = (id: number, data: object) => api.put(`/rules/${id}`, data);
 export const deleteRule = (id: number) => api.delete(`/rules/${id}`);
 export const toggleRule = (id: number) => api.patch(`/rules/${id}/toggle`);
+export const evaluateRules = (uploadId: number, autoCreateDrafts = true) =>
+  api.post<{ matches: any[]; draftsCreated: number; employeesEvaluated: number }>(`/rules/evaluate/${uploadId}`, { autoCreateDrafts });
 
 // Analytics
 export const getAnalyticsOverview = () => api.get('/analytics/overview');

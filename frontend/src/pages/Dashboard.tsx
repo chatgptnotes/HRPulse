@@ -49,6 +49,8 @@ export default function Dashboard() {
   const [previewEmployee, setPreviewEmployee] = useState<{ uploadId: number; employeeId: number; name: string; email: string } | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [sending, setSending] = useState(false);
+  const [applyingRules, setApplyingRules] = useState(false);
+  const [ruleResult, setRuleResult] = useState<{ draftsCreated: number; evaluated: number } | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
 
   const showToast = (msg: string, type: 'ok' | 'err' = 'ok') => {
@@ -133,6 +135,23 @@ export default function Dashboard() {
       setGenProgress(null);
       qc.invalidateQueries({ queryKey: ['summary', uploadId] });
       qc.invalidateQueries({ queryKey: ['drafts', uploadId] });
+    }
+  };
+
+  const handleApplyRules = async () => {
+    if (!uploadId) return;
+    setApplyingRules(true);
+    setRuleResult(null);
+    try {
+      const { data } = await api.evaluateRules(uploadId, true);
+      setRuleResult({ draftsCreated: data.draftsCreated, evaluated: data.employeesEvaluated });
+      showToast(`Rules applied: ${data.draftsCreated} draft${data.draftsCreated !== 1 ? 's' : ''} created from ${data.employeesEvaluated} employees`);
+      qc.invalidateQueries({ queryKey: ['summary', uploadId] });
+      qc.invalidateQueries({ queryKey: ['drafts', uploadId] });
+    } catch {
+      showToast('Rule evaluation failed', 'err');
+    } finally {
+      setApplyingRules(false);
     }
   };
 
@@ -289,6 +308,23 @@ export default function Dashboard() {
                 />
               </div>
               <p className="text-xs text-slate-400 mt-1 truncate">{genProgress.current}</p>
+            </div>
+          )}
+
+          <button
+            onClick={handleApplyRules}
+            disabled={!uploadId || applyingRules}
+            className="w-full mt-2 text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 disabled:opacity-50 text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            {applyingRules
+              ? <><span className="material-icons text-base animate-spin">sync</span> Evaluating...</>
+              : <><span className="material-icons text-base">gavel</span> Apply HR Rules</>
+            }
+          </button>
+          {ruleResult && (
+            <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center gap-1.5">
+              <span className="material-icons text-xs">check_circle</span>
+              {ruleResult.draftsCreated} draft{ruleResult.draftsCreated !== 1 ? 's' : ''} from {ruleResult.evaluated} employees
             </div>
           )}
         </div>
