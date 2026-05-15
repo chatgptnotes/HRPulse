@@ -93,6 +93,43 @@ export default function SettingsPage() {
         {tab === 'smtp' && (
           <div className="space-y-4">
             <h2 className="font-semibold text-slate-700">SMTP Configuration</h2>
+
+            {/* Testing / Live mode toggle */}
+            <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-700">
+                  {settings['smtp_host'] === 'localhost' ? '🧪 Testing Mode' : '🚀 Live Mode'}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {settings['smtp_host'] === 'localhost'
+                    ? 'Emails are captured locally — nothing goes to real inboxes. Safe to test.'
+                    : 'Emails will be sent to real employee inboxes via Gmail.'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  if (settings['smtp_host'] === 'localhost') {
+                    set('smtp_host', 'smtp.gmail.com');
+                    set('smtp_port', '587');
+                    set('smtp_secure', 'false');
+                  } else {
+                    set('smtp_host', 'localhost');
+                    set('smtp_port', '1025');
+                    set('smtp_secure', 'false');
+                    set('smtp_user', '');
+                    set('smtp_pass', '');
+                  }
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap ${
+                  settings['smtp_host'] === 'localhost'
+                    ? 'bg-brand-600 text-white hover:bg-brand-700'
+                    : 'bg-amber-500 text-white hover:bg-amber-600'
+                }`}
+              >
+                {settings['smtp_host'] === 'localhost' ? 'Switch to Live (Gmail)' : 'Switch to Testing'}
+              </button>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <Field label="SMTP Host" value={settings['smtp_host'] || ''} onChange={v => set('smtp_host', v)} placeholder="smtp.gmail.com" />
               <Field label="Port" value={settings['smtp_port'] || '587'} onChange={v => set('smtp_port', v)} placeholder="587" />
