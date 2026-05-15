@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import clsx from 'clsx';
@@ -22,6 +22,20 @@ interface Summary {
   draftId: number | null;
 }
 
+function StatCard({ icon, label, value, color }: { icon: string; label: string; value: number | string; color: string }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/60 p-4 flex items-center gap-4 shadow-sm">
+      <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', color)}>
+        <span className="material-icons text-white text-lg">{icon}</span>
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-slate-800 leading-none">{value}</p>
+        <p className="text-xs text-slate-500 mt-1">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const qc = useQueryClient();
   const [uploadId, setUploadId] = useState<number | null>(null);
@@ -43,20 +57,17 @@ export default function Dashboard() {
   };
 
   const { data: uploads = [] } = useQuery({ queryKey: ['uploads'], queryFn: () => api.getUploads().then(r => r.data) });
-
   const { data: summary = [], refetch: refetchSummary } = useQuery({
     queryKey: ['summary', uploadId],
     queryFn: () => api.getAttendanceSummary(uploadId!).then(r => r.data as Summary[]),
     enabled: !!uploadId,
   });
-
   const { data: drafts = [] } = useQuery({
     queryKey: ['drafts', uploadId],
     queryFn: () => api.getEmailDrafts(uploadId!).then(r => r.data),
     enabled: !!uploadId,
   });
 
-  // Auto-select latest upload on load
   useEffect(() => {
     if (!uploadId && uploads.length > 0) {
       const latest = uploads[0] as { id: number; periodMonth: string };
@@ -93,17 +104,11 @@ export default function Dashboard() {
     if (!uploadId) return;
     setGenerating(true);
     setGenProgress({ completed: 0, total: 0, current: 'Starting...' });
-
-    const es = new EventSource(`/api/emails/generate/${uploadId}`);
-    // EventSource doesn't support POST — use fetch with SSE manually
-    es.close();
-
     try {
       const response = await fetch(`/api/emails/generate/${uploadId}`, { method: 'POST' });
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -115,8 +120,8 @@ export default function Dashboard() {
             try {
               const ev = JSON.parse(line.slice(6));
               if (ev.type === 'progress') setGenProgress({ completed: ev.completed, total: ev.total, current: ev.currentEmployee });
-              if (ev.type === 'done') { showToast(`Generated ${ev.total} email drafts`); }
-              if (ev.type === 'error') { showToast(ev.error, 'err'); }
+              if (ev.type === 'done') showToast(`Generated ${ev.total} email drafts`);
+              if (ev.type === 'error') showToast(ev.error, 'err');
             } catch {}
           }
         }
@@ -144,7 +149,7 @@ export default function Dashboard() {
       qc.invalidateQueries({ queryKey: ['summary', uploadId] });
       qc.invalidateQueries({ queryKey: ['drafts', uploadId] });
       setSelected(new Set());
-    } catch (err: any) {
+    } catch {
       showToast('Dispatch failed', 'err');
     } finally {
       setSending(false);
@@ -164,12 +169,15 @@ export default function Dashboard() {
   const getDraftForEmployee = (empId: number) => (drafts as any[]).find((d: any) => d.employeeId === empId);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-slate-100">
       {/* Left Panel */}
-      <div className="w-64 border-r border-slate-200 bg-white flex flex-col overflow-y-auto">
-        <div className="px-4 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-700 text-sm">Attendance Dispatcher AI</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Powered by local Ollama</p>
+      <div className="w-64 bg-white border-r border-slate-200/70 flex flex-col overflow-y-auto shadow-sm">
+        <div className="px-5 py-5 border-b border-slate-100">
+          <h2 className="font-bold text-slate-800 text-sm">Attendance Dispatcher</h2>
+          <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+            Powered by local Ollama
+          </p>
         </div>
 
         {/* Upload Zone */}
@@ -177,46 +185,63 @@ export default function Dashboard() {
           <div
             {...getRootProps()}
             className={clsx(
-              'border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all',
-              isDragActive ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:border-brand-400 hover:bg-slate-50'
+              'border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all',
+              isDragActive
+                ? 'border-indigo-400 bg-indigo-50 scale-[0.98]'
+                : uploadId
+                ? 'border-emerald-300 bg-emerald-50/50 hover:border-emerald-400'
+                : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30'
             )}
           >
             <input {...getInputProps()} />
-            <div className="text-2xl mb-2">{uploading ? '⏳' : '📂'}</div>
             {uploading ? (
-              <p className="text-xs text-slate-500">Processing...</p>
+              <>
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center mx-auto mb-2">
+                  <span className="material-icons text-indigo-500 text-xl animate-spin">sync</span>
+                </div>
+                <p className="text-xs font-medium text-slate-600">Processing...</p>
+              </>
             ) : uploadId ? (
-              <div>
-                <p className="text-xs font-medium text-brand-600">Uploaded</p>
-                <p className="text-xs text-slate-400 mt-0.5">{periodMonth}</p>
+              <>
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center mx-auto mb-2">
+                  <span className="material-icons text-emerald-600 text-xl">check_circle</span>
+                </div>
+                <p className="text-xs font-semibold text-emerald-700">{periodMonth}</p>
                 <p className="text-xs text-slate-400 mt-0.5">Drop to replace</p>
-              </div>
+              </>
             ) : (
-              <div>
-                <p className="text-xs font-medium text-slate-600">Upload Attendance File</p>
+              <>
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-2">
+                  <span className="material-icons text-slate-400 text-xl">upload_file</span>
+                </div>
+                <p className="text-xs font-semibold text-slate-600">Upload Attendance File</p>
                 <p className="text-xs text-slate-400 mt-0.5">Drop Excel (.xlsx) here</p>
-              </div>
+              </>
             )}
           </div>
 
           {uploadWarnings.length > 0 && (
-            <div className="mt-2 text-xs text-amber-600 bg-amber-50 rounded p-2 space-y-0.5">
+            <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-2.5 space-y-0.5">
               {uploadWarnings.slice(0, 3).map((w, i) => <div key={i}>⚠ {w}</div>)}
-              {uploadWarnings.length > 3 && <div>+{uploadWarnings.length - 3} more warnings</div>}
+              {uploadWarnings.length > 3 && <div className="text-amber-500">+{uploadWarnings.length - 3} more</div>}
             </div>
           )}
 
-          {/* Past uploads */}
           {uploads.length > 1 && (
-            <div className="mt-2 space-y-1">
-              <p className="text-xs text-slate-400 font-medium">Past uploads</p>
+            <div className="mt-3 space-y-1">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Past uploads</p>
               {(uploads as any[]).slice(0, 5).map((u: any) => (
                 <button
                   key={u.id}
                   onClick={() => { setUploadId(u.id); setPeriodMonth(u.periodMonth); }}
-                  className={clsx('w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors', u.id === uploadId ? 'bg-brand-50 text-brand-700 font-medium' : 'text-slate-500 hover:bg-slate-50')}
+                  className={clsx(
+                    'w-full text-left text-xs px-3 py-2 rounded-xl transition-colors font-medium',
+                    u.id === uploadId
+                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                      : 'text-slate-500 hover:bg-slate-50 border border-transparent'
+                  )}
                 >
-                  {u.periodMonth} — {u.rowCount} rows
+                  {u.periodMonth} · {u.rowCount} rows
                 </button>
               ))}
             </div>
@@ -225,12 +250,12 @@ export default function Dashboard() {
 
         {/* Custom Guide */}
         <div className="px-4 py-3 border-b border-slate-100">
-          <label className="text-xs font-medium text-slate-500 block mb-1.5">Custom Email Draft Guide</label>
+          <label className="text-xs font-semibold text-slate-500 block mb-1.5">AI Draft Instructions</label>
           <textarea
             value={customGuide}
             onChange={e => setCustomGuide(e.target.value)}
-            placeholder="Optional: add specific instructions for the AI draft..."
-            className="w-full text-xs border border-slate-200 rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+            placeholder="Optional: add specific tone or context for the AI..."
+            className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 bg-slate-50"
             rows={3}
           />
         </div>
@@ -240,23 +265,27 @@ export default function Dashboard() {
           <button
             onClick={handleGenerate}
             disabled={!uploadId || generating}
-            className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="w-full text-white text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-indigo-900/20"
+            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}
           >
             {generating ? (
               <>
-                <span className="animate-spin">⏳</span>
+                <span className="material-icons text-base animate-spin">sync</span>
                 {genProgress ? `${genProgress.completed}/${genProgress.total}` : 'Starting...'}
               </>
             ) : (
-              <><span>✨</span> Process with AI</>
+              <><span className="material-icons text-base">auto_awesome</span> Process with AI</>
             )}
           </button>
           {generating && genProgress && (
-            <div className="mt-2">
+            <div className="mt-2.5">
               <div className="w-full bg-slate-100 rounded-full h-1.5">
                 <div
-                  className="bg-brand-500 h-1.5 rounded-full transition-all"
-                  style={{ width: `${genProgress.total ? (genProgress.completed / genProgress.total) * 100 : 0}%` }}
+                  className="h-1.5 rounded-full transition-all"
+                  style={{
+                    width: `${genProgress.total ? (genProgress.completed / genProgress.total) * 100 : 0}%`,
+                    background: 'linear-gradient(90deg, #6366f1, #4f46e5)',
+                  }}
                 />
               </div>
               <p className="text-xs text-slate-400 mt-1 truncate">{genProgress.current}</p>
@@ -264,28 +293,23 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Entity Summary */}
+        {/* Stats */}
         {uploadId && (
-          <div className="px-4 py-4 border-b border-slate-100 space-y-2">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Entity Summary</p>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Unique Entities</span>
-              <span className="font-bold text-slate-800">{uniqueEntities}</span>
+          <div className="px-4 py-4 border-b border-slate-100">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Summary</p>
+            <div className="space-y-2">
+              {[
+                { label: 'Employees', value: uniqueEntities, color: 'text-slate-700', bg: 'bg-slate-100' },
+                { label: 'Flagged Records', value: flaggedRecords, color: 'text-red-600', bg: 'bg-red-50' },
+                { label: 'Pending Emails', value: pendingEmails, color: 'text-amber-600', bg: 'bg-amber-50' },
+                ...(sentEmails > 0 ? [{ label: 'Sent', value: sentEmails, color: 'text-emerald-600', bg: 'bg-emerald-50' }] : []),
+              ].map(s => (
+                <div key={s.label} className={clsx('flex items-center justify-between px-3 py-2 rounded-xl', s.bg)}>
+                  <span className="text-xs text-slate-600">{s.label}</span>
+                  <span className={clsx('text-sm font-bold', s.color)}>{s.value}</span>
+                </div>
+              ))}
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Flagged Records</span>
-              <span className="font-bold text-red-600">{flaggedRecords}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Pending Emails</span>
-              <span className="font-bold text-amber-600">{pendingEmails}</span>
-            </div>
-            {sentEmails > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Sent Emails</span>
-                <span className="font-bold text-green-600">{sentEmails}</span>
-              </div>
-            )}
           </div>
         )}
 
@@ -295,31 +319,41 @@ export default function Dashboard() {
             <button
               onClick={handleDispatch}
               disabled={sending || pendingEmails === 0}
-              className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-sm font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-900/20"
             >
-              {sending ? <span className="animate-spin">⏳</span> : <span>📤</span>}
-              {sending ? 'Dispatching...' : `Dispatch Emails${selected.size > 0 ? ` (${selected.size})` : ''}`}
+              {sending
+                ? <><span className="material-icons text-base animate-spin">sync</span> Dispatching...</>
+                : <><span className="material-icons text-base">send</span> Dispatch Emails{selected.size > 0 ? ` (${selected.size})` : ''}</>
+              }
             </button>
           </div>
         )}
       </div>
 
-      {/* Right Panel — Records Preview */}
+      {/* Right Panel */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 bg-white flex items-center justify-between">
+        {/* Header */}
+        <div className="px-6 py-4 bg-white border-b border-slate-200/70 flex items-center justify-between shadow-sm">
           <div>
-            <h3 className="font-semibold text-slate-800">Records Preview</h3>
-            {uploadId && <p className="text-xs text-slate-400 mt-0.5">{periodMonth} · {summary.length} employees with flagged records</p>}
+            <h3 className="font-bold text-slate-800 text-base">Records Preview</h3>
+            {uploadId && (
+              <p className="text-xs text-slate-400 mt-0.5">
+                {periodMonth} · <span className="text-indigo-500 font-medium">{summary.length} employees</span> with flagged records
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-3">
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search employee..."
-              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-52 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-            />
+            <div className="relative">
+              <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none">search</span>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search employee..."
+                className="text-sm border border-slate-200 rounded-xl pl-9 pr-4 py-2 w-52 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 bg-slate-50"
+              />
+            </div>
             {selected.size > 0 && (
-              <button onClick={() => setSelected(new Set())} className="text-xs text-slate-500 hover:text-slate-700">
+              <button onClick={() => setSelected(new Set())} className="text-xs text-slate-400 hover:text-slate-600 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors">
                 Clear ({selected.size})
               </button>
             )}
@@ -327,11 +361,13 @@ export default function Dashboard() {
         </div>
 
         {!uploadId ? (
-          <div className="flex-1 flex items-center justify-center text-slate-400">
+          <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <div className="text-5xl mb-3">📂</div>
-              <p className="font-medium">Upload an attendance Excel to get started</p>
-              <p className="text-sm mt-1">SmartTime GDHR format supported</p>
+              <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center mx-auto mb-4">
+                <span className="material-icons text-slate-300 text-4xl">upload_file</span>
+              </div>
+              <p className="font-semibold text-slate-600">Upload an attendance file to get started</p>
+              <p className="text-sm text-slate-400 mt-1">SmartTime GDHR format supported</p>
             </div>
           </div>
         ) : filtered.length === 0 ? (
@@ -339,10 +375,10 @@ export default function Dashboard() {
             <p>{summary.length === 0 ? 'No flagged records found' : 'No employees match search'}</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto">
-            {/* Table Header */}
-            <div className="sticky top-0 bg-slate-50 border-b border-slate-200 px-6 py-2.5 grid grid-cols-12 gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-              <div className="col-span-1">
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {/* Table header */}
+            <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <div className="col-span-1 flex items-center">
                 <input
                   type="checkbox"
                   checked={selected.size === filtered.length && filtered.length > 0}
@@ -358,11 +394,12 @@ export default function Dashboard() {
                 />
               </div>
               <div className="col-span-3">Employee</div>
-              <div className="col-span-4">Status Flags</div>
+              <div className="col-span-4">Flags</div>
               <div className="col-span-2">Action</div>
-              <div className="col-span-2">Email Status</div>
+              <div className="col-span-2">Status</div>
             </div>
 
+            {/* Rows */}
             {filtered.map(s => {
               const draft = getDraftForEmployee(s.employeeId);
               const isSelected = draft && selected.has(draft.id);
@@ -370,8 +407,10 @@ export default function Dashboard() {
                 <div
                   key={s.employeeId}
                   className={clsx(
-                    'px-6 py-3.5 grid grid-cols-12 gap-4 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center',
-                    isSelected && 'bg-brand-50'
+                    'grid grid-cols-12 gap-4 px-4 py-3.5 bg-white rounded-2xl border items-center transition-all shadow-sm hover:shadow-md',
+                    isSelected
+                      ? 'border-indigo-300 bg-indigo-50/50 shadow-indigo-100'
+                      : 'border-slate-200/70 hover:border-slate-300'
                   )}
                 >
                   <div className="col-span-1">
@@ -389,23 +428,31 @@ export default function Dashboard() {
                       />
                     )}
                   </div>
-                  <div className="col-span-3">
-                    <p className="text-sm font-medium text-slate-800 truncate">{s.employeeName}</p>
-                    <p className="text-xs text-slate-400 truncate">{s.employeeEmail}</p>
+
+                  <div className="col-span-3 flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-xs font-bold">{s.employeeName.charAt(0)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{s.employeeName}</p>
+                      <p className="text-xs text-slate-400 truncate">{s.employeeEmail}</p>
+                    </div>
                   </div>
-                  <div className="col-span-4 flex flex-wrap gap-1">
+
+                  <div className="col-span-4 flex flex-wrap gap-1.5 items-center">
                     {s.absentDays > 0 && <StatusBadge label="Absent" small />}
                     {s.missedSwipeDays > 0 && <StatusBadge label="Missed Swipe" small />}
                     {s.lateComingDays > 0 && <StatusBadge label="Late Coming" small />}
                     {s.earlyLeavingDays > 0 && <StatusBadge label="Early Leaving" small />}
-                    <span className="text-xs text-slate-400 self-center">({s.flaggedTotal})</span>
+                    <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">{s.flaggedTotal}</span>
                   </div>
-                  <div className="col-span-2 flex items-center gap-1.5">
+
+                  <div className="col-span-2 flex items-center gap-2">
                     {draft ? (
                       <>
                         <button
                           onClick={() => setPreviewEmployee({ uploadId: uploadId!, employeeId: s.employeeId, name: s.employeeName, email: s.employeeEmail })}
-                          className="text-xs bg-white border border-slate-200 hover:border-brand-400 hover:text-brand-600 text-slate-600 px-2.5 py-1 rounded-lg transition-colors font-medium"
+                          className="text-xs font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 px-3 py-1.5 rounded-xl transition-colors border border-transparent hover:border-indigo-200"
                         >
                           Preview
                         </button>
@@ -419,7 +466,7 @@ export default function Dashboard() {
                                 showToast(`Email sent to ${s.employeeName}`);
                               } catch { showToast('Send failed', 'err'); }
                             }}
-                            className="text-xs bg-green-50 border border-green-200 hover:bg-green-100 text-green-700 px-2.5 py-1 rounded-lg transition-colors font-medium"
+                            className="text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-xl transition-colors border border-emerald-200"
                           >
                             Send
                           </button>
@@ -429,6 +476,7 @@ export default function Dashboard() {
                       <span className="text-xs text-slate-300">No draft</span>
                     )}
                   </div>
+
                   <div className="col-span-2">
                     {draft ? <StatusBadge label={draft.status} small /> : <span className="text-xs text-slate-300">—</span>}
                   </div>
@@ -439,7 +487,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Email Draft Modal */}
       {previewEmployee && (
         <EmailDraftModal
           uploadId={previewEmployee.uploadId}
@@ -456,12 +503,12 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Toast */}
       {toast && (
         <div className={clsx(
-          'fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all z-50',
-          toast.type === 'ok' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+          'fixed bottom-6 right-6 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold z-50 flex items-center gap-2',
+          toast.type === 'ok' ? 'bg-emerald-600 text-white' : 'bg-red-500 text-white'
         )}>
+          <span className="material-icons text-base">{toast.type === 'ok' ? 'check_circle' : 'error'}</span>
           {toast.msg}
         </div>
       )}

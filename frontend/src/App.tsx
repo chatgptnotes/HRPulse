@@ -18,7 +18,7 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, sta
 function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-100">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
       <main className="flex-1 overflow-auto min-w-0">
         <Routes>

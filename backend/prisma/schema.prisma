@@ -12,6 +12,7 @@ model Employee {
   employeeNumber String?   @map("employee_number")
   name           String
   email          String    @unique
+  photoUrl       String?   @map("photo_url")
   organisation   String?
   entity         String?
   department     String?

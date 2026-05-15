@@ -39,6 +39,11 @@ export const testOllama = () => api.post('/settings/test-ollama');
 export const getEmployees = () => api.get('/employees');
 export const getEmployee = (id: number) => api.get(`/employees/${id}`);
 export const updateEmployee = (id: number, data: { name?: string; email?: string; department?: string }) => api.patch(`/employees/${id}`, data);
+export const uploadEmployeePhoto = (id: number, file: File) => {
+  const fd = new FormData();
+  fd.append('photo', file);
+  return api.post(`/employees/${id}/photo`, fd);
+};
 
 // SOPs
 export const getSops = (params?: { category?: string; search?: string }) => api.get('/sops', { params });

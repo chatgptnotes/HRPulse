@@ -28,6 +28,9 @@ app.use(express.urlencoded({ extended: true }));
 // Seed DB on startup
 seedDatabase().catch(console.error);
 
+// Serve uploaded photos
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/emails', emailRoutes);
 app.use('/api/employees', employeeRoutes);
