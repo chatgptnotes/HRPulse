@@ -1,0 +1,44 @@
+
+> vite_react_shadcn_ts@0.0.0 dev
+> vite
+
+Re-optimizing dependencies because vite config has changed
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m18486[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8080[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.0.117:[1m8080[22m/[39m
+[2m4:10:53 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:10:53 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:11:44 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:12:21 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:13:04 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:14:02 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:14:02 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:14:35 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:15:14 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:15:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:17:08 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:26:52 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:26:52 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:27:37 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:28:16 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:29:01 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:29:41 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:30:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:31:13 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m4:32:01 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m5:06:16 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m5:06:17 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m5:07:02 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m5:07:32 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m11:22:54 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m11:22:55 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m11:23:33 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m6:21:06 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m6:21:27 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m6:21:58 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m6:22:31 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m6:23:29 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m6:32:19 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m6:32:38 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m

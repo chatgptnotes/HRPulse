@@ -1,0 +1,114 @@
+# OpenCode + GLM (Z.ai) Setup
+
+This document describes how the GLM API key is wired into OpenCode for the HRPulse
+project, and how to reproduce or rotate the setup.
+
+## 1. Where OpenCode reads config from
+
+OpenCode loads its global config from:
+
+- **Windows:** `C:\Users\<you>\.config\opencode\opencode.jsonc`
+- **macOS / Linux:** `~/.config/opencode/opencode.jsonc`
+
+A project-local config (`./opencode.jsonc`) would override the global one for that
+project only.
+
+## 2. The setup — built-in provider, minimal config
+
+OpenCode ships with a **built-in `zai` provider** that already knows about Z.ai's
+API endpoint, all GLM models (including `glm-5.2`), and pricing. No custom
+provider definition is needed.
+
+The only config required is selecting the model:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "zai/glm-5.2"
+}
+```
+
+### Built-in `zai` provider details (from OpenCode source)
+
+| Setting | Value |
+|---|---|
+| Provider ID | `zai` |
+| API library | `@ai-sdk/openai-compatible` |
+| Endpoint | `https://api.z.ai/api/paas/v4` |
+| Env var | **`ZHIPU_API_KEY`** (not `GLM_API_KEY`) |
+| Models | `glm-5.2`, `glm-5.1`, `glm-4.7`, `glm-4.6`, `glm-4.5`, and more |
+
+### Why `ZHIPU_API_KEY` and not `GLM_API_KEY`?
+
+OpenCode's built-in `zai` provider reads from `ZHIPU_API_KEY`. If your key is
+stored under a different env var name (e.g., `GLM_API_KEY`), OpenCode won't find
+it and will report "token expired or incorrect" or "missing API key."
+
+**Fix:** Set `ZHIPU_API_KEY` to the same value:
+
+```powershell
+# Windows
+setx ZHIPU_API_KEY "your-key-here.xxxxxxxxxxxxxxxx"
+```
+
+```bash
+# macOS / Linux
+export ZHIPU_API_KEY="your-key-here.xxxxxxxxxxxxxxxx"
+```
+
+## 3. GLM-5.2 model details
+
+`glm-5.2` is Z.ai's flagship model, verified working with the coding pass key:
+
+| Property | Value |
+|---|---|
+| Context window | 1,000,000 tokens (1M) |
+| Max output | 131,072 tokens |
+| Input price | $1.40 / M tokens |
+| Output price | $4.40 / M tokens |
+| Cache read | $0.26 / M tokens |
+| Tool calling | Yes |
+| Reasoning | Yes (`reasoning_content` field, effort-based) |
+| Structured output | Yes |
+
+## 4. Switching models
+
+Change the top-level `model` field:
+
+```jsonc
+"model": "zai/glm-5.2"      // flagship, 1M context
+"model": "zai/glm-5.1"      // strong coding model, 200K context
+"model": "zai/glm-4.7"      // dependable coding/reasoning
+"model": "zai/glm-4.6"      // coding workhorse
+"model": "zai/glm-4.5"      // hybrid reasoning
+```
+
+**Note:** The current Z.ai coding pass key covers `glm-5.2`. Older models may
+return HTTP 429 ("Insufficient balance") if not included in your pass plan.
+
+## 5. Getting a Z.ai API key
+
+1. Sign up at <https://z.ai> (or <https://open.bigmodel.cn>).
+2. Open the API keys page and create a new key.
+3. Copy the key (format: `xxxxxxxx.yyyyyyyyyyyy`).
+4. Put it in the `ZHIPU_API_KEY` env var as shown above.
+
+## 6. Rotating / replacing the key
+
+1. Generate a new key in the Z.ai dashboard.
+2. Update the env var:
+   - **Windows:** `setx ZHIPU_API_KEY "<new-key>"`
+   - **macOS/Linux:** edit the `export` line and re-source.
+3. Restart OpenCode so it re-reads the env var.
+4. (Optional) Revoke the old key in the Z.ai dashboard.
+
+## 7. Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| "token expired or incorrect" | `ZHIPU_API_KEY` not set (OpenCode reads this, not `GLM_API_KEY`) | `setx ZHIPU_API_KEY "<key>"` and **restart OpenCode** |
+| "missing API key" | Env var not visible in the session that launched OpenCode | Set it with `setx` and open a **new** terminal |
+| 401 / unauthorized | Key invalid or revoked | Generate a new key, update env var |
+| 429 / "Insufficient balance" | Model not covered by your coding pass plan | Switch to `glm-5.2` (covered by coding pass) or add credits |
+| 404 on chat completions | Wrong `baseURL` (if using custom provider) | Use built-in `zai` provider, or ensure baseURL is `https://api.z.ai/api/paas/v4` |
+| Model not found | Wrong model ID format | Use `zai/glm-5.2` (provider/model-id format) |

@@ -1,0 +1,621 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Adamrit HRPulse Implementation Report</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #111827;
+      background: #ffffff;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+    h1 {
+      margin: 0 0 12px;
+      padding: 22px 24px;
+      border-radius: 18px;
+      color: #f8fafc;
+      background: #0f172a;
+      font-size: 26px;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+    h2 {
+      margin: 24px 0 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #dbe3ef;
+      color: #0f172a;
+      font-size: 17px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 18px 0 8px;
+      color: #1e293b;
+      font-size: 13px;
+      page-break-after: avoid;
+    }
+    h4 {
+      margin: 14px 0 6px;
+      color: #334155;
+      font-size: 12px;
+      page-break-after: avoid;
+    }
+    p { margin: 6px 0; }
+    ul { margin: 6px 0 10px 18px; padding: 0; }
+    li { margin: 3px 0; }
+    code {
+      padding: 1px 4px;
+      border-radius: 5px;
+      color: #0f172a;
+      background: #eef2ff;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 10px;
+    }
+    pre {
+      margin: 8px 0;
+      padding: 10px;
+      border: 1px solid #dbe3ef;
+      border-radius: 12px;
+      background: #f8fafc;
+      white-space: pre-wrap;
+      page-break-inside: avoid;
+    }
+    pre code { padding: 0; background: transparent; }
+    .step {
+      margin: 4px 0 4px 14px;
+      color: #334155;
+    }
+  </style>
+</head>
+<body><h1>Adamrit HRPulse Implementation Report</h1>
+<p>Generated on: 25 July 2026</p>
+<p>This document explains the work added across HRPulse and Adamrit, how each part works, and how to verify the integration. It intentionally does not include passwords, service-role keys, OpenAI keys, webhook tokens, or other private credentials.</p>
+<h2>1. Purpose</h2>
+<p>Adamrit and HRPulse remain two separate production applications.</p>
+<p>HRPulse is the master HR, attendance, leave, payroll, salary, rule, and notification system. Adamrit acts as the employee-facing Employee Self-Service portal inside the existing Tablet View Dashboard.</p>
+<p>The main rule is:</p>
+<ul>
+<li>HRPulse calculates and owns HR data.</li>
+<li>Adamrit only displays employee-specific HR data.</li>
+<li>Adamrit does not duplicate attendance, payroll, salary, or HR business logic.</li>
+<li>Employees are mapped by a unique identifier such as email, employee id, employee code, or UUID, never by employee name.</li>
+</ul>
+<h2>2. High-Level Architecture</h2>
+<p>The integration has four layers:</p>
+<p class="step">HRPulse backend APIs expose secure ESS endpoints.</p>
+<p class="step">Adamrit serverless API routes proxy the logged-in employee request to HRPulse.</p>
+<p class="step">HRPulse stores and pushes employee notifications to Adamrit.</p>
+<p class="step">Adamrit HR tile displays HRPulse data, documents, payslips, leave, attendance, salary, alerts, and notification bell messages.</p>
+<p>The workflow is:</p>
+<p>Biometric machine -&gt; Excel upload in HRPulse -&gt; attendance processing -&gt; rule/payroll calculation -&gt; AI attendance alert generation -&gt; HRPulse notification table -&gt; Adamrit notification webhook -&gt; Adamrit employee notification table -&gt; Adamrit HR tile notification bell.</p>
+<h2>3. HRPulse Backend Additions</h2>
+<h3>3.1 ESS API</h3>
+<p>File:</p>
+<ul>
+<li><code>backend/src/routes/ess.ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>Provides secure Employee Self-Service APIs that Adamrit can call. The ESS API always resolves the employee first and then returns only that employee's records.</p>
+<p>Main endpoints:</p>
+<ul>
+<li><code>GET /api/ess/profile</code></li>
+<li><code>GET /api/ess/attendance/today</code></li>
+<li><code>GET /api/ess/attendance/monthly?month=YYYY-MM</code></li>
+<li><code>GET /api/ess/attendance/history?month=YYYY-MM</code></li>
+<li><code>GET /api/ess/leaves</code></li>
+<li><code>POST /api/ess/leaves/request</code></li>
+<li><code>GET /api/ess/payroll/current?month=YYYY-MM</code></li>
+<li><code>GET /api/ess/payroll/history</code></li>
+<li><code>GET /api/ess/payslips/:periodMonth</code></li>
+<li><code>GET /api/ess/notifications</code></li>
+<li><code>POST /api/ess/notifications/read-all</code></li>
+<li><code>POST /api/ess/notifications/:id/read</code></li>
+<li><code>GET /api/ess/alerts?month=YYYY-MM</code></li>
+<li><code>GET /api/ess/documents</code></li>
+<li><code>POST /api/ess/documents</code></li>
+<li><code>GET /api/ess/documents/:documentId/download</code></li>
+</ul>
+<p>Security:</p>
+<ul>
+<li>Requires integration token headers.</li>
+<li>Resolves the current employee using the Adamrit identity passed by the server-side proxy.</li>
+<li>Does not allow the client to request another employee's data directly.</li>
+<li>Uses server-side validation before reading attendance, salary, leave, documents, or notifications.</li>
+</ul>
+<h3>3.2 Employee Matching</h3>
+<p>File:</p>
+<ul>
+<li><code>backend/src/services/employeeMatch.ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>Maps an Adamrit logged-in user to an HRPulse employee.</p>
+<p>Matching strategy:</p>
+<ul>
+<li>Prefer exact email match.</li>
+<li>Support employee id/code where available.</li>
+<li>Avoid name-based matching because names are not unique and are unsafe for authorization.</li>
+</ul>
+<p>Why this matters:</p>
+<p>If <code>cmd@hopehospital.com</code> is logged into Adamrit, HRPulse must return only the employee record mapped to that email or unique identifier.</p>
+<h3>3.3 Attendance Excel Upload Processing</h3>
+<p>Files:</p>
+<ul>
+<li><code>backend/src/routes/attendance.ts</code></li>
+<li><code>backend/src/routes/payroll.ts</code></li>
+<li><code>backend/src/services/excelParser.ts</code></li>
+<li><code>backend/src/services/attendanceRecordWriter.ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>HRPulse can process daily or multi-day attendance Excel data. The uploaded file is analyzed by date, month, and year.</p>
+<p>Important behavior:</p>
+<ul>
+<li>If the Excel sheet contains one day, only that day is processed.</li>
+<li>If the Excel sheet contains 4 to 10 days, all those dates are processed independently.</li>
+<li>If the Excel sheet contains data crossing into the next month, HRPulse separates those records under the correct month.</li>
+<li>Month-end payroll still calculates the full monthly salary summary using the processed daily attendance records.</li>
+</ul>
+<p>Compatibility fix:</p>
+<p><code>attendanceRecordWriter.ts</code> handles batch attendance record writes safely, including fallback behavior when the database does not have the expected unique constraint. This avoids upload failures such as:</p>
+<p><code>there is no unique or exclusion constraint matching the ON CONFLICT specification</code></p>
+<h3>3.4 Day-Wise Attendance Notification Engine</h3>
+<p>File:</p>
+<ul>
+<li><code>backend/src/services/attendanceAlertService.ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>After attendance upload and processing, HRPulse automatically analyzes each affected employee and each affected date.</p>
+<p>Day-wise alerts generated:</p>
+<ul>
+<li>Late arrival</li>
+<li>Missing punch</li>
+<li>Missing punch-in</li>
+<li>Missing punch-out</li>
+<li>Absent</li>
+<li>Half day</li>
+<li>Early departure</li>
+<li>Insufficient working hours</li>
+<li>Overtime</li>
+<li>Holiday work</li>
+<li>Weekly off work</li>
+</ul>
+<p>Pattern/month-level alerts still generated:</p>
+<ul>
+<li>Three consecutive late arrivals</li>
+<li>Three consecutive absences</li>
+<li>Low attendance percentage</li>
+</ul>
+<p>Notification key format:</p>
+<ul>
+<li><code>attendance:2026-06-09:missing_punch_alert</code></li>
+<li><code>attendance:2026-06-17:late_arrival_alert</code></li>
+<li><code>attendance:2026-06-20:overtime_alert</code></li>
+</ul>
+<p>Why this is important:</p>
+<p>The same date-specific notification is not duplicated again and again for the same employee. HRPulse can update or replace the same notification using the notification key.</p>
+<p>Example:</p>
+<p>If Aniruddha is late on 17 June 2026, HRPulse creates a notification for that exact date. If the same sheet is uploaded again, HRPulse does not create an unlimited number of duplicate late messages for the same employee/date/type.</p>
+<h3>3.5 HR Notification Service</h3>
+<p>File:</p>
+<ul>
+<li><code>backend/src/services/hrNotificationService.ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>Central service for creating notifications in HRPulse and pushing them to Adamrit.</p>
+<p>What it does:</p>
+<ul>
+<li>Saves notifications into HRPulse <code>hr_notifications</code>.</li>
+<li>Pushes notifications to Adamrit webhook when configured.</li>
+<li>Removes <code>employee_email</code> before inserting into HRPulse if the HRPulse table does not contain that column.</li>
+<li>Keeps <code>employee_email</code> for the Adamrit push because Adamrit needs it to route the message to the correct logged-in employee.</li>
+<li>Handles missing unique constraint fallback by delete-and-insert compatibility mode.</li>
+</ul>
+<p>Supported notification fields:</p>
+<ul>
+<li>Employee id</li>
+<li>Employee email</li>
+<li>Notification key</li>
+<li>Type</li>
+<li>Title</li>
+<li>Message/body</li>
+<li>Severity</li>
+<li>Related date</li>
+<li>Source</li>
+<li>Metadata</li>
+<li>Read status</li>
+</ul>
+<h3>3.6 Manual and Rule-Based Notifications</h3>
+<p>Files:</p>
+<ul>
+<li><code>backend/src/routes/notifications.ts</code></li>
+<li><code>backend/src/routes/rules.ts</code></li>
+<li><code>backend/src/services/ruleEngine.ts</code></li>
+<li><code>backend/src/services/ollamaService.ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>HRPulse supports HR/admin-driven notifications and rule-triggered attendance communication.</p>
+<p>Important clarification:</p>
+<p>The attendance notification delivery to Adamrit does not depend on WhatsApp. The requested WhatsApp message behavior was removed from the HRPulse-to-Adamrit flow. Notifications now go to Adamrit's HR notification bell through the notification sync path.</p>
+<h3>3.7 Leave Request Flow</h3>
+<p>Files:</p>
+<ul>
+<li><code>backend/src/routes/leaves.ts</code></li>
+<li><code>backend/src/routes/ess.ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>Employees can submit leave from Adamrit. HRPulse remains the approval system.</p>
+<p>Flow:</p>
+<p class="step">Employee submits leave request in Adamrit HR tile.</p>
+<p class="step">Adamrit sends it through the ESS proxy to HRPulse.</p>
+<p class="step">HRPulse creates a leave request.</p>
+<p class="step">HRPulse Super Admin approves or rejects it.</p>
+<p class="step">HRPulse creates or updates the notification.</p>
+<p class="step">Adamrit receives and displays the decision notification.</p>
+<h3>3.8 Employee Documents</h3>
+<p>Files:</p>
+<ul>
+<li><code>backend/src/services/employeeDocumentService.ts</code></li>
+<li><code>backend/src/routes/ess.ts</code></li>
+<li><code>backend/src/routes/employees.ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>Employees can upload documents from Adamrit. Those documents are stored through HRPulse and shown in the HRPulse Employee Master document section.</p>
+<p>Flow:</p>
+<p class="step">Employee opens Adamrit HR tile.</p>
+<p class="step">Employee selects a document type.</p>
+<p class="step">Employee uploads a PDF/image/Word/text document.</p>
+<p class="step">Adamrit sends the file to HRPulse ESS document endpoint.</p>
+<p class="step">HRPulse saves the file and creates an employee document record.</p>
+<p class="step">HRPulse Employee Master can list/download the document.</p>
+<p class="step">Adamrit HR tile also shows uploaded employee documents.</p>
+<p>Allowed file types:</p>
+<ul>
+<li>PDF</li>
+<li>PNG/JPG/JPEG</li>
+<li>Word documents</li>
+<li>Text documents</li>
+</ul>
+<h3>3.9 Overtime Calculation</h3>
+<p>Relevant files:</p>
+<ul>
+<li><code>backend/src/services/payrollService.ts</code></li>
+<li><code>backend/src/routes/payroll.ts</code></li>
+<li>Attendance/payroll calculation services</li>
+</ul>
+<p>Business rule:</p>
+<p>Overtime is calculated using punch-out time compared with assigned shift end time.</p>
+<p>Example:</p>
+<ul>
+<li>Shift: 09:00 AM to 06:00 PM</li>
+<li>Punch out: 08:15 PM</li>
+<li>Overtime duration: 2 hours 15 minutes</li>
+</ul>
+<p>Threshold:</p>
+<ul>
+<li>Overtime is payable only if the employee works more than 2 hours beyond shift end.</li>
+<li>If overtime is 2 hours or less, no overtime payment is generated.</li>
+<li>If overtime is more than 2 hours, the entire overtime duration beyond shift end is recorded as payable overtime.</li>
+</ul>
+<p>Salary formula:</p>
+<ul>
+<li>Per Day Salary = Monthly Salary / 30</li>
+<li>Overtime Per Day = (Monthly Salary / 30) / 2</li>
+</ul>
+<p>Adamrit display:</p>
+<ul>
+<li>Monthly summary shows overtime hours.</li>
+<li>Salary card shows overtime hours and overtime pay when returned by HRPulse.</li>
+<li>Adamrit does not calculate overtime itself.</li>
+</ul>
+<h3>3.10 Half-Day Attendance Rule</h3>
+<p>Relevant files:</p>
+<ul>
+<li>Attendance/payroll calculation services</li>
+<li><code>backend/src/routes/payroll.ts</code></li>
+<li><code>backend/src/services/payrollService.ts</code></li>
+</ul>
+<p>Business rule:</p>
+<ul>
+<li>If total working hours are less than 4 hours, attendance is marked Half Day.</li>
+<li>If working hours are 4 hours or more, the record follows the organization's full-day policy.</li>
+</ul>
+<p>Payroll effect:</p>
+<ul>
+<li>Payable day becomes <code>0.5</code>.</li>
+<li>Half Day Deduction = <code>(Monthly Salary / 30) / 2</code></li>
+</ul>
+<p>Display:</p>
+<ul>
+<li>Attendance records show Half Day.</li>
+<li>Payroll summary shows half days and half-day deduction.</li>
+<li>Payslip uses HRPulse payroll output.</li>
+</ul>
+<h2>4. Adamrit Additions</h2>
+<h3>4.1 HR Tile in Tablet View</h3>
+<p>File:</p>
+<ul>
+<li><code>adamrit/src/tablet/modules/hr/HrEssFlow.tsx</code></li>
+</ul>
+<p>Purpose:</p>
+<p>Adds the employee HR portal inside Adamrit Tablet View.</p>
+<p>Displayed data:</p>
+<ul>
+<li>Profile</li>
+<li>Employee ID/code</li>
+<li>Department</li>
+<li>Designation</li>
+<li>Shift</li>
+<li>Joining date</li>
+<li>Email</li>
+<li>Today's attendance</li>
+<li>Monthly attendance summary</li>
+<li>Attendance history</li>
+<li>Weekly attendance chart</li>
+<li>Leave balance</li>
+<li>Leave request form</li>
+<li>Leave history</li>
+<li>Current salary summary</li>
+<li>Previous salary history</li>
+<li>Payslip download</li>
+<li>Employee documents</li>
+<li>HRPulse notification bell</li>
+</ul>
+<p>Important:</p>
+<p>Adamrit only displays the data returned by HRPulse APIs. It does not calculate attendance, payroll, salary, overtime, half-day, or AI attendance rules.</p>
+<h3>4.2 Adamrit ESS Proxy</h3>
+<p>File:</p>
+<ul>
+<li><code>adamrit/api/hrpulse-ess/[...path].ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>Server-side proxy between Adamrit UI and HRPulse ESS APIs.</p>
+<p>Why this exists:</p>
+<p>The browser should not directly call HRPulse with private integration credentials. Adamrit's serverless API route adds the secure token and forwards the request to HRPulse.</p>
+<p>Flow:</p>
+<p class="step">Employee logs into Adamrit.</p>
+<p class="step">Adamrit creates/restores a secure session.</p>
+<p class="step">HR tile calls <code>/api/hrpulse-ess/profile</code>, <code>/attendance/monthly</code>, etc.</p>
+<p class="step">Adamrit proxy forwards to HRPulse <code>/api/ess/...</code>.</p>
+<p class="step">HRPulse validates and returns only that employee's data.</p>
+<h3>4.3 Adamrit Session Bridge</h3>
+<p>File:</p>
+<ul>
+<li><code>adamrit/api/adamrit-session.ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>Maintains the Adamrit-side secure session used by the HR tile integration. This helps local development and production routes know which Adamrit employee is currently signed in.</p>
+<h3>4.4 Adamrit Notification Webhook and Store</h3>
+<p>File:</p>
+<ul>
+<li><code>adamrit/api/hrpulse-notifications.ts</code></li>
+</ul>
+<p>Purpose:</p>
+<p>Receives notification pushes from HRPulse and stores them in Adamrit.</p>
+<p>Supported operations:</p>
+<ul>
+<li><code>POST</code>: HRPulse pushes a new employee notification.</li>
+<li><code>GET</code>: Adamrit HR tile reads employee notifications.</li>
+<li><code>PATCH</code>: Marks notifications as read.</li>
+</ul>
+<p>Security:</p>
+<ul>
+<li>HRPulse must send a configured webhook token.</li>
+<li>Adamrit validates the token before accepting pushed messages.</li>
+<li>Employees can only read notifications mapped to their own email/session.</li>
+</ul>
+<h3>4.5 Real-Time Notification Bell and Toasts</h3>
+<p>File:</p>
+<ul>
+<li><code>adamrit/src/tablet/modules/hr/HrEssFlow.tsx</code></li>
+</ul>
+<p>Purpose:</p>
+<p>Shows HRPulse notifications inside Adamrit.</p>
+<p>How it works:</p>
+<ul>
+<li>On page load, HR tile fetches notifications from both HRPulse ESS and Adamrit mirrored notification table.</li>
+<li>It merges and de-duplicates notifications.</li>
+<li>It shows unread count on the notification bell.</li>
+<li>It supports mark one as read and mark all as read.</li>
+<li>It refreshes periodically.</li>
+<li>It subscribes to Supabase realtime inserts for <code>hrpulse_employee_notifications</code>.</li>
+<li>When a new notification arrives, Adamrit shows a toast message.</li>
+</ul>
+<h2>5. Database Tables and Migrations</h2>
+<p>Migration location:</p>
+<ul>
+<li><code>backend/supabase/migrations/20260722_ess_integration.sql</code></li>
+</ul>
+<p>Main tables expected:</p>
+<ul>
+<li><code>hr_notifications</code></li>
+<li><code>leave_requests</code></li>
+<li><code>leave_balances</code></li>
+<li><code>employee_documents</code></li>
+<li>ESS audit-related tables where applicable</li>
+</ul>
+<p>Adamrit database table expected:</p>
+<ul>
+<li><code>hrpulse_employee_notifications</code></li>
+</ul>
+<p>Important:</p>
+<p>If a Supabase table or unique constraint is missing, some fallback code exists, but production should still run the migrations properly.</p>
+<h2>6. How Day-Wise Notifications Work</h2>
+<p>Day-wise notification means every uploaded attendance date is analyzed separately.</p>
+<p>Example Excel data:</p>
+<ul>
+<li>09 June 2026: missing punch-out</li>
+<li>10 June 2026: late arrival</li>
+<li>11 June 2026: normal</li>
+<li>12 June 2026: half day</li>
+</ul>
+<p>Expected notifications:</p>
+<ul>
+<li>Missing punch notification for 09 June 2026</li>
+<li>Late arrival notification for 10 June 2026</li>
+<li>No alert for 11 June 2026 if normal</li>
+<li>Half day notification for 12 June 2026</li>
+</ul>
+<p>If 4 to 10 days are uploaded together, HRPulse loops over those dates and creates date-wise notifications for each employee/date where a problem or payable event is detected.</p>
+<h2>7. When Notifications Are Sent</h2>
+<p>Notifications are generated after attendance processing completes.</p>
+<p>Exact timing:</p>
+<p class="step">HR uploads Excel in HRPulse.</p>
+<p class="step">HRPulse parses the file.</p>
+<p class="step">Attendance records are inserted/updated.</p>
+<p class="step">HRPulse runs attendance alert analysis for affected uploaded dates.</p>
+<p class="step">HRPulse writes notifications.</p>
+<p class="step">HRPulse pushes notifications to Adamrit.</p>
+<p class="step">Adamrit stores them.</p>
+<p class="step">Adamrit HR tile bell updates after refresh/realtime event.</p>
+<p class="step">Employee sees bell count, notification panel item, and toast if the HR tile is open.</p>
+<h2>8. Why a Notification May Not Show</h2>
+<p>Common reasons:</p>
+<ul>
+<li>Employee email in HRPulse does not match Adamrit login email.</li>
+<li>HRPulse notification webhook URL/token is not configured.</li>
+<li>Adamrit local server is not running.</li>
+<li>Adamrit is running on HTTPS while HRPulse is pushing to HTTP, or the reverse.</li>
+<li>The uploaded sheet did not contain a qualifying late/missing/half-day/overtime event.</li>
+<li>The same notification key already exists and was updated instead of duplicated.</li>
+<li>Adamrit Supabase table <code>hrpulse_employee_notifications</code> is missing.</li>
+<li>Browser is logged in as a different Adamrit employee than the HRPulse employee being checked.</li>
+<li>Notification was created in HRPulse but Adamrit push failed.</li>
+</ul>
+<h2>9. How to Verify</h2>
+<h3>9.1 Verify HRPulse Backend</h3>
+<p>Run HRPulse backend locally and confirm:</p>
+<ul>
+<li>Backend is running on <code>http://localhost:3001</code></li>
+<li>Upload endpoint returns <code>attendanceAlerts</code></li>
+<li>Console/logs do not show notification push errors</li>
+</ul>
+<h3>9.2 Verify Adamrit Locally</h3>
+<p>Run Adamrit locally and open:</p>
+<ul>
+<li><code>http://localhost:8080/hr</code></li>
+</ul>
+<p>Login with the employee account that has the same email as the HRPulse employee record.</p>
+<h3>9.3 Verify Employee Mapping</h3>
+<p>Check HRPulse Employee Master:</p>
+<ul>
+<li>Employee email must match Adamrit login email.</li>
+<li>Employee ID/code should be unique.</li>
+<li>Do not rely on employee name.</li>
+</ul>
+<h3>9.4 Verify Notification Flow</h3>
+<p>After uploading attendance:</p>
+<p class="step">Open Adamrit HR tile.</p>
+<p class="step">Check the notification bell count.</p>
+<p class="step">Open notification panel.</p>
+<p class="step">Confirm notification title/body mentions the correct date.</p>
+<p class="step">Confirm it belongs to the logged-in employee only.</p>
+<p>Example expected message:</p>
+<p><code>Late arrival on 17 Jun 2026</code></p>
+<p>or:</p>
+<p><code>Your attendance on 09 Jun 2026 has a missing punch-out. Please regularize it before payroll processing.</code></p>
+<h3>9.5 Verify Day-Wise Behavior</h3>
+<p>Upload an Excel containing multiple dates. The notifications should mention specific dates, not only a monthly total.</p>
+<p>Example:</p>
+<ul>
+<li>Upload 04 June to 10 June data.</li>
+<li>If 06 June is late and 09 June has missing punch, Adamrit should show separate messages for those dates.</li>
+</ul>
+<h2>10. Current UI State</h2>
+<p>Adamrit HR tile currently includes:</p>
+<ul>
+<li>Employee profile card</li>
+<li>Today's attendance card</li>
+<li>Monthly summary card</li>
+<li>Weekly attendance chart</li>
+<li>Salary card</li>
+<li>Leave card</li>
+<li>Documents section</li>
+<li>Attendance history</li>
+<li>HRPulse notification bell and notification drawer</li>
+</ul>
+<p>The most recent wide premium dashboard redesign was reverted as requested. The layout was then adjusted to reduce excessive width and improve card arrangement while keeping the compact HR portal workflow.</p>
+<h2>11. Important Files Changed or Added</h2>
+<p>HRPulse backend:</p>
+<ul>
+<li><code>backend/src/routes/ess.ts</code></li>
+<li><code>backend/src/routes/attendance.ts</code></li>
+<li><code>backend/src/routes/payroll.ts</code></li>
+<li><code>backend/src/routes/leaves.ts</code></li>
+<li><code>backend/src/routes/notifications.ts</code></li>
+<li><code>backend/src/routes/employees.ts</code></li>
+<li><code>backend/src/services/attendanceAlertService.ts</code></li>
+<li><code>backend/src/services/hrNotificationService.ts</code></li>
+<li><code>backend/src/services/attendanceRecordWriter.ts</code></li>
+<li><code>backend/src/services/employeeDocumentService.ts</code></li>
+<li><code>backend/src/services/employeeMatch.ts</code></li>
+<li><code>backend/src/services/payrollService.ts</code></li>
+<li><code>backend/src/services/salaryRules.ts</code></li>
+<li><code>backend/supabase/migrations/20260722_ess_integration.sql</code></li>
+</ul>
+<p>Adamrit:</p>
+<ul>
+<li><code>adamrit/api/hrpulse-ess/[...path].ts</code></li>
+<li><code>adamrit/api/hrpulse-notifications.ts</code></li>
+<li><code>adamrit/api/adamrit-session.ts</code></li>
+<li><code>adamrit/src/tablet/modules/hr/HrEssFlow.tsx</code></li>
+</ul>
+<p>Documentation/session files:</p>
+<ul>
+<li><code>SESSION-2026-07-22.md</code></li>
+<li><code>SESSION-2026-07-24.md</code></li>
+<li><code>docs/Adamrit-HRPulse-Implementation-Report.md</code></li>
+</ul>
+<h2>12. What Adamrit Does Not Do</h2>
+<p>Adamrit does not:</p>
+<ul>
+<li>Calculate salary.</li>
+<li>Calculate overtime.</li>
+<li>Calculate half-day deductions.</li>
+<li>Decide attendance status.</li>
+<li>Generate AI attendance logic.</li>
+<li>Approve leave.</li>
+<li>Own HR master data.</li>
+</ul>
+<p>Adamrit only:</p>
+<ul>
+<li>Authenticates the employee inside Adamrit.</li>
+<li>Calls secure server-side proxy routes.</li>
+<li>Displays HRPulse data.</li>
+<li>Receives HRPulse notifications.</li>
+<li>Lets the employee submit requests/documents that flow back to HRPulse.</li>
+</ul>
+<h2>13. Production Checklist</h2>
+<p>Before production use:</p>
+<ul>
+<li>Run HRPulse Supabase migrations.</li>
+<li>Run Adamrit Supabase table migration for <code>hrpulse_employee_notifications</code>.</li>
+<li>Configure HRPulse integration token.</li>
+<li>Configure Adamrit notification webhook token.</li>
+<li>Configure HRPulse backend URL in Adamrit server environment.</li>
+<li>Configure Adamrit notification webhook URL in HRPulse backend environment.</li>
+<li>Ensure employee emails match between HRPulse and Adamrit.</li>
+<li>Confirm Supabase RLS policies are active.</li>
+<li>Test one employee with late, missing punch, absent, half-day, and overtime records.</li>
+<li>Confirm notifications do not leak across users.</li>
+</ul>
+<h2>14. Summary</h2>
+<p>The integration now supports HRPulse as the single source of truth and Adamrit as the employee self-service portal.</p>
+<p>The important completed capabilities are:</p>
+<ul>
+<li>Secure HRPulse ESS APIs.</li>
+<li>Adamrit HR tile.</li>
+<li>Employee-specific profile, attendance, salary, leave, payslip, documents, and notifications.</li>
+<li>Leave request from Adamrit to HRPulse.</li>
+<li>Document upload from Adamrit to HRPulse Employee Master.</li>
+<li>HRPulse to Adamrit notification sync.</li>
+<li>Real-time notification bell and toast support in Adamrit.</li>
+<li>Day-wise attendance alert generation after Excel upload.</li>
+<li>Overtime payroll logic display.</li>
+<li>Half-day payroll logic display.</li>
+<li>Compatibility fallback for missing upsert unique constraints.</li>
+</ul>
+<p>HRPulse continues to own all HR logic. Adamrit displays the final employee-specific result.</p></body>
+</html>

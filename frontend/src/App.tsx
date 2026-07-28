@@ -5,6 +5,7 @@ import Sidebar from './components/layout/Sidebar';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import SalaryPage from './pages/SalaryPage';
+import PayrollPage from './pages/PayrollPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
@@ -12,6 +13,7 @@ import EmployeesPage from './pages/EmployeesPage';
 import RulesPage from './pages/RulesPage';
 import SopsPage from './pages/SopsPage';
 import AiInsightsPage from './pages/AiInsightsPage';
+import LeaveRequestsPage from './pages/LeaveRequestsPage';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
 
@@ -23,11 +25,13 @@ function AppShell() {
       <main className="flex-1 overflow-auto min-w-0">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/payroll" element={<PayrollPage />} />
           <Route path="/salary" element={<SalaryPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/employees" element={<EmployeesPage />} />
+          <Route path="/leaves" element={<LeaveRequestsPage />} />
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/sops" element={<SopsPage />} />
           <Route path="/ai" element={<AiInsightsPage />} />
@@ -40,7 +44,7 @@ function AppShell() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/*" element={<AppShell />} />

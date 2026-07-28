@@ -1,34 +1,37 @@
 import { Router, Request, Response } from 'express';
-import prisma from '../db/prisma';
+import { supabase, getSettings } from '../db/supabase';
 import { testSmtp } from '../services/emailService';
 import { testOllamaConnection } from '../services/ollamaService';
 
 const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
-  const rows = await prisma.setting.findMany();
-  const settings: Record<string, string> = {};
-  for (const r of rows) {
-    settings[r.key] = r.key === 'smtp_pass' ? '••••••••' : r.value;
+  const settings = await getSettings();
+  const masked: Record<string, string> = {};
+  for (const [k, v] of Object.entries(settings)) {
+    masked[k] = k === 'smtp_pass' ? '••••••••' : v;
   }
-  res.json(settings);
+  res.json(masked);
 });
 
 router.put('/', async (req: Request, res: Response) => {
   const updates = req.body as Record<string, string>;
-  for (const [key, value] of Object.entries(updates)) {
-    await prisma.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
-  }
+  const rows = Object.entries(updates).map(([key, value]) => ({ key, value }));
+  const { error } = await supabase.from('settings').upsert(rows, { onConflict: 'key' });
+  if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ ok: true });
 });
 
 router.get('/templates', async (_req: Request, res: Response) => {
-  res.json(await prisma.emailTemplate.findMany({ orderBy: { id: 'asc' } }));
+  const { data, error } = await supabase.from('email_templates').select('*').order('id', { ascending: true });
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json(data);
 });
 
 router.put('/templates/:type', async (req: Request, res: Response) => {
   const { subject, body } = req.body;
-  await prisma.emailTemplate.update({ where: { type: req.params.type }, data: { subject, body } });
+  const { error } = await supabase.from('email_templates').update({ subject, body }).eq('type', req.params.type);
+  if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ ok: true });
 });
 

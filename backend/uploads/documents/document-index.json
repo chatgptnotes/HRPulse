@@ -1,0 +1,28 @@
+[
+  {
+    "id": "7f64160c-4c2c-4026-8a17-6b62c658cad5",
+    "employee_id": 672,
+    "document_type": "Identity Document",
+    "original_filename": "payslip-2026-06-275.pdf",
+    "stored_filename": "672-1784886857660-7f64160c-payslip-2026-06-275.pdf",
+    "mime_type": "application/pdf",
+    "file_size": 1132,
+    "file_path": "/uploads/documents/672-1784886857660-7f64160c-payslip-2026-06-275.pdf",
+    "source": "adamrit",
+    "uploaded_by": "cmd@hopehospital.com",
+    "created_at": "2026-07-24T09:54:17.661Z"
+  },
+  {
+    "id": "8fbd57bc-db01-4096-adaf-1444a6310ecb",
+    "employee_id": 672,
+    "document_type": "Identity Document",
+    "original_filename": "adamrit-demo-document.txt",
+    "stored_filename": "672-1784885573535-8fbd57bc-adamrit-demo-document.txt",
+    "mime_type": "text/plain",
+    "file_size": 53,
+    "file_path": "/uploads/documents/672-1784885573535-8fbd57bc-adamrit-demo-document.txt",
+    "source": "adamrit",
+    "uploaded_by": "cmd@hopehospital.com",
+    "created_at": "2026-07-24T09:32:53.536Z"
+  }
+]

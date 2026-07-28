@@ -1,10 +1,5 @@
 import nodemailer from 'nodemailer';
-import prisma from '../db/prisma';
-
-async function getSettings() {
-  const rows = await prisma.setting.findMany();
-  return Object.fromEntries(rows.map(r => [r.key, r.value]));
-}
+import { getSettings } from '../db/supabase';
 
 export async function sendEmail(to: string, subject: string, body: string): Promise<void> {
   const s = await getSettings();

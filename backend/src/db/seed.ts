@@ -1,4 +1,4 @@
-import prisma from './prisma';
+import { supabase } from './supabase';
 
 const DEFAULT_SETTINGS: [string, string][] = [
   ['smtp_host', process.env.SMTP_HOST || ''],
@@ -7,11 +7,18 @@ const DEFAULT_SETTINGS: [string, string][] = [
   ['smtp_user', process.env.SMTP_USER || ''],
   ['smtp_pass', process.env.SMTP_PASS || ''],
   ['ollama_url', process.env.OLLAMA_URL || 'http://localhost:11434'],
-  ['ollama_model', process.env.OLLAMA_MODEL || 'llama3.1:8b'],
+  ['ollama_model', process.env.OLLAMA_MODEL || 'llama3.2:3b'],
   ['company_name', process.env.COMPANY_NAME || 'Your Company'],
   ['hr_name', process.env.HR_NAME || 'HR Department'],
   ['working_days', '26'],
   ['missed_swipe_weight', '0.5'],
+  ['standard_working_hours', '9'],
+  ['half_day_hours', '4'],
+  ['late_grace_minutes', '15'],
+  ['shift_start', '09:00'],
+  ['ot_threshold_hours', '9'],
+  ['ot_multiplier', '1.5'],
+  ['late_penalty_days', '0'],
 ];
 
 const DEFAULT_TEMPLATES = [
@@ -161,162 +168,175 @@ const DEFAULT_RULES = [
   {
     name: 'Unexcused Absence — First Notice',
     description: 'Any unexcused absence triggers an initial notification per Dubai Government attendance policy.',
-    ruleType: 'absence_threshold',
+    rule_type: 'absence_threshold',
     conditions: { absentDays: { gte: 1 } },
     actions: { templateType: 'initial', severity: 'notice', lopMultiplier: 1 },
     priority: 1,
-    isActive: true,
+    is_active: true,
   },
   {
     name: 'Repeated Absence — Formal Warning (3+ Days)',
     description: 'Three or more absent days in a month requires a formal written warning under Article 78 of Federal Law No. 11.',
-    ruleType: 'absence_threshold',
+    rule_type: 'absence_threshold',
     conditions: { absentDays: { gte: 3 } },
     actions: { templateType: 'reminder', severity: 'warning', lopMultiplier: 1, notifyManager: true },
     priority: 2,
-    isActive: true,
+    is_active: true,
   },
   {
     name: 'Critical Absence — Escalation to HR Director (5+ Days)',
     description: 'Five or more absent days in a month: disciplinary committee referral risk. Escalation mandatory per Dubai Gov HR circular.',
-    ruleType: 'absence_threshold',
+    rule_type: 'absence_threshold',
     conditions: { absentDays: { gte: 5 } },
     actions: { templateType: 'escalation', severity: 'critical', notifyHRDirector: true, disciplinaryRisk: true },
     priority: 3,
-    isActive: true,
+    is_active: true,
   },
   {
     name: 'AWOL — Consecutive Absence (3 Days)',
     description: 'Three or more consecutive absent days = Absence Without Official Leave (AWOL). Triggers formal investigation under Article 79.',
-    ruleType: 'absence_threshold',
+    rule_type: 'absence_threshold',
     conditions: { absentDays: { gte: 3 }, consecutive: true },
     actions: { templateType: 'escalation', severity: 'critical', awol: true, notifyHRDirector: true, initiateInvestigation: true },
     priority: 4,
-    isActive: true,
+    is_active: true,
   },
 
   // ── LATE COMING RULES ──
   {
     name: 'Late Coming — Reminder (1–3 Times)',
     description: 'Grace period is 15 minutes. 1–3 late arrivals per month trigger a courtesy reminder.',
-    ruleType: 'late_coming',
+    rule_type: 'late_coming',
     conditions: { lateComingDays: { gte: 1, lte: 3 } },
     actions: { templateType: 'initial', severity: 'notice', gracePeriodMinutes: 15 },
     priority: 5,
-    isActive: true,
+    is_active: true,
   },
   {
     name: 'Late Coming — Half-Day LOP Warning (4–6 Times)',
     description: '4–6 late arrivals per month = 0.5 day Loss of Pay deduction per Dubai Government payroll policy.',
-    ruleType: 'late_coming',
+    rule_type: 'late_coming',
     conditions: { lateComingDays: { gte: 4, lte: 6 } },
     actions: { templateType: 'reminder', severity: 'warning', lopDays: 0.5, notifyManager: true },
     priority: 6,
-    isActive: true,
+    is_active: true,
   },
   {
     name: 'Late Coming — Full-Day LOP + Formal Notice (7+ Times)',
     description: '7 or more late arrivals per month = 1 full-day LOP deduction and formal written warning. Disciplinary risk.',
-    ruleType: 'late_coming',
+    rule_type: 'late_coming',
     conditions: { lateComingDays: { gte: 7 } },
     actions: { templateType: 'escalation', severity: 'critical', lopDays: 1, notifyHRDirector: true, disciplinaryRisk: true },
     priority: 7,
-    isActive: true,
+    is_active: true,
   },
 
   // ── MISSED SWIPE RULES ──
   {
     name: 'Missed Biometric — Initial Notice (1–2 Times)',
     description: 'Failure to register biometric attendance (fingerprint/face scan) = half-day absence per Dubai Smart Government policy.',
-    ruleType: 'missed_swipe',
+    rule_type: 'missed_swipe',
     conditions: { missedSwipeDays: { gte: 1, lte: 2 } },
     actions: { templateType: 'initial', severity: 'notice', lopMultiplier: 0.5 },
     priority: 8,
-    isActive: true,
+    is_active: true,
   },
   {
     name: 'Missed Biometric — Formal Warning (3+ Times)',
     description: 'Three or more missed biometric registrations in a month. Repeated pattern may indicate buddy-punching or time fraud.',
-    ruleType: 'missed_swipe',
+    rule_type: 'missed_swipe',
     conditions: { missedSwipeDays: { gte: 3 } },
     actions: { templateType: 'reminder', severity: 'warning', lopMultiplier: 0.5, notifyManager: true, integrityFlag: true },
     priority: 9,
-    isActive: true,
+    is_active: true,
   },
 
   // ── EARLY LEAVING RULES ──
   {
     name: 'Early Leaving — Reminder (1–2 Times)',
     description: 'Leaving before official end time without prior approval. Treated as partial absence.',
-    ruleType: 'early_leaving',
+    rule_type: 'early_leaving',
     conditions: { earlyLeavingDays: { gte: 1, lte: 2 } },
     actions: { templateType: 'initial', severity: 'notice', lopMultiplier: 0.5 },
     priority: 10,
-    isActive: true,
+    is_active: true,
   },
   {
     name: 'Early Leaving — Formal Warning (3+ Times)',
     description: 'Three or more early departures in a month triggers a formal written warning and manager notification.',
-    ruleType: 'early_leaving',
+    rule_type: 'early_leaving',
     conditions: { earlyLeavingDays: { gte: 3 } },
     actions: { templateType: 'reminder', severity: 'warning', lopMultiplier: 0.5, notifyManager: true },
     priority: 11,
-    isActive: true,
+    is_active: true,
   },
 
   // ── COMBINED / ESCALATION RULES ──
   {
     name: 'Combined Attendance Issues — High Risk',
     description: 'Total flagged incidents (absent + missed swipe + late + early) ≥ 8 in a month. Escalation mandatory.',
-    ruleType: 'escalation',
+    rule_type: 'escalation',
     conditions: { totalFlagged: { gte: 8 } },
     actions: { templateType: 'escalation', severity: 'critical', notifyHRDirector: true, disciplinaryRisk: true },
     priority: 12,
-    isActive: true,
+    is_active: true,
   },
   {
     name: 'Salary Deduction Notice — LOP Exceeds 3 Days',
     description: 'When calculated LOP exceeds 3 working days, employee must receive official deduction notice per UAE WPS requirements.',
-    ruleType: 'lop_threshold',
+    rule_type: 'lop_threshold',
     conditions: { lopDays: { gte: 3 } },
     actions: { templateType: 'reminder', severity: 'warning', includeLopDetails: true, wpsNotice: true },
     priority: 13,
-    isActive: true,
+    is_active: true,
   },
 ];
 
-export async function seedDatabase() {
-  // Seed settings
+async function seedSettings() {
   for (const [key, value] of DEFAULT_SETTINGS) {
-    await prisma.setting.upsert({
-      where: { key },
-      update: {},
-      create: { key, value },
-    });
+    const { error } = await supabase
+      .from('settings')
+      .upsert({ key, value }, { onConflict: 'key', ignoreDuplicates: true });
+    if (error) console.error(`[seed] settings ${key}:`, error.message);
   }
+}
 
-  // Seed email templates
+async function seedTemplates() {
   for (const template of DEFAULT_TEMPLATES) {
-    await prisma.emailTemplate.upsert({
-      where: { type: template.type },
-      update: {},
-      create: template,
-    });
+    const { error } = await supabase
+      .from('email_templates')
+      .upsert(template, { onConflict: 'type', ignoreDuplicates: true });
+    if (error) console.error(`[seed] template ${template.type}:`, error.message);
   }
+}
 
-  // Seed SOPs
-  const sopCount = await prisma.sop.count();
-  if (sopCount === 0) {
-    for (const sop of DEFAULT_SOPS) {
-      await prisma.sop.create({ data: sop });
-    }
+async function seedSops() {
+  const { count, error } = await supabase
+    .from('sops')
+    .select('*', { count: 'exact', head: true });
+  if (error) { console.error('[seed] sop count:', error.message); return; }
+  if ((count || 0) > 0) return;
+  for (const sop of DEFAULT_SOPS) {
+    const { error } = await supabase.from('sops').insert(sop);
+    if (error) console.error(`[seed] sop ${sop.title}:`, error.message);
   }
+}
 
-  // Seed Rules
-  const ruleCount = await prisma.attendanceRule.count();
-  if (ruleCount === 0) {
-    for (const rule of DEFAULT_RULES) {
-      await prisma.attendanceRule.create({ data: rule });
-    }
+async function seedRules() {
+  const { count, error } = await supabase
+    .from('attendance_rules')
+    .select('*', { count: 'exact', head: true });
+  if (error) { console.error('[seed] rule count:', error.message); return; }
+  if ((count || 0) > 0) return;
+  for (const rule of DEFAULT_RULES) {
+    const { error } = await supabase.from('attendance_rules').insert(rule);
+    if (error) console.error(`[seed] rule ${rule.name}:`, error.message);
   }
+}
+
+export async function seedDatabase() {
+  await seedSettings();
+  await seedTemplates();
+  await seedSops();
+  await seedRules();
 }

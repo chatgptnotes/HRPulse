@@ -1,9 +1,4 @@
-import prisma from '../db/prisma';
-
-async function getSettings() {
-  const rows = await prisma.setting.findMany();
-  return Object.fromEntries(rows.map(r => [r.key, r.value]));
-}
+import { getSettings } from '../db/supabase';
 
 export async function generateEmailDraft(
   employeeName: string, employeeEmail: string, periodMonth: string,
@@ -12,7 +7,7 @@ export async function generateEmailDraft(
 ): Promise<{ subject: string; body: string }> {
   const settings = await getSettings();
   const ollamaUrl = settings['ollama_url'] || 'http://localhost:11434';
-  const model = settings['ollama_model'] || 'llama3.1:8b';
+  const model = settings['ollama_model'] || 'llama3.2:3b';
   const companyName = settings['company_name'] || 'the Company';
   const hrName = settings['hr_name'] || 'HR Department';
 

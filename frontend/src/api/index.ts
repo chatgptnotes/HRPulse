@@ -8,9 +8,15 @@ export const uploadAttendance = (file: File) => {
   fd.append('file', file);
   return api.post<{ uploadId: number; periodMonth: string; rowCount: number; warnings: string[] }>('/attendance/upload', fd);
 };
+export const inspectAttendance = (file: File) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return api.post('/attendance/inspect', fd);
+};
 export const getUploads = () => api.get('/attendance/uploads');
 export const getAttendanceSummary = (uploadId: number) => api.get(`/attendance/summary/${uploadId}`);
 export const getAttendanceRecords = (uploadId: number, employeeId: number) => api.get(`/attendance/records/${uploadId}/${employeeId}`);
+export const getAttendanceSheet = (uploadId: number) => api.get(`/attendance/sheet/${uploadId}`);
 export const deleteUpload = (uploadId: number) => api.delete(`/attendance/uploads/${uploadId}`);
 
 // Emails
@@ -28,6 +34,23 @@ export const getSalaryConfigs = (month?: string) => api.get('/salary/configs', {
 export const saveSalaryConfig = (data: { employeeId: number; basicSalary: number; effectiveMonth: string }) => api.put('/salary/configs', data);
 export const saveSalaryBulk = (configs: Array<{ employeeId: number; basicSalary: number; effectiveMonth: string }>) => api.put('/salary/configs/bulk', { configs });
 export const getSalaryDeductions = (uploadId: number) => api.get(`/salary/deductions/${uploadId}`);
+export const getSalaryPayments = (month: string) => api.get('/salary/payments', { params: { month } });
+export const saveSalaryPayment = (
+  employeeId: number,
+  data: { periodMonth: string; status: 'pending' | 'paid' | 'on_hold' | 'resigned'; paidAmount?: number; paymentDate?: string; holdReason?: string; notes?: string; markedBy?: string },
+) => api.put(`/salary/payments/${employeeId}`, data);
+
+// Payroll (Process Attendance & Calculate Salary)
+export const processPayroll = (file: File, uploadedBy = 'admin') => {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('uploadedBy', uploadedBy);
+  return api.post('/payroll/process', fd);
+};
+export const getPayrollRun = (uploadId: number) => api.get(`/payroll/runs/${uploadId}`);
+export const getPayrollEmployeeDetail = (uploadId: number, employeeId: number) => api.get(`/payroll/employee/${uploadId}/${employeeId}`);
+export const getPayrollHistory = () => api.get('/payroll/history');
+export const getPayrollFilters = () => api.get('/payroll/filters');
 
 // Settings
 export const getSettings = () => api.get('/settings');
@@ -38,14 +61,79 @@ export const testSmtp = () => api.post('/settings/test-smtp');
 export const testOllama = () => api.post('/settings/test-ollama');
 
 // Employees
+export interface EmployeeMaster {
+  employeeNumber?: string;
+  name: string;
+  email?: string;
+  mobile?: string;
+  department?: string;
+  designation?: string;
+  shift?: string;
+  shiftStartTime?: string;
+  shiftEndTime?: string;
+  monthlySalary?: number;
+  status?: 'Active' | 'Inactive';
+  paidLeavesEligible?: boolean;
+  overtimeEligible?: boolean;
+}
 export const getEmployees = () => api.get('/employees');
 export const getEmployee = (id: number) => api.get(`/employees/${id}`);
-export const updateEmployee = (id: number, data: { name?: string; email?: string; department?: string }) => api.patch(`/employees/${id}`, data);
-export const uploadEmployeePhoto = (id: number, file: File) => {
-  const fd = new FormData();
-  fd.append('photo', file);
-  return api.post(`/employees/${id}/photo`, fd);
-};
+export const getEmployeeDocuments = (id: number) => api.get(`/employees/${id}/documents`);
+export const createEmployee = (data: EmployeeMaster) => api.post('/employees', data);
+export const updateEmployee = (id: number, data: Partial<EmployeeMaster> & { email?: string }) => api.patch(`/employees/${id}`, data);
+export const deleteEmployee = (id: number) => api.delete(`/employees/${id}`);
+export type EmployeeNotificationSeverity = 'info' | 'success' | 'warning' | 'critical';
+export const sendEmployeeNotification = (
+  employeeId: number,
+  data: { title: string; body: string; type?: string; severity?: EmployeeNotificationSeverity; sentBy?: string },
+) => api.post('/notifications/send', { employeeId, ...data });
+
+// Leave administration
+export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export interface LeaveBalance {
+  id: number;
+  employeeId: number;
+  leaveType: string;
+  openingBalance: number;
+  accrued: number;
+  used: number;
+  pending: number;
+  available: number;
+  periodYear: number;
+}
+export interface LeaveRequest {
+  id: number;
+  employeeId: number;
+  employee: {
+    id: number;
+    employeeNumber: string;
+    name: string;
+    email: string;
+    department: string;
+    designation: string;
+    paidLeavesEligible: boolean;
+  } | null;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason: string;
+  status: LeaveStatus;
+  source: string;
+  approverNotes: string;
+  decidedBy: string;
+  decidedAt: string | null;
+  requestedAt: string;
+  balance: LeaveBalance | null;
+}
+export const getLeaveRequests = (params?: { status?: string; search?: string; employeeId?: number }) =>
+  api.get<LeaveRequest[]>('/leaves', { params });
+export const getEmployeeLeaves = (employeeId: number) =>
+  api.get<{ requests: LeaveRequest[]; balances: LeaveBalance[] }>(`/leaves/employee/${employeeId}`);
+export const saveLeaveBalance = (employeeId: number, data: { leaveType: string; periodYear: number; available: number }) =>
+  api.put<LeaveBalance>(`/leaves/balances/${employeeId}`, data);
+export const decideLeaveRequest = (id: number, data: { decision: 'approved' | 'rejected'; approverNotes?: string; decidedBy?: string }) =>
+  api.patch<{ request: LeaveRequest; balance: LeaveBalance | null }>(`/leaves/${id}/decision`, data);
 
 // SOPs
 export const getSops = (params?: { category?: string; search?: string }) => api.get('/sops', { params });

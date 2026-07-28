@@ -86,6 +86,17 @@ Open http://localhost:5173
 | `SMTP_USER` | — | SMTP username |
 | `SMTP_PASS` | — | SMTP password |
 | `COMPANY_NAME` | `Your Company` | Used in email signatures |
+| `HRPULSE_ESS_TOKEN` | - | Shared server-to-server token required by Adamrit ESS proxy calls |
+| `ADAMRIT_HR_NOTIFICATIONS_URL` | - | Adamrit server endpoint that receives mirrored HRPulse notifications, for example `https://adamrit.com/api/hrpulse-notifications` |
+| `ADAMRIT_HR_NOTIFICATIONS_TOKEN` | `HRPULSE_ESS_TOKEN` | Bearer token HRPulse uses when pushing notifications to Adamrit |
+
+## Adamrit ESS Integration
+
+HRPulse exposes employee-scoped ESS APIs under `/api/ess/*` for Adamrit. Adamrit must call these APIs from its server-side proxy only, passing `Authorization: Bearer <HRPULSE_ESS_TOKEN>` plus one employee identity header such as `x-employee-email`, `x-employee-number`, or `x-employee-id`.
+
+Apply `backend/supabase/migrations/20260722_ess_integration.sql` before enabling leave requests, ESS notifications, audit logs, and optional employee `external_uuid` mapping.
+
+For near-real-time employee notification display inside Adamrit, set `ADAMRIT_HR_NOTIFICATIONS_URL` and `ADAMRIT_HR_NOTIFICATIONS_TOKEN` in HRPulse. HRPulse will mirror newly created ESS notifications to Adamrit's `/api/hrpulse-notifications` endpoint. Adamrit stores only the employee-facing notification/read state; HRPulse remains the source system for all HR rules and message generation.
 
 ## License
 

@@ -1,0 +1,808 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Adamrit HRPulse Complete System Guide</title>
+  <style>
+    @page { size: A4; margin: 17mm 15mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #111827;
+      background: #ffffff;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      font-size: 10.5px;
+      line-height: 1.52;
+    }
+    h1 {
+      margin: 0 0 12px;
+      padding: 22px 24px;
+      border-radius: 18px;
+      color: #f8fafc;
+      background: #0f172a;
+      font-size: 25px;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+    h2 {
+      margin: 22px 0 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #dbe3ef;
+      color: #0f172a;
+      font-size: 16px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 16px 0 7px;
+      color: #1e293b;
+      font-size: 12.5px;
+      page-break-after: avoid;
+    }
+    h4 {
+      margin: 13px 0 6px;
+      color: #334155;
+      font-size: 12px;
+      page-break-after: avoid;
+    }
+    p { margin: 5px 0; }
+    ul { margin: 5px 0 9px 18px; padding: 0; }
+    li { margin: 2px 0; }
+    code {
+      padding: 1px 4px;
+      border-radius: 5px;
+      color: #0f172a;
+      background: #eef2ff;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 9.5px;
+    }
+    pre {
+      margin: 7px 0;
+      padding: 9px;
+      border: 1px solid #dbe3ef;
+      border-radius: 12px;
+      background: #f8fafc;
+      white-space: pre-wrap;
+      page-break-inside: avoid;
+    }
+    pre code { padding: 0; background: transparent; }
+    .step {
+      margin: 4px 0 4px 14px;
+      color: #334155;
+    }
+  </style>
+</head>
+<body><h1>Adamrit HRPulse Complete System Guide</h1>
+<p>Generated on: 28 July 2026</p>
+<p>This document explains the HRPulse and Adamrit HR integration in simple language. It covers the full flow from employee master setup, attendance Excel upload, payroll rules, salary calculation, notifications, Adamrit HR tile display, and how both applications are connected.</p>
+<p>This document does not include passwords, service-role keys, API keys, or private tokens.</p>
+<h2>1. Big Picture</h2>
+<p>There are two separate applications:</p>
+<ul>
+<li>HRPulse</li>
+<li>Adamrit</li>
+</ul>
+<p>HRPulse is the master HR system. It owns employee master data, attendance, leave, salary, payroll, rules, payslips, documents, and HR notifications.</p>
+<p>Adamrit is the hospital management system. Employees already log in to Adamrit every day. Adamrit now also works as an Employee Self-Service portal for HR data.</p>
+<p>The important rule is:</p>
+<ul>
+<li>HRPulse calculates everything.</li>
+<li>Adamrit displays employee-specific HR data.</li>
+<li>Adamrit does not calculate salary, payroll, attendance, leave balance, or HR rules.</li>
+<li>Adamrit never becomes the master HR database.</li>
+</ul>
+<h2>2. Full Integration Flow</h2>
+<p>The full flow is:</p>
+<pre><code>Employee Master in HRPulse
+        ↓
+Daily / bulk biometric Excel upload in HRPulse
+        ↓
+HRPulse parses attendance date-wise
+        ↓
+HRPulse saves attendance records
+        ↓
+HRPulse fills missing month dates as Not Attempted for payroll
+        ↓
+HRPulse applies attendance policy
+        ↓
+HRPulse calculates salary and deductions
+        ↓
+HRPulse generates HR notifications
+        ↓
+Notifications are saved in HRPulse
+        ↓
+Notifications are synchronized to Adamrit
+        ↓
+Employee opens HR tile in Adamrit
+        ↓
+Employee sees profile, attendance, salary, leaves, documents, payslips, and notifications</code></pre>
+<h2>3. Employee Mapping Between HRPulse And Adamrit</h2>
+<p>Employees are connected between both systems using a unique identifier.</p>
+<p>Preferred matching order:</p>
+<ul>
+<li>Employee ID</li>
+<li>Employee Code / Employee Number</li>
+<li>UUID / External UUID</li>
+<li>Email address</li>
+</ul>
+<p>Employee name is not used for secure matching because names can be duplicate or misspelled.</p>
+<p>Example:</p>
+<pre><code>Adamrit logged-in user email = cmd@hopehospital.com
+HRPulse employee email = cmd@hopehospital.com
+Result = Adamrit can show only this employee's HRPulse data</code></pre>
+<p>If the email or employee identifier does not match, Adamrit HR tile cannot load that employee's HR profile.</p>
+<h2>4. Employee Master In HRPulse</h2>
+<p>HRPulse Employee Master stores important employee data:</p>
+<ul>
+<li>Employee name</li>
+<li>Employee number</li>
+<li>Email</li>
+<li>Mobile number</li>
+<li>Department</li>
+<li>Designation</li>
+<li>Shift</li>
+<li>Shift start time</li>
+<li>Shift end time</li>
+<li>Monthly salary</li>
+<li>Paid leave related values</li>
+<li>Overtime eligibility</li>
+<li>Status</li>
+</ul>
+<p>The email is very important because Adamrit uses it to connect the logged-in Adamrit user with the HRPulse employee record.</p>
+<h2>5. Adamrit HR Tile</h2>
+<p>Inside Adamrit Tablet View Dashboard there is an HR tile.</p>
+<p>When employee opens HR tile:</p>
+<ul>
+<li>Adamrit checks the logged-in employee session.</li>
+<li>Adamrit creates/refreshes secure employee identity.</li>
+<li>Adamrit calls its own server-side API route.</li>
+<li>Adamrit server-side API calls HRPulse ESS API.</li>
+<li>HRPulse returns only that employee's data.</li>
+</ul>
+<p>The employee can see:</p>
+<ul>
+<li>Profile</li>
+<li>Today's attendance</li>
+<li>Monthly attendance summary</li>
+<li>Attendance calendar</li>
+<li>Attendance history</li>
+<li>Salary summary</li>
+<li>Payroll history</li>
+<li>Payslip download</li>
+<li>Leave balance</li>
+<li>Leave request form</li>
+<li>Leave history</li>
+<li>Documents</li>
+<li>HRPulse notifications</li>
+</ul>
+<h2>6. Security Flow</h2>
+<p>The browser does not directly call HRPulse with private server credentials.</p>
+<p>Secure flow:</p>
+<pre><code>Adamrit browser
+        ↓
+Adamrit serverless API route
+        ↓
+HRPulse ESS API with integration token
+        ↓
+HRPulse validates employee identity
+        ↓
+HRPulse returns only that employee's records</code></pre>
+<p>This protects employees from seeing another employee's salary, attendance, leave, or personal data.</p>
+<h2>7. Attendance Excel Upload</h2>
+<p>HR uploads biometric attendance Excel in HRPulse.</p>
+<p>The Excel can be:</p>
+<ul>
+<li>Daily attendance</li>
+<li>4-5 days together</li>
+<li>Half month</li>
+<li>Full month</li>
+<li>Multiple months in one sheet</li>
+</ul>
+<p>HRPulse analyzes each row date-wise.</p>
+<p>If the sheet contains multiple months, HRPulse groups records by month and saves each date under the correct month.</p>
+<p>Example:</p>
+<pre><code>Excel contains:
+2026-07-24
+2026-07-25
+2026-08-01
+
+HRPulse saves:
+July records under 2026-07
+August records under 2026-08</code></pre>
+<h2>8. Attendance Status Detection</h2>
+<p>HRPulse reads attendance status and punch timing from Excel.</p>
+<p>Common statuses:</p>
+<ul>
+<li>Present</li>
+<li>Normal</li>
+<li>Late Coming</li>
+<li>Early Leaving</li>
+<li>Missing Punch</li>
+<li>Missed Swipe</li>
+<li>Incomplete</li>
+<li>Half Day</li>
+<li>Absent</li>
+<li>Paid Leave</li>
+<li>Weekly Off</li>
+<li>Holiday</li>
+<li>Not Attempted</li>
+</ul>
+<p>Punch timing examples:</p>
+<pre><code>09:00 - 18:00 = Present / Normal
+09:30 - 18:00 = Late
+09:00 - blank = Missing punch-out
+blank - 18:00 = Missing punch-in
+blank - blank with no uploaded row = Not Attempted</code></pre>
+<h2>9. Not Attempted Logic</h2>
+<p>When payroll detail is opened, HRPulse shows the full month.</p>
+<p>If July has 31 days, HRPulse shows:</p>
+<pre><code>01 July to 31 July</code></pre>
+<p>If attendance was uploaded only until 25 July:</p>
+<pre><code>26 July to 31 July = Not Attempted</code></pre>
+<p>Not Attempted means:</p>
+<ul>
+<li>Attendance was not uploaded for that date.</li>
+<li>Employee is not marked present.</li>
+<li>For payroll calculation, Not Attempted counts as absence.</li>
+</ul>
+<p>When remaining attendance is uploaded later:</p>
+<pre><code>Not Attempted date gets replaced by real attendance data</code></pre>
+<p>Example:</p>
+<pre><code>Before upload:
+26 July = Not Attempted = absence for salary
+
+After upload:
+26 July = Present = no absent deduction</code></pre>
+<h2>10. Monthly Payroll Calculation</h2>
+<p>Salary is monthly, but attendance is analyzed date-wise.</p>
+<p>HRPulse reads every date, counts the month totals, then calculates salary.</p>
+<p>The salary formula now is:</p>
+<pre><code>Gross Salary = Monthly Salary + Overtime Pay
+Total Deductions = Absent Deduction + Half-Day Deduction + Late Deduction + Rule Deduction
+Final Net Salary = Gross Salary - Total Deductions</code></pre>
+<p>Missing punch does not deduct salary.</p>
+<h2>11. Per Day Salary Rule</h2>
+<p>The final payroll policy uses fixed 26 days.</p>
+<pre><code>Per Day Salary = Monthly Salary / 26</code></pre>
+<p>Example:</p>
+<pre><code>Monthly Salary = INR 15,000
+Per Day Salary = 15,000 / 26
+Per Day Salary = INR 577 approximately</code></pre>
+<p>This per-day salary is used for:</p>
+<ul>
+<li>Absent deduction</li>
+<li>Late deduction</li>
+<li>Half-day deduction</li>
+</ul>
+<h2>12. Department-Based Leave And Sunday Policy</h2>
+<h3>IT Department</h3>
+<p>IT employees get:</p>
+<ul>
+<li>Sundays as weekly off</li>
+<li>2 casual paid leaves per month</li>
+</ul>
+<p>For IT:</p>
+<pre><code>Sunday = Weekly Off
+Sunday Not Attempted = No salary deduction</code></pre>
+<p>If IT employee has 2 absences in the month:</p>
+<pre><code>Paid Leave Used = 2
+Unpaid Absence = 0
+Absent Deduction = INR 0</code></pre>
+<p>If IT employee has 4 absences:</p>
+<pre><code>Paid Leave Used = 2
+Unpaid Absence = 2
+Absent Deduction = 2 x Per Day Salary</code></pre>
+<h3>Non-IT Departments</h3>
+<p>All departments except IT get:</p>
+<ul>
+<li>4 paid leaves per month</li>
+<li>Sundays are working days</li>
+</ul>
+<p>For non-IT:</p>
+<pre><code>Sunday = Working Day
+Sunday Not Attempted = Absence
+Sunday Absent can be covered by paid leave</code></pre>
+<p>If non-IT employee has 4 absences:</p>
+<pre><code>Paid Leave Used = 4
+Unpaid Absence = 0
+Absent Deduction = INR 0</code></pre>
+<p>If non-IT employee has 6 absences:</p>
+<pre><code>Paid Leave Used = 4
+Unpaid Absence = 2
+Absent Deduction = 2 x Per Day Salary</code></pre>
+<h2>13. Absence Calculation</h2>
+<p>HRPulse now shows absence clearly in payroll detail.</p>
+<p>It separates:</p>
+<ul>
+<li>Total Absences</li>
+<li>Paid Leaves</li>
+<li>Unpaid Absences</li>
+<li>Absent Salary Impact</li>
+</ul>
+<p>Example:</p>
+<pre><code>Total Absences = 6
+Paid Leaves = 4
+Unpaid Absences = 2
+Per Day Salary = INR 577
+Absent Deduction = 2 x 577 = INR 1,154</code></pre>
+<p>If paid leave covers all absence:</p>
+<pre><code>Total Absences = 2
+Paid Leaves = 2
+Unpaid Absences = 0
+Absent Deduction = INR 0</code></pre>
+<h2>14. Missing Punch Logic</h2>
+<p>Missing punch means attendance has incomplete punch data.</p>
+<p>Examples:</p>
+<pre><code>Punch-in exists but punch-out missing
+Punch-out exists but punch-in missing
+Status is Missed Swipe / Missing Punch / Incomplete</code></pre>
+<p>Current rule:</p>
+<pre><code>Missing Punch Deduction = INR 0</code></pre>
+<p>Missing punch is shown in:</p>
+<ul>
+<li>Attendance summary</li>
+<li>Day-by-day records</li>
+<li>Adamrit attendance calendar</li>
+<li>Notifications if count is more than 2</li>
+</ul>
+<p>If missing punches are 1 or 2:</p>
+<pre><code>Only shown as count
+No salary deduction
+No Adamrit warning notification</code></pre>
+<p>If missing punches are more than 2:</p>
+<pre><code>HRPulse creates warning notification
+Adamrit notification bell shows the warning</code></pre>
+<h2>15. Late Coming Logic</h2>
+<p>Late coming is detected using shift start time and grace minutes.</p>
+<p>Default example:</p>
+<pre><code>Shift Start = 09:00
+Grace = 15 minutes
+Punch-in after 09:15 = Late</code></pre>
+<p>Salary deduction rule:</p>
+<pre><code>Every 3 late arrivals = 1 salary day deduction</code></pre>
+<p>Example:</p>
+<pre><code>Monthly Salary = INR 15,000
+Per Day Salary = 15,000 / 26 = INR 577
+Late Count = 8
+Late Deduction Days = floor(8 / 3) = 2
+Late Deduction = 2 x 577 = INR 1,154</code></pre>
+<p>Remaining late arrivals that do not complete a group of 3 do not create an extra deduction.</p>
+<p>Example:</p>
+<pre><code>Late Count = 2
+Late Deduction Days = 0
+
+Late Count = 3
+Late Deduction Days = 1
+
+Late Count = 5
+Late Deduction Days = 1
+
+Late Count = 6
+Late Deduction Days = 2</code></pre>
+<h2>16. Half-Day Logic</h2>
+<p>Half day is based on actual working hours.</p>
+<p>Rule:</p>
+<pre><code>If working hours are less than 4 hours, mark Half Day</code></pre>
+<p>Half-day deduction:</p>
+<pre><code>Half-Day Deduction = Per Day Salary / 2</code></pre>
+<p>Example:</p>
+<pre><code>Monthly Salary = INR 15,000
+Per Day Salary = INR 577
+Half Day Deduction = 577 / 2 = INR 289 approximately</code></pre>
+<p>If employee has 2 half days:</p>
+<pre><code>Half-Day Deduction = 2 x 289 = INR 578 approximately</code></pre>
+<h2>17. Overtime Logic</h2>
+<p>Overtime does not apply to every employee automatically.</p>
+<p>Employee Master has overtime eligibility.</p>
+<p>Only employees marked eligible for overtime can receive overtime calculation.</p>
+<p>Rule:</p>
+<pre><code>Overtime is based on punch-out time after shift end time.
+Overtime applies only if employee works more than 2 hours after shift end.</code></pre>
+<p>Example:</p>
+<pre><code>Shift End = 18:00
+Punch Out = 20:15
+Overtime Duration = 2 hours 15 minutes
+Overtime is payable because it is more than 2 hours</code></pre>
+<p>If punch out is 20:00 or earlier:</p>
+<pre><code>Overtime Duration = 2 hours or less
+Overtime Pay = INR 0</code></pre>
+<p>Overtime pay policy:</p>
+<pre><code>Overtime Per Day = (Monthly Salary / 30) / 2</code></pre>
+<h2>18. Paid Leave Request Flow</h2>
+<p>Employees can submit leave requests from Adamrit HR tile.</p>
+<p>Flow:</p>
+<pre><code>Employee opens Adamrit HR tile
+        ↓
+Employee submits leave request
+        ↓
+Adamrit sends request to HRPulse ESS API
+        ↓
+HRPulse saves leave request
+        ↓
+HRPulse Super Admin reviews request
+        ↓
+Approved / Rejected status is available to employee in Adamrit</code></pre>
+<p>Adamrit does not approve leave. HRPulse remains the approval system.</p>
+<h2>19. Documents Flow</h2>
+<p>Employees can upload documents from Adamrit HR tile.</p>
+<p>Flow:</p>
+<pre><code>Employee uploads document in Adamrit
+        ↓
+Adamrit sends document through secure HRPulse ESS API
+        ↓
+HRPulse stores the document
+        ↓
+Document appears in HRPulse Employee Master document section
+        ↓
+Employee can also see document in Adamrit HR tile</code></pre>
+<p>Examples:</p>
+<ul>
+<li>Identity document</li>
+<li>Address proof</li>
+<li>Education certificate</li>
+<li>Experience letter</li>
+<li>Medical certificate</li>
+<li>Bank document</li>
+<li>Other document</li>
+</ul>
+<h2>20. Payroll Detail Screen</h2>
+<p>Payroll detail shows:</p>
+<ul>
+<li>Monthly salary</li>
+<li>Per-day salary</li>
+<li>Final net salary</li>
+<li>Payable days</li>
+<li>Profile details</li>
+<li>Salary breakdown</li>
+<li>Attendance summary</li>
+<li>Salary calculation formula</li>
+<li>Deductions</li>
+<li>Final payable</li>
+<li>Payroll rules applied</li>
+<li>Day-by-day records</li>
+<li>Punch timing PDF button</li>
+</ul>
+<p>The Day-by-Day Records table shows:</p>
+<ul>
+<li>Date</li>
+<li>Punch in</li>
+<li>Punch out</li>
+<li>Working hours</li>
+<li>Status</li>
+</ul>
+<p>Statuses include:</p>
+<ul>
+<li>Present</li>
+<li>Absent</li>
+<li>Late</li>
+<li>Missing Punch</li>
+<li>Half Day</li>
+<li>Weekly Off</li>
+<li>Not Attempted</li>
+</ul>
+<h2>21. Attendance Rules Page</h2>
+<p>Attendance Rules page is for salary-effect rules and HR automation rules.</p>
+<p>Rules can affect:</p>
+<ul>
+<li>Absence</li>
+<li>Late coming</li>
+<li>Missing punch</li>
+<li>Half day</li>
+<li>Overtime</li>
+<li>Shift</li>
+<li>Leave</li>
+<li>Payroll</li>
+<li>AI notifications</li>
+<li>Custom rules</li>
+</ul>
+<p>Important:</p>
+<ul>
+<li>Default payroll logic is not always created from the Rules page.</li>
+<li>Some policies are system payroll logic.</li>
+<li>Salary-effect rules created in Rules page show under <code>Payroll Rules Applied</code>.</li>
+</ul>
+<p>Example:</p>
+<pre><code>Rule: If late arrivals are 3 or more, deduct 1 salary day
+Effect: Rule deduction appears in Payroll Rules Applied</code></pre>
+<p>If no salary-effect rule matched:</p>
+<pre><code>Payroll Rules Applied (0)
+No active salary-effect rule from the Rules tab matched this employee.</code></pre>
+<h2>22. Default Payroll Logic Versus Rules Page Logic</h2>
+<p>There are two kinds of logic.</p>
+<h3>System Payroll Logic</h3>
+<p>This is built into HRPulse payroll engine:</p>
+<ul>
+<li>Per-day salary = Monthly Salary / 26</li>
+<li>Department-based paid leaves</li>
+<li>IT Sunday weekly off</li>
+<li>Non-IT Sunday working day</li>
+<li>Not Attempted counts as absence</li>
+<li>Missing punch no salary deduction</li>
+<li>Every 3 late arrivals = 1 salary day deduction</li>
+<li>Half day = per-day salary / 2</li>
+</ul>
+<h3>Rules Page Logic</h3>
+<p>This is created/configured in the Rules page:</p>
+<ul>
+<li>Custom salary deduction rules</li>
+<li>Custom salary allowance rules</li>
+<li>Custom attendance triggers</li>
+<li>Custom notification behavior</li>
+</ul>
+<p>Rules page results appear under:</p>
+<pre><code>Payroll Rules Applied</code></pre>
+<h2>23. Notification Flow From HRPulse To Adamrit</h2>
+<p>HRPulse creates notifications. Adamrit displays them.</p>
+<p>Full flow:</p>
+<pre><code>Attendance Excel uploaded in HRPulse
+        ↓
+Attendance records saved
+        ↓
+HRPulse Attendance Alert Service analyzes records
+        ↓
+Notifications are created in HRPulse notification table
+        ↓
+Notification sync sends message to Adamrit
+        ↓
+Adamrit stores employee notification
+        ↓
+Adamrit HR tile notification bell shows unread count
+        ↓
+Employee opens notification drawer</code></pre>
+<p>Notifications are employee-specific.</p>
+<p>Employee A cannot see Employee B notifications.</p>
+<h2>24. Notification Timing</h2>
+<p>Notifications are generated at these times:</p>
+<h3>Immediately after Excel upload</h3>
+<p>When HR uploads attendance Excel:</p>
+<pre><code>Excel processed
+Attendance records saved
+Attendance alerts generated
+Notifications saved
+Notifications synced to Adamrit</code></pre>
+<p>This is the main timing.</p>
+<h3>When Adamrit HR tile refreshes</h3>
+<p>Adamrit also fetches notifications when:</p>
+<ul>
+<li>Employee opens HR tile</li>
+<li>Employee refreshes HR tile</li>
+<li>Adamrit periodic refresh runs</li>
+<li>Realtime notification event arrives</li>
+</ul>
+<h3>Realtime behavior</h3>
+<p>Adamrit listens for employee notification inserts in its notification table.</p>
+<p>When a new notification arrives:</p>
+<ul>
+<li>Bell count increases</li>
+<li>Toast can appear</li>
+<li>Notification drawer shows the message</li>
+</ul>
+<h2>25. Notification Types</h2>
+<p>Notification examples:</p>
+<ul>
+<li>Late arrival alert</li>
+<li>Missing punch warning</li>
+<li>Multiple missing punches</li>
+<li>Half-day alert</li>
+<li>Absent alert</li>
+<li>Insufficient working hours</li>
+<li>Overtime alert</li>
+<li>Holiday work alert</li>
+<li>Weekly off attendance</li>
+<li>Three consecutive late arrivals</li>
+<li>Three consecutive absences</li>
+<li>Low attendance percentage</li>
+<li>Payroll processed</li>
+<li>Salary generated</li>
+<li>Payslip available</li>
+<li>Leave approved</li>
+<li>Leave rejected</li>
+<li>Holiday reminder</li>
+<li>Birthday wish</li>
+<li>Work anniversary</li>
+<li>Company announcement</li>
+</ul>
+<h2>26. Missing Punch Notification Example</h2>
+<p>If employee has 3 missing punches:</p>
+<pre><code>Title: Multiple missing punches
+Message: You have 3 missing punch records. Please regularize them with HR. No salary deduction has been applied for missing punches.
+Severity: Warning</code></pre>
+<p>If employee has 1 missing punch:</p>
+<pre><code>Shown in attendance summary
+No salary deduction
+No Adamrit warning notification</code></pre>
+<h2>27. Late Notification Example</h2>
+<p>If employee is late 3 consecutive working days:</p>
+<pre><code>Title: Three consecutive late arrivals
+Message: You reported late for 3 consecutive working days. Please ensure timely attendance.
+Severity: Critical</code></pre>
+<p>If employee is late on one day:</p>
+<pre><code>Title: Late arrival alert
+Message: You were late on 24 Jul 2026. Punch-in: 09:30, shift start: 09:00.
+Severity: Warning</code></pre>
+<h2>28. Adamrit Notification Bell</h2>
+<p>Adamrit HR tile has a notification bell.</p>
+<p>It shows:</p>
+<ul>
+<li>Unread count</li>
+<li>Notification title</li>
+<li>Message body</li>
+<li>Severity color</li>
+<li>Created time</li>
+<li>Mark as read</li>
+<li>Mark all read</li>
+<li>Refresh</li>
+</ul>
+<p>When a new notification arrives:</p>
+<ul>
+<li>Bell count updates</li>
+<li>Toast can appear</li>
+<li>Employee can open drawer to read details</li>
+</ul>
+<h2>29. Payslip And PDF Flow</h2>
+<p>Employees can download payslips from Adamrit.</p>
+<p>Flow:</p>
+<pre><code>Employee clicks Payslip in Adamrit
+        ↓
+Adamrit calls HRPulse ESS payslip endpoint
+        ↓
+HRPulse generates/downloads PDF
+        ↓
+Employee receives payslip PDF</code></pre>
+<p>Adamrit does not create salary PDF by itself.</p>
+<h2>30. Example: Partial Month Upload</h2>
+<p>Scenario:</p>
+<pre><code>Month = July
+July has 31 days
+HR uploads attendance from 1 July to 25 July
+26 July to 31 July are not uploaded</code></pre>
+<p>HRPulse shows:</p>
+<pre><code>01-25 = real attendance
+26-31 = Not Attempted</code></pre>
+<p>Payroll:</p>
+<pre><code>Not Attempted dates count as absence
+Paid leaves cover them first
+Remaining unpaid absence deducts salary</code></pre>
+<p>Later:</p>
+<pre><code>HR uploads 26-31 attendance
+Real records replace Not Attempted
+Payroll recalculates full month</code></pre>
+<h2>31. Example: IT Employee Salary</h2>
+<p>Employee:</p>
+<pre><code>Department = IT
+Monthly Salary = INR 15,000
+Per Day Salary = 15,000 / 26 = INR 577
+Sundays = Weekly Off
+Paid Leaves = 2</code></pre>
+<p>Attendance:</p>
+<pre><code>Total Absences = 3
+2 absences covered by paid leave
+1 unpaid absence remains
+Late Count = 4
+Missing Punch = 1
+Half Day = 0
+Overtime = 0</code></pre>
+<p>Calculation:</p>
+<pre><code>Absent Deduction = 1 x 577 = INR 577
+Late Deduction = floor(4 / 3) x 577 = 1 x 577 = INR 577
+Missing Punch Deduction = INR 0
+Half-Day Deduction = INR 0
+Total Deduction = 577 + 577 = INR 1,154
+Final Salary = 15,000 - 1,154 = INR 13,846</code></pre>
+<h2>32. Example: Non-IT Employee Salary</h2>
+<p>Employee:</p>
+<pre><code>Department = Reception
+Monthly Salary = INR 15,000
+Per Day Salary = 15,000 / 26 = INR 577
+Sundays = Working Days
+Paid Leaves = 4</code></pre>
+<p>Attendance:</p>
+<pre><code>Total Absences = 6
+Paid Leave Used = 4
+Unpaid Absences = 2
+Late Count = 8
+Missing Punch = 1
+Half Day = 0</code></pre>
+<p>Calculation:</p>
+<pre><code>Absent Deduction = 2 x 577 = INR 1,154
+Late Deduction = floor(8 / 3) x 577 = 2 x 577 = INR 1,154
+Missing Punch Deduction = INR 0
+Total Deductions = 1,154 + 1,154 = INR 2,308
+Final Salary = 15,000 - 2,308 = INR 12,692</code></pre>
+<h2>33. What Adamrit Shows From HRPulse</h2>
+<p>Adamrit HR tile shows the final processed HRPulse data:</p>
+<ul>
+<li>Profile</li>
+<li>Shift</li>
+<li>Department</li>
+<li>Designation</li>
+<li>Attendance today</li>
+<li>Monthly summary</li>
+<li>Attendance calendar</li>
+<li>Attendance history</li>
+<li>Leave balance</li>
+<li>Leave requests</li>
+<li>Current salary</li>
+<li>Salary history</li>
+<li>Payslips</li>
+<li>Documents</li>
+<li>Notifications</li>
+</ul>
+<p>Adamrit is not calculating these values.</p>
+<h2>34. What HRPulse Super Admin Controls</h2>
+<p>HRPulse Super Admin controls:</p>
+<ul>
+<li>Employee Master</li>
+<li>Attendance upload</li>
+<li>Attendance correction</li>
+<li>Shift setup</li>
+<li>Leave approval/rejection</li>
+<li>Salary and payroll calculation</li>
+<li>Rules</li>
+<li>Notifications</li>
+<li>Payslips</li>
+<li>Documents</li>
+<li>Reports</li>
+</ul>
+<p>Adamrit employee users cannot change HRPulse payroll logic.</p>
+<h2>35. Important Files</h2>
+<p>Main HRPulse payroll logic:</p>
+<ul>
+<li><code>backend/src/services/payrollService.ts</code></li>
+</ul>
+<p>Attendance alert and notification generation:</p>
+<ul>
+<li><code>backend/src/services/attendanceAlertService.ts</code></li>
+</ul>
+<p>HRPulse ESS API:</p>
+<ul>
+<li><code>backend/src/routes/ess.ts</code></li>
+</ul>
+<p>HRPulse payroll API:</p>
+<ul>
+<li><code>backend/src/routes/payroll.ts</code></li>
+</ul>
+<p>Adamrit HR tile:</p>
+<ul>
+<li><code>adamrit/src/tablet/modules/hr/HrEssFlow.tsx</code></li>
+</ul>
+<p>Adamrit HRPulse proxy:</p>
+<ul>
+<li><code>adamrit/api/hrpulse-ess/[...path].ts</code></li>
+</ul>
+<p>Adamrit HRPulse notifications API:</p>
+<ul>
+<li><code>adamrit/api/hrpulse-notifications.ts</code></li>
+</ul>
+<p>Payroll detail modal:</p>
+<ul>
+<li><code>frontend/src/components/payroll/PayrollDetailModal.tsx</code></li>
+</ul>
+<h2>36. What To Check After Uploading Excel</h2>
+<p>After uploading attendance Excel:</p>
+<p class="step">Open HRPulse Payroll page.</p>
+<p class="step">Load the payroll month.</p>
+<p class="step">Open an employee salary detail.</p>
+<p class="step">Check Day-by-Day Records.</p>
+<p class="step">Confirm all dates of month are visible.</p>
+<p class="step">Confirm missing dates show Not Attempted.</p>
+<p class="step">Confirm Not Attempted affects absence.</p>
+<p class="step">Confirm paid leaves are applied.</p>
+<p class="step">Confirm unpaid absences deduct salary.</p>
+<p class="step">Confirm missing punch does not deduct salary.</p>
+<p class="step">Confirm late deduction appears correctly.</p>
+<p class="step">Open Adamrit HR tile.</p>
+<p class="step">Check notifications and salary summary.</p>
+<h2>37. Simple Final Summary</h2>
+<p>HRPulse is the brain.</p>
+<p>Adamrit is the employee screen.</p>
+<p>Attendance is uploaded date-wise.</p>
+<p>Salary is calculated monthly.</p>
+<p>Not Attempted dates count as absence.</p>
+<p>IT gets Sundays off and 2 paid leaves.</p>
+<p>Non-IT works Sundays and gets 4 paid leaves.</p>
+<p>Per-day salary is monthly salary divided by 26.</p>
+<p>Missing punch does not cut salary.</p>
+<p>More than 2 missing punches creates Adamrit notification.</p>
+<p>Late deduction is every 3 late arrivals equals 1 salary day.</p>
+<p>All final HR/payroll data comes from HRPulse and is shown securely in Adamrit.</p></body>
+</html>

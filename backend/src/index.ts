@@ -10,10 +10,24 @@ import salaryRoutes from './routes/salary';
 import settingsRoutes from './routes/settings';
 import sopRoutes from './routes/sops';
 import rulesRoutes from './routes/rules';
+import payrollRoutes from './routes/payroll';
 import aiRoutes from './routes/ai';
 import analyticsRoutes from './routes/analytics';
+import essRoutes from './routes/ess';
+import leaveRoutes from './routes/leaves';
+import notificationRoutes from './routes/notifications';
 
 dotenv.config();
+
+// Prevent transient errors (e.g. Supabase "JWT issued at future" clock skew,
+// network blips) from crashing the whole backend via unhandled rejections.
+// Log and keep serving instead of dying.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason instanceof Error ? reason.message : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err.message);
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,8 +52,12 @@ app.use('/api/salary', salaryRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/sops', sopRoutes);
 app.use('/api/rules', rulesRoutes);
+app.use('/api/payroll', payrollRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/ess', essRoutes);
+app.use('/api/leaves', leaveRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Serve frontend in production (cwd = repo root on Railway)
 if (process.env.NODE_ENV === 'production') {
@@ -48,7 +66,7 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (_req, res) => res.sendFile(path.join(frontendPath, 'index.html')));
 }
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString(), db: 'postgresql' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString(), db: 'supabase' }));
 
 app.listen(PORT, () => {
   console.log(`HRPulse backend running on http://localhost:${PORT}`);

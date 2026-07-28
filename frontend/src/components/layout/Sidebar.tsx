@@ -1,11 +1,15 @@
 import { NavLink } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
+import { getLeaveRequests } from '../../api';
 
 const links = [
   { to: '/', label: 'Dispatcher', icon: 'send', end: true },
+  { to: '/payroll', label: 'Payroll', icon: 'calculate', end: false },
   { to: '/analytics', label: 'Analytics', icon: 'bar_chart', end: false },
   { to: '/employees', label: 'Employees', icon: 'people', end: false },
-  { to: '/salary', label: 'Salary / LOP', icon: 'payments', end: false },
+  { to: '/leaves', label: 'Leave Requests', icon: 'event_busy', end: false },
+  { to: '/salary', label: 'Salary', icon: 'payments', end: false },
   { to: '/history', label: 'Email History', icon: 'history', end: false },
   { to: '/rules', label: 'Rules', icon: 'rule', end: false },
   { to: '/sops', label: 'SOPs', icon: 'description', end: false },
@@ -22,6 +26,12 @@ interface Props {
 }
 
 export default function Sidebar({ collapsed, onToggle }: Props) {
+  const { data: pendingLeaves = [] } = useQuery({
+    queryKey: ['leave-requests', 'sidebar-pending'],
+    queryFn: () => getLeaveRequests({ status: 'pending' }).then(r => r.data),
+    refetchInterval: 60_000,
+  });
+
   return (
     <aside
       className={clsx(
@@ -79,7 +89,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             title={collapsed ? l.label : undefined}
             className={({ isActive }) =>
               clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
+                'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
                 collapsed && 'justify-center px-2',
                 isActive
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
@@ -91,6 +101,15 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
               <>
                 <span className={clsx('material-icons text-xl flex-shrink-0 transition-transform', isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200')}>{l.icon}</span>
                 {!collapsed && <span className="truncate">{l.label}</span>}
+                {l.to === '/leaves' && pendingLeaves.length > 0 && (
+                  <span className={clsx(
+                    'ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold',
+                    isActive ? 'bg-white/20 text-white' : 'bg-amber-400 text-slate-950',
+                    collapsed && 'absolute translate-x-4 -translate-y-3 px-1.5',
+                  )}>
+                    {pendingLeaves.length > 99 ? '99+' : pendingLeaves.length}
+                  </span>
+                )}
               </>
             )}
           </NavLink>

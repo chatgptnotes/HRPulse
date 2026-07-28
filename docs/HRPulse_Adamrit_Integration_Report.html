@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>HRPulse and Adamrit Integration Report</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111827; line-height: 1.45; font-size: 11.5pt; }
+    h1 { font-size: 24pt; margin: 0 0 6mm; color: #0f172a; }
+    h2 { font-size: 15pt; margin: 8mm 0 3mm; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 1.5mm; }
+    h3 { font-size: 12.5pt; margin: 5mm 0 2mm; color: #164e63; }
+    p { margin: 0 0 3mm; }
+    ul, ol { margin-top: 1.5mm; margin-bottom: 3.5mm; padding-left: 7mm; }
+    li { margin-bottom: 1mm; }
+    code { font-family: Consolas, monospace; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 3px; padding: 0.4mm 1mm; }
+    .cover { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10mm; margin-bottom: 8mm; background: #f8fafc; }
+    .subtitle { color: #475569; font-size: 12pt; }
+    .note { border-left: 4px solid #0891b2; background: #ecfeff; padding: 3mm 4mm; margin: 4mm 0; }
+    .warning { border-left: 4px solid #e11d48; background: #fff1f2; padding: 3mm 4mm; margin: 4mm 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+    .box { border: 1px solid #dbe3ef; border-radius: 6px; padding: 4mm; background: #ffffff; }
+    .small { font-size: 10pt; color: #475569; }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <h1>HRPulse and Adamrit Integration Report</h1>
+    <p class="subtitle">Detailed explanation of the Employee Self-Service integration work completed on July 22, 2026.</p>
+    <p><strong>Main idea:</strong> HRPulse remains the HR and payroll master system. Adamrit only displays employee-specific HR data through a secure portal.</p>
+  </section>
+
+  <h2>1. Purpose</h2>
+  <p>This report explains the integration work completed between HRPulse and Adamrit.</p>
+  <p>The goal was to keep both applications independent while allowing Adamrit employees to view their own HR information from HRPulse.</p>
+  <ul>
+    <li>HRPulse remains the master system for HR, attendance, leave, payroll, salary, payslips, notifications, and HR business logic.</li>
+    <li>Adamrit remains the hospital management system.</li>
+    <li>Adamrit does not calculate salary, payroll, attendance, leave balance, deductions, or alerts.</li>
+    <li>Adamrit only displays employee-specific results that come from HRPulse.</li>
+    <li>The two databases were not merged.</li>
+  </ul>
+
+  <h2>2. High-Level Architecture</h2>
+  <ol>
+    <li>An employee logs into Adamrit using the existing Adamrit login.</li>
+    <li>Adamrit shows the Tablet View Dashboard.</li>
+    <li>If the user has access to the HR tile, Adamrit shows the HR tile.</li>
+    <li>The employee opens the HR tile.</li>
+    <li>Adamrit shows a button: <code>Load My HR Data</code>.</li>
+    <li>When the employee clicks the button, Adamrit prepares a secure server session.</li>
+    <li>Adamrit server calls HRPulse server through a proxy.</li>
+    <li>HRPulse verifies the integration token.</li>
+    <li>HRPulse identifies the employee by a unique identifier, currently email by default.</li>
+    <li>HRPulse returns only that employee's data.</li>
+    <li>Adamrit displays the data in the Employee Self-Service portal.</li>
+  </ol>
+  <div class="note">The browser does not receive HRPulse service keys or Supabase service-role keys.</div>
+
+  <h2>3. HRPulse Work Completed</h2>
+  <h3>3.1 New ESS API Route</h3>
+  <p>A new HRPulse backend route was added at <code>backend/src/routes/ess.ts</code> and mounted in <code>backend/src/index.ts</code>.</p>
+  <p>The route is available under <code>/api/ess</code>. This is the HRPulse Employee Self-Service API layer that Adamrit consumes.</p>
+
+  <h3>3.2 HRPulse ESS Endpoints</h3>
+  <p>The new HRPulse route supports employee-scoped access for profile, attendance, salary, payslips, leave, notifications, alerts, and audit logging.</p>
+  <div class="grid">
+    <div class="box"><code>/api/ess/profile</code><br>Employee profile</div>
+    <div class="box"><code>/api/ess/attendance/today</code><br>Today's attendance</div>
+    <div class="box"><code>/api/ess/attendance/monthly</code><br>Monthly attendance summary</div>
+    <div class="box"><code>/api/ess/attendance/history</code><br>Attendance history</div>
+    <div class="box"><code>/api/ess/payroll/current</code><br>Current salary summary</div>
+    <div class="box"><code>/api/ess/payroll/history</code><br>Previous salary history</div>
+    <div class="box"><code>/api/ess/payslips/:periodMonth</code><br>PDF payslip download</div>
+    <div class="box"><code>/api/ess/leaves/request</code><br>Submit leave request</div>
+  </div>
+
+  <h3>3.3 HRPulse Security</h3>
+  <p>The HRPulse ESS API requires a server-to-server token named <code>HRPULSE_ESS_TOKEN</code>.</p>
+  <p>Adamrit must send this token from its backend only. It must not be exposed in Adamrit frontend code.</p>
+  <p>Supported employee identity headers include <code>x-employee-email</code>, <code>x-employee-id</code>, <code>x-employee-number</code>, <code>x-employee-code</code>, and <code>x-employee-uuid</code>.</p>
+  <p>The default matching method is email. Employee name is not used for matching.</p>
+
+  <h3>3.4 HRPulse Business Logic Reuse</h3>
+  <p>The integration reuses HRPulse's existing payroll and attendance services. Adamrit does not copy payroll formulas or attendance rules.</p>
+  <p>HRPulse produces gross salary, deductions, net salary, payable days, working days, late deductions, missing punch deductions, attendance percentage, and intelligent alerts.</p>
+
+  <h3>3.5 HRPulse Database Migration</h3>
+  <p>A new Supabase migration was added: <code>backend/supabase/migrations/20260722_ess_integration.sql</code>.</p>
+  <p>It adds leave balances, leave requests, HR notifications, ESS audit logs, and optional <code>employees.external_uuid</code> mapping.</p>
+
+  <h2 class="page-break">4. Adamrit Work Completed</h2>
+  <p>Adamrit was cloned inside the HRPulse workspace at <code>C:\Users\hope4\hrpulse\HRPulse\adamrit</code>.</p>
+
+  <h3>4.1 New HR Tile</h3>
+  <p>A new HR tile was added to Adamrit Tablet View. The module id is <code>hr</code>. The access-control tile id is <code>t-hr</code>.</p>
+
+  <h3>4.2 HR Tile Access Control</h3>
+  <p>The HR tile is now permission-based.</p>
+  <ul>
+    <li>If a user has access to <code>t-hr</code>, the HR tile can appear.</li>
+    <li>If a user does not have access to <code>t-hr</code>, the HR tile is hidden.</li>
+    <li>If a user manually opens <code>/hr</code> without access, Adamrit redirects back to the tablet home page.</li>
+  </ul>
+
+  <h3>4.3 HR Employee Portal UI</h3>
+  <p>A new HR portal screen was added at <code>adamrit/src/tablet/modules/hr/HrEssFlow.tsx</code>.</p>
+  <p>The page shows profile, attendance, salary, payslips, leave balance, leave requests, notifications, alerts, and attendance history.</p>
+
+  <h3>4.4 Manual Load Button</h3>
+  <p>The HR portal no longer loads data automatically. It first shows <code>Load My HR Data</code>. Only after clicking this button does Adamrit call HRPulse.</p>
+
+  <h3>4.5 Adamrit Server Session API</h3>
+  <p>A new Adamrit API route was added: <code>adamrit/api/adamrit-session.ts</code>.</p>
+  <p>It creates and clears a secure HTTP-only Adamrit session cookie used by the HRPulse proxy.</p>
+
+  <h3>4.6 Adamrit HRPulse Proxy API</h3>
+  <p>A new Adamrit API route was added: <code>adamrit/api/hrpulse-ess/[...path].ts</code>.</p>
+  <p>It verifies the Adamrit secure session, calls HRPulse with <code>HRPULSE_ESS_TOKEN</code>, and forwards only the logged-in employee's identity.</p>
+
+  <h3>4.7 Local Dev Middleware</h3>
+  <p>Vite local development does not automatically serve Vercel API functions. A dev-only middleware was added in <code>adamrit/vite.config.ts</code> to support <code>/api/adamrit-session</code> and <code>/api/hrpulse-ess/*</code> locally.</p>
+
+  <h2>5. Required Environment Variables</h2>
+  <div class="grid">
+    <div class="box">
+      <h3>HRPulse</h3>
+      <p><code>HRPULSE_ESS_TOKEN</code></p>
+    </div>
+    <div class="box">
+      <h3>Adamrit</h3>
+      <p><code>ADAMRIT_SESSION_SECRET</code></p>
+      <p><code>HRPULSE_API_URL</code></p>
+      <p><code>HRPULSE_ESS_TOKEN</code></p>
+      <p><code>SUPABASE_URL</code></p>
+      <p><code>SUPABASE_SERVICE_ROLE_KEY</code></p>
+    </div>
+  </div>
+
+  <h2>6. Local URLs</h2>
+  <ul>
+    <li>Adamrit: <code>http://localhost:8080</code></li>
+    <li>Adamrit HR page: <code>http://localhost:8080/hr</code></li>
+    <li>HRPulse health: <code>http://localhost:3001/health</code></li>
+    <li>HRPulse ESS base: <code>http://localhost:3001/api/ess</code></li>
+  </ul>
+
+  <h2>7. How To See The HR Portal</h2>
+  <ol>
+    <li>Open <code>http://localhost:8080</code>.</li>
+    <li>Log in to Adamrit.</li>
+    <li>Open Tablet View.</li>
+    <li>Make sure the user has access to tile <code>t-hr</code>.</li>
+    <li>Click the HR tile.</li>
+    <li>Click <code>Load My HR Data</code>.</li>
+    <li>Adamrit will call HRPulse and show data if the Adamrit user is linked to an HRPulse employee.</li>
+  </ol>
+
+  <h2 class="page-break">8. Why Data May Not Appear</h2>
+  <p>If the page says <code>Adamrit secure session is missing</code>, Adamrit frontend login exists but the backend secure cookie was not created.</p>
+  <p>If the page says <code>HR profile is not linked</code>, Adamrit successfully called HRPulse, but HRPulse could not find an employee matching the Adamrit user.</p>
+  <p>For example, if Adamrit is signed in as <code>cmd@hopehospital.com</code>, HRPulse employee master must contain the same email for data to appear.</p>
+
+  <h2>9. Employee Mapping Rule</h2>
+  <p>Current default: Adamrit user email maps to HRPulse employee email.</p>
+  <p>Supported future options: employee id, employee number, employee code, and external UUID.</p>
+  <p>Not allowed: employee name.</p>
+
+  <h2>10. Leave Request Flow</h2>
+  <ol>
+    <li>Employee submits leave request from Adamrit HR portal.</li>
+    <li>Adamrit sends it to <code>/api/hrpulse-ess/leaves/request</code>.</li>
+    <li>Adamrit proxy forwards it to HRPulse <code>/api/ess/leaves/request</code>.</li>
+    <li>HRPulse stores it in <code>leave_requests</code> with status <code>pending</code>.</li>
+    <li>HRPulse Super Admin approves or rejects it in HRPulse.</li>
+    <li>Adamrit displays the updated status.</li>
+  </ol>
+
+  <h2>11. Notification And Alert Flow</h2>
+  <p>HRPulse owns notifications and alerts. Adamrit displays them only.</p>
+  <p>Examples include missing punch reminders, late warnings, payroll processed messages, leave approval or rejection updates, holiday reminders, birthday wishes, work anniversary messages, company announcements, low attendance alerts, multiple missing punch alerts, and three consecutive late arrival alerts.</p>
+
+  <h2>12. Security Notes</h2>
+  <ul>
+    <li>HRPulse service-role key is not exposed to Adamrit frontend.</li>
+    <li>Adamrit service-role key is not exposed to Adamrit frontend.</li>
+    <li>HRPulse ESS token is server-side only.</li>
+    <li>Adamrit browser calls only Adamrit local/proxy APIs.</li>
+    <li>HRPulse validates token and employee identity.</li>
+    <li>Employees cannot type another employee id into the HR UI.</li>
+  </ul>
+  <div class="warning">Real secrets were pasted during the conversation. They should be treated as exposed and rotated in Supabase, OpenAI, Gemini, and DoubleTick dashboards.</div>
+
+  <h2>13. Verification Done</h2>
+  <ul>
+    <li>HRPulse backend TypeScript check passed.</li>
+    <li>Adamrit TypeScript check passed.</li>
+    <li>HRPulse backend health check passed.</li>
+    <li>Adamrit local page response check passed.</li>
+  </ul>
+
+  <h2>14. Remaining Setup Needed</h2>
+  <ol>
+    <li>Apply HRPulse migration <code>backend/supabase/migrations/20260722_ess_integration.sql</code>.</li>
+    <li>Set matching <code>HRPULSE_ESS_TOKEN</code> in both applications.</li>
+    <li>Set Adamrit production environment variables.</li>
+    <li>Ensure the Adamrit logged-in user email exists in HRPulse employee master.</li>
+    <li>Allow <code>t-hr</code> tile access for the selected Adamrit user role.</li>
+  </ol>
+
+  <h2>15. Simple Explanation</h2>
+  <p>HRPulse is the HR office. Adamrit is the hospital work app.</p>
+  <p>The new HR tile in Adamrit is like a window into HRPulse.</p>
+  <p>When the employee clicks <code>Load My HR Data</code>, Adamrit asks HRPulse: show me only this logged-in employee's HR data.</p>
+  <p>HRPulse checks the request and sends back only that employee's information. Adamrit displays it. Adamrit does not calculate or own the HR data.</p>
+
+  <p class="small">End of report.</p>
+</body>
+</html>

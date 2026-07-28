@@ -1,13 +1,17 @@
-import prisma from '../db/prisma';
+import { supabase } from '../db/supabase';
 
 interface EmployeeSummary {
   employeeId: number;
   employeeName: string;
   employeeEmail: string;
+  shift: string | null;
   absentDays: number;
   missedSwipeDays: number;
   lateComingDays: number;
   earlyLeavingDays: number;
+  halfDays: number;
+  overtimeDays: number;
+  overtimeHours: number;
   flaggedTotal: number;
   lopDays: number;
 }
@@ -17,9 +21,13 @@ interface RuleConditions {
   missedSwipeDays?: { gte?: number; lte?: number };
   lateComingDays?: { gte?: number; lte?: number };
   earlyLeavingDays?: { gte?: number; lte?: number };
+  halfDays?: { gte?: number; lte?: number };
+  overtimeDays?: { gte?: number; lte?: number };
+  overtimeHours?: { gte?: number; lte?: number };
   totalFlagged?: { gte?: number; lte?: number };
   lopDays?: { gte?: number; lte?: number };
   consecutive?: boolean;
+  shift?: string;
 }
 
 interface RuleActions {
@@ -44,10 +52,14 @@ function matchesCondition(value: number, cond: { gte?: number; lte?: number }): 
 }
 
 function evaluateRule(emp: EmployeeSummary, conditions: RuleConditions): boolean {
+  if (conditions.shift && conditions.shift !== emp.shift) return false;
   if (conditions.absentDays && !matchesCondition(emp.absentDays, conditions.absentDays)) return false;
   if (conditions.missedSwipeDays && !matchesCondition(emp.missedSwipeDays, conditions.missedSwipeDays)) return false;
   if (conditions.lateComingDays && !matchesCondition(emp.lateComingDays, conditions.lateComingDays)) return false;
   if (conditions.earlyLeavingDays && !matchesCondition(emp.earlyLeavingDays, conditions.earlyLeavingDays)) return false;
+  if (conditions.halfDays && !matchesCondition(emp.halfDays, conditions.halfDays)) return false;
+  if (conditions.overtimeDays && !matchesCondition(emp.overtimeDays, conditions.overtimeDays)) return false;
+  if (conditions.overtimeHours && !matchesCondition(emp.overtimeHours, conditions.overtimeHours)) return false;
   if (conditions.totalFlagged && !matchesCondition(emp.flaggedTotal, conditions.totalFlagged)) return false;
   if (conditions.lopDays && !matchesCondition(emp.lopDays, conditions.lopDays)) return false;
   return true;
@@ -71,10 +83,20 @@ const TEMPLATE_FOR_SEVERITY: Record<string, 'initial' | 'reminder' | 'escalation
 };
 
 export async function evaluateRulesForUpload(uploadId: number, summaries: EmployeeSummary[]): Promise<RuleMatch[]> {
-  const rules = await prisma.attendanceRule.findMany({
-    where: { isActive: true },
-    orderBy: { priority: 'asc' },
-  });
+  const { data: ruleRows, error } = await supabase
+    .from('attendance_rules')
+    .select('*')
+    .eq('is_active', true)
+    .order('priority', { ascending: true });
+  if (error) throw new Error(`evaluateRulesForUpload: ${error.message}`);
+  const rules = (ruleRows || []).map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    ruleType: r.rule_type,
+    conditions: r.conditions,
+    actions: r.actions,
+    priority: r.priority,
+  }));
 
   const results: RuleMatch[] = [];
 
