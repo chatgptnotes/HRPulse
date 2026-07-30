@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getRules, createRule, updateRule, deleteRule, toggleRule } from '../api';
+import { getRules, createRule, updateRule, deleteRule, toggleRule, generateRule } from '../api';
 import { DEPARTMENTS } from '../constants/departments';
 import clsx from 'clsx';
 
@@ -16,7 +16,7 @@ interface Rule {
   created_at: string;
 }
 
-type SalaryEffect = 'deduct_days' | 'deduct_amount' | 'deduct_percent' | 'allowance_amount' | 'allowance_percent';
+type SalaryEffect = 'deduct_days' | 'deduct_amount' | 'deduct_percent' | 'allowance_amount' | 'allowance_percent' | 'half_day_policy' | 'overtime_half_day_allowance';
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 interface CondRow { metric: string; op: 'gte' | 'lte'; value: number }
@@ -58,13 +58,14 @@ const METRICS = [
   { key: 'lateComingDays', label: 'Late arrivals', sample: 4 },
   { key: 'missedSwipeDays', label: 'Missing punches', sample: 2 },
   { key: 'earlyLeavingDays', label: 'Early exits', sample: 1 },
+  { key: 'workingHours', label: 'Working hours', sample: 3 },
   { key: 'halfDays', label: 'Half days', sample: 2 },
   { key: 'overtimeDays', label: 'Overtime days', sample: 2 },
   { key: 'overtimeHours', label: 'Overtime hours', sample: 6 },
   { key: 'totalFlagged', label: 'Any issue count', sample: 5 },
 ];
 
-const EFFECT_FIELD: Record<SalaryEffect, string> = {
+const EFFECT_FIELD: Record<Exclude<SalaryEffect, 'half_day_policy' | 'overtime_half_day_allowance'>, string> = {
   deduct_days: 'deductDays',
   deduct_amount: 'deductAmount',
   deduct_percent: 'deductPercent',
@@ -78,9 +79,11 @@ const SALARY_EFFECT_LABELS: Record<SalaryEffect, string> = {
   deduct_percent: 'Deduct salary percentage',
   allowance_amount: 'Add fixed allowance',
   allowance_percent: 'Add salary percentage',
+  half_day_policy: 'Use built-in half-day deduction',
+  overtime_half_day_allowance: 'Add half-day salary as overtime pay',
 };
 
-const EMAIL_KEYS = ['sendEmail', 'templateType', 'severity', 'notifyManager', 'notifyHRDirector', 'disciplinaryRisk', 'awol'];
+const EMAIL_KEYS = ['sendEmail', 'templateType', 'severity', 'notifyManager', 'notifyHRDirector', 'disciplinaryRisk', 'awol', 'repeat', 'halfDaySalaryDeduction', 'markHalfDay', 'overtimeHalfDayAllowance'];
 const ALL_SALARY_FIELDS = Object.values(EFFECT_FIELD);
 
 const DEFAULT_FORM = {
@@ -95,6 +98,7 @@ const DEFAULT_FORM = {
   notifyManager: false,
   salaryEffect: 'deduct_days' as SalaryEffect,
   salaryValue: 1,
+  repeat: false,
   priority: 5,
 };
 
@@ -126,6 +130,7 @@ function describeActions(actions: Record<string, unknown>) {
   if (a.awol) out.push('Mark AWOL');
   const salary = salaryEffectText(actions);
   if (salary) out.push(salary);
+  if (a.repeat === true) out.push('Repeat per threshold');
   return out;
 }
 
@@ -136,6 +141,8 @@ function salaryEffectText(actions: Record<string, unknown>) {
   if (Number(a.deductPercent) > 0) return `Deduct ${a.deductPercent}% salary`;
   if (Number(a.allowanceAmount) > 0) return `Add Rs. ${a.allowanceAmount} allowance`;
   if (Number(a.allowancePercent) > 0) return `Add ${a.allowancePercent}% allowance`;
+  if (a.halfDaySalaryDeduction === true) return 'Mark Half Day and use built-in half-day deduction';
+  if (a.overtimeHalfDayAllowance === true) return 'Add half-day salary as overtime pay';
   return '';
 }
 
@@ -180,8 +187,19 @@ function buildPayload(form: typeof DEFAULT_FORM, actionsExtra: Record<string, un
   actions.templateType = form.priority <= 2 ? 'escalation' : form.priority <= 5 ? 'reminder' : 'initial';
   actions.severity = form.severity;
   actions.notifyManager = form.notifyManager;
+  actions.repeat = form.repeat;
   for (const key of ALL_SALARY_FIELDS) delete actions[key];
-  actions[EFFECT_FIELD[form.salaryEffect]] = Number(form.salaryValue) || 0;
+  delete actions.halfDaySalaryDeduction;
+  delete actions.markHalfDay;
+  delete actions.overtimeHalfDayAllowance;
+  if (form.salaryEffect === 'half_day_policy') {
+    actions.halfDaySalaryDeduction = true;
+    actions.markHalfDay = true;
+  } else if (form.salaryEffect === 'overtime_half_day_allowance') {
+    actions.overtimeHalfDayAllowance = true;
+  } else {
+    actions[EFFECT_FIELD[form.salaryEffect]] = Number(form.salaryValue) || 0;
+  }
 
   return {
     name: form.name,
@@ -193,30 +211,48 @@ function buildPayload(form: typeof DEFAULT_FORM, actionsExtra: Record<string, un
   };
 }
 
+const SUPPORTED_GENERATOR_TERMS = [
+  'late', 'absent', 'absence', 'missing', 'punch', 'swipe', 'early', 'working', 'work hour', 'half', 'overtime', 'ot ', 'shift',
+];
+
+function canGenerateRule(text: string) {
+  const lower = text.toLowerCase();
+  return SUPPORTED_GENERATOR_TERMS.some(term => lower.includes(term));
+}
+
 function parseGenerator(text: string) {
   const lower = text.toLowerCase();
-  let metric = 'lateComingDays';
-  let ruleType = 'late_coming';
-  if (lower.includes('absent') || lower.includes('absence')) { metric = 'absentDays'; ruleType = 'absence_threshold'; }
+  let metric = '';
+  let ruleType = '';
+  if (lower.includes('late')) { metric = 'lateComingDays'; ruleType = 'late_coming'; }
+  else if (lower.includes('absent') || lower.includes('absence')) { metric = 'absentDays'; ruleType = 'absence_threshold'; }
   else if (lower.includes('missing') || lower.includes('punch') || lower.includes('swipe')) { metric = 'missedSwipeDays'; ruleType = 'missed_swipe'; }
   else if (lower.includes('early')) { metric = 'earlyLeavingDays'; ruleType = 'early_leaving'; }
+  else if ((lower.includes('working') || lower.includes('work')) && lower.includes('hour')) { metric = 'workingHours'; ruleType = 'half_day'; }
   else if (lower.includes('half')) { metric = 'halfDays'; ruleType = 'half_day'; }
   else if (lower.includes('overtime') || lower.includes('ot ')) {
     metric = lower.includes('hour') ? 'overtimeHours' : 'overtimeDays';
     ruleType = 'overtime';
   }
   else if (lower.includes('shift')) { metric = 'totalFlagged'; ruleType = 'shift'; }
+  else {
+    throw new Error('Unsupported rule request');
+  }
 
-  const number = Number(lower.match(/(\d+)/)?.[1] || 3);
+  const isOvertimeHalfDayAllowance = ruleType === 'overtime' && lower.includes('half') && lower.includes('salary');
+  if (isOvertimeHalfDayAllowance) metric = 'overtimeDays';
+  const number = isOvertimeHalfDayAllowance ? 1 : Number(lower.match(/(\d+)/)?.[1] || 3);
   const salaryNumber = Number(lower.match(/deduct\s+(\d+)|cut\s+(\d+)|add\s+(\d+)/)?.slice(1).find(Boolean) || 1);
   const isAllowance = lower.includes('allowance') || lower.includes('add ');
+  const isHalfDayPolicy = ruleType === 'half_day' && metric === 'workingHours';
   return {
     name: text.trim().slice(0, 80) || 'AI generated attendance rule',
     description: text.trim() || 'Generated from plain English by HRPulse.',
     ruleType,
-    conditions: [{ metric, op: 'gte' as const, value: number }],
-    salaryEffect: isAllowance ? 'allowance_amount' as SalaryEffect : 'deduct_days' as SalaryEffect,
-    salaryValue: salaryNumber,
+    conditions: [{ metric, op: (isHalfDayPolicy ? 'lte' : 'gte') as 'gte' | 'lte', value: number }],
+    salaryEffect: isHalfDayPolicy ? 'half_day_policy' as SalaryEffect : isOvertimeHalfDayAllowance ? 'overtime_half_day_allowance' as SalaryEffect : isAllowance ? 'allowance_amount' as SalaryEffect : 'deduct_days' as SalaryEffect,
+    salaryValue: isHalfDayPolicy || isOvertimeHalfDayAllowance ? 0 : salaryNumber,
+    repeat: isOvertimeHalfDayAllowance || (!isAllowance && (lower.includes('every') || lower.includes('per') || metric === 'lateComingDays')),
     severity: lower.includes('critical') || lower.includes('strict') ? 'critical' : 'warning',
   };
 }
@@ -235,7 +271,9 @@ export default function RulesPage() {
   const [triggerFilter, setTriggerFilter] = useState('all');
   const [aiOnly, setAiOnly] = useState(false);
   const [generatorText, setGeneratorText] = useState('');
-  const [simulation, setSimulation] = useState({ absentDays: 2, lateComingDays: 4, missedSwipeDays: 1, earlyLeavingDays: 1, halfDays: 2, overtimeDays: 1, overtimeHours: 4, totalFlagged: 6 });
+  const [generatorBusy, setGeneratorBusy] = useState(false);
+  const [generatorMessage, setGeneratorMessage] = useState<{ type: 'info' | 'error'; text: string } | null>(null);
+  const [simulation, setSimulation] = useState({ absentDays: 2, lateComingDays: 4, missedSwipeDays: 1, earlyLeavingDays: 1, workingHours: 3, halfDays: 2, overtimeDays: 1, overtimeHours: 4, totalFlagged: 6 });
 
   const { data: rules = [], isLoading } = useQuery<Rule[]>({
     queryKey: ['rules'],
@@ -320,7 +358,15 @@ export default function RulesPage() {
     }
     let salaryEffect: SalaryEffect = 'deduct_days';
     let salaryValue = 1;
-    for (const effect of Object.keys(EFFECT_FIELD) as SalaryEffect[]) {
+    if (actions?.halfDaySalaryDeduction === true || actions?.markHalfDay === true) {
+      salaryEffect = 'half_day_policy';
+      salaryValue = 0;
+    } else if (actions?.overtimeHalfDayAllowance === true) {
+      salaryEffect = 'overtime_half_day_allowance';
+      salaryValue = 0;
+    }
+    for (const effect of Object.keys(EFFECT_FIELD) as Array<Exclude<SalaryEffect, 'half_day_policy' | 'overtime_half_day_allowance'>>) {
+      if (salaryEffect === 'half_day_policy' || salaryEffect === 'overtime_half_day_allowance') break;
       const value = Number(actions?.[EFFECT_FIELD[effect]]);
       if (value > 0) {
         salaryEffect = effect;
@@ -342,6 +388,7 @@ export default function RulesPage() {
       notifyManager: !!actions?.notifyManager,
       salaryEffect,
       salaryValue,
+      repeat: actions?.repeat === true,
       priority: rule.priority,
     });
     setShowModal(true);
@@ -369,12 +416,43 @@ export default function RulesPage() {
     });
   }
 
-  function applyGenerator() {
-    const generated = parseGenerator(generatorText);
-    setForm(current => ({ ...current, ...generated }));
-    setEditingRule(null);
-    setActionsExtra({ aiGenerated: true, prompt: generatorText });
-    setShowModal(true);
+  async function applyGenerator() {
+    const prompt = generatorText.trim();
+    if (!prompt) return;
+    setGeneratorMessage(null);
+    if (!canGenerateRule(prompt)) {
+      setGeneratorMessage({
+        type: 'info',
+        text: 'Rule Generator only supports attendance and payroll rules like late coming, absence, missing punch, early leaving, half day, working hours, overtime, and shift rules.',
+      });
+      return;
+    }
+    setGeneratorBusy(true);
+    try {
+      const response = await generateRule(prompt);
+      if (!response.data?.ruleType || !Array.isArray(response.data?.conditions) || response.data.conditions.length === 0) {
+        throw new Error('Unsupported rule response');
+      }
+      setForm(current => ({ ...current, ...response.data }));
+      setActionsExtra({ aiGenerated: true, aiProvider: 'openrouter', prompt });
+      setEditingRule(null);
+      setShowModal(true);
+    } catch (_error) {
+      try {
+        const generated = parseGenerator(prompt);
+        setForm(current => ({ ...current, ...generated }));
+        setActionsExtra({ aiGenerated: true, aiProvider: 'local_fallback', prompt });
+        setEditingRule(null);
+        setShowModal(true);
+      } catch {
+        setGeneratorMessage({
+          type: 'error',
+          text: 'Sorry, HRPulse could not create a valid rule from this command. Please enter an attendance/payroll rule, for example: "Late 3 times deduct 1 day".',
+        });
+      }
+    } finally {
+      setGeneratorBusy(false);
+    }
   }
 
   function simulationResult() {
@@ -511,11 +589,30 @@ export default function RulesPage() {
                 <Icon name="auto_awesome" className="text-fuchsia-600" />
                 Rule Generator
               </div>
-              <textarea value={generatorText} onChange={e => setGeneratorText(e.target.value)} rows={4} placeholder="Example: Late 3 times deduct 1 day." className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none focus:border-fuchsia-400 focus:ring-4 focus:ring-fuchsia-50" />
-              <button onClick={applyGenerator} disabled={!generatorText.trim()} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-fuchsia-600 text-sm font-bold text-white disabled:opacity-50">
+              <textarea
+                value={generatorText}
+                onChange={e => {
+                  setGeneratorText(e.target.value);
+                  setGeneratorMessage(null);
+                }}
+                rows={4}
+                placeholder="Example: Late 3 times deduct 1 day."
+                className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none focus:border-fuchsia-400 focus:ring-4 focus:ring-fuchsia-50"
+              />
+              <button onClick={applyGenerator} disabled={!generatorText.trim() || generatorBusy} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-fuchsia-600 text-sm font-bold text-white disabled:opacity-50">
                 <Icon name="bolt" className="text-lg" />
-                Generate
+                {generatorBusy ? 'Generating...' : 'Generate'}
               </button>
+              {generatorMessage && (
+                <div className={clsx(
+                  'mt-3 rounded-xl border px-3 py-2 text-xs font-medium leading-relaxed',
+                  generatorMessage.type === 'error'
+                    ? 'border-rose-200 bg-rose-50 text-rose-700'
+                    : 'border-amber-200 bg-amber-50 text-amber-700',
+                )}>
+                  {generatorMessage.text}
+                </div>
+              )}
             </div>
           </aside>
         </section>
@@ -732,8 +829,41 @@ function RuleModal({ form, setForm, editing, pending, onClose, onSave }: {
               </select>
             </Field>
             <Field label="Value">
-              <input type="number" min={0} value={form.salaryValue} onChange={e => setForm(f => ({ ...f, salaryValue: Number(e.target.value) || 0 }))} className="input" />
+              <input
+                type="number"
+                min={0}
+                value={form.salaryValue}
+                disabled={form.salaryEffect === 'half_day_policy' || form.salaryEffect === 'overtime_half_day_allowance'}
+                onChange={e => setForm(f => ({ ...f, salaryValue: Number(e.target.value) || 0 }))}
+                className="input disabled:bg-slate-100 disabled:text-slate-400"
+              />
+              {form.salaryEffect === 'half_day_policy' && (
+                <p className="mt-1 text-xs text-slate-500">Calculated automatically as Monthly Salary / 30 / 2 for each half-day.</p>
+              )}
+              {form.salaryEffect === 'overtime_half_day_allowance' && (
+                <p className="mt-1 text-xs text-slate-500">Calculated automatically as Monthly Salary / 30 / 2 for each overtime day.</p>
+              )}
             </Field>
+            <button
+              type="button"
+              onClick={() => setForm(f => ({ ...f, repeat: !f.repeat }))}
+              className={clsx(
+                'rounded-2xl border p-4 text-left transition md:col-span-2',
+                form.repeat ? 'border-indigo-200 bg-indigo-50 text-indigo-900' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300',
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <span className={clsx('mt-0.5 grid h-5 w-5 place-items-center rounded-md border text-xs font-black', form.repeat ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white')}>
+                  {form.repeat ? 'Y' : ''}
+                </span>
+                <div>
+                  <div className="font-semibold">Repeat this salary effect for every threshold group</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    Example: Late arrivals {">="} 3 with deduct 1 day means 10 late arrivals deduct 3 salary days.
+                  </div>
+                </div>
+              </div>
+            </button>
             <Field label="Priority">
               <input type="number" min={0} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: Number(e.target.value) || 0 }))} className="input" />
             </Field>

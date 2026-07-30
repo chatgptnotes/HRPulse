@@ -321,12 +321,11 @@ export default function EmployeeProfileDrawer({ employee, initialTab, onClose, o
               {documentsLoading ? (
                 <div className="py-10 text-center text-sm text-slate-400">Loading documents...</div>
               ) : documents.length ? (
-                documents.map(document => (
-                  <a
+                documents.map(document => {
+                  const downloadUrl = `/api/employees/${employee.id}/documents/${document.id}/download`;
+                  return (
+                  <div
                     key={document.id}
-                    href={document.url}
-                    target="_blank"
-                    rel="noreferrer"
                     className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-200 hover:bg-indigo-50/30"
                   >
                     <span className="material-icons flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">description</span>
@@ -339,9 +338,28 @@ export default function EmployeeProfileDrawer({ employee, initialTab, onClose, o
                         Source: {document.source === 'adamrit' ? 'Adamrit ESS' : 'HRPulse'}
                       </span>
                     </span>
-                    <span className="material-icons text-slate-300">open_in_new</span>
-                  </a>
-                ))
+                    <span className="flex shrink-0 items-center gap-1">
+                      <a
+                        href={downloadUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open document"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-indigo-50 hover:text-indigo-600"
+                      >
+                        <span className="material-icons text-xl">open_in_new</span>
+                      </a>
+                      <a
+                        href={downloadUrl}
+                        download={document.originalFilename}
+                        title="Download document"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600"
+                      >
+                        <span className="material-icons text-xl">download</span>
+                      </a>
+                    </span>
+                  </div>
+                  );
+                })
               ) : (
                 <EmptyState icon="folder_open" title="No documents uploaded" sub="Documents uploaded by the employee from Adamrit will appear here." />
               )}

@@ -1,0 +1,235 @@
+openapi: 3.1.0
+info:
+  title: HRPulse HIMS Connector API
+  version: 1.0.0
+  description: Inbound connector contract implemented by HRPulse. All write operations are idempotent.
+servers:
+  - url: https://{hrpulse-host}/api/integrations/v1
+    variables:
+      hrpulse-host:
+        default: hrpulse.example.invalid
+security:
+  - connectorBearer: []
+paths:
+  /attendance/daily/batch:
+    post:
+      summary: Ingest up to 500 versioned daily attendance records
+      operationId: ingestDailyAttendance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DailyAttendanceBatch'
+      responses:
+        '202': { description: All records accepted }
+        '207': { description: Some records rejected }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { description: Version or idempotency conflict }
+  /leave-requests:
+    post:
+      summary: Submit a HIMS-originated leave request to HRPulse
+      operationId: submitLeaveRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveRequest'
+      responses:
+        '201': { description: Created }
+        '200': { description: Duplicate acknowledged }
+        '422': { description: Mapping or business validation failed }
+  /leave-requests/{requestUuid}:
+    patch:
+      summary: Edit a HIMS-originated request while it is pending
+      operationId: updateLeaveRequest
+      parameters:
+        - $ref: '#/components/parameters/RequestUuid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveRequestUpdate'
+      responses:
+        '200': { description: Updated }
+        '409': { description: Request is no longer pending or version is stale }
+  /leave-requests/{requestUuid}/cancel:
+    post:
+      summary: Cancel a HIMS-originated request while it is pending
+      operationId: cancelLeaveRequest
+      parameters:
+        - $ref: '#/components/parameters/RequestUuid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveRequestCancellation'
+      responses:
+        '200': { description: Cancelled or duplicate acknowledged }
+        '409': { description: Request is no longer pending or version is stale }
+  /webhooks/adamrit:
+    post:
+      summary: Receive a signed Adamrit integration event
+      operationId: receiveAdamritWebhook
+      parameters:
+        - in: header
+          name: X-HIMS-Timestamp
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-HIMS-Signature
+          required: true
+          schema: { type: string, pattern: '^v1=[a-f0-9]{64}$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventEnvelope'
+      responses:
+        '202': { description: Accepted }
+        '200': { description: Duplicate acknowledged }
+        '401': { description: Invalid, missing, or stale signature }
+  /employee-documents/upload-sessions:
+    post:
+      summary: Create a short-lived private upload session
+      operationId: createDocumentUploadSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentUploadRequest'
+      responses:
+        '201': { description: Upload session created }
+  /employee-documents/{documentUuid}/complete:
+    post:
+      summary: Validate upload size/checksum and place the document in quarantine
+      operationId: completeDocumentUpload
+      parameters:
+        - $ref: '#/components/parameters/DocumentUuid'
+      responses:
+        '202': { description: Awaiting malware scan }
+        '422': { description: Size or checksum mismatch }
+  /employee-documents/{documentUuid}/download-link:
+    post:
+      summary: Create a five-minute signed link for a clean document
+      operationId: createDocumentDownloadLink
+      parameters:
+        - $ref: '#/components/parameters/DocumentUuid'
+      responses:
+        '200': { description: Signed link created }
+        '423': { description: Document is quarantined or scan failed }
+components:
+  securitySchemes:
+    connectorBearer:
+      type: http
+      scheme: bearer
+      description: Send X-Connector-Id with the provisioned connector id.
+  parameters:
+    DocumentUuid:
+      in: path
+      name: documentUuid
+      required: true
+      schema: { type: string, format: uuid }
+    RequestUuid:
+      in: path
+      name: requestUuid
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Unauthorized:
+      description: Connector is disabled or the bearer credential is invalid
+  schemas:
+    EventEnvelope:
+      type: object
+      required: [event_uuid, event_type, event_version, occurred_at, data]
+      properties:
+        event_uuid: { type: string, format: uuid }
+        event_type:
+          type: string
+          enum: [attendance.daily.upserted, attendance.daily.reversed, leave.request.submitted]
+        event_version: { type: integer, minimum: 1 }
+        entity_uuid: { type: [string, 'null'], format: uuid }
+        occurred_at: { type: string, format: date-time }
+        data: { type: object, additionalProperties: true }
+    DailyAttendance:
+      type: object
+      required: [sourceRecordId, hrpulseEmployeeUuid, workDate, timezone, status, sourceVersion, sourceUpdatedAt]
+      properties:
+        sourceRecordId: { type: string, maxLength: 200 }
+        hrpulseEmployeeUuid: { type: string, format: uuid }
+        workDate: { type: string, format: date }
+        checkInAt: { type: [string, 'null'], format: date-time }
+        checkOutAt: { type: [string, 'null'], format: date-time }
+        timezone: { type: string, const: Asia/Kolkata }
+        shiftType: { type: [string, 'null'] }
+        status:
+          type: string
+          enum: [present, absent, half_day, on_leave, weekly_off, holiday, missing_punch, late]
+        notes: { type: [string, 'null'], maxLength: 1000 }
+        sourceVersion: { type: integer, minimum: 1 }
+        sourceUpdatedAt: { type: string, format: date-time }
+        reversed: { type: boolean, default: false }
+    DailyAttendanceBatch:
+      type: object
+      required: [eventUuid, occurredAt, records]
+      properties:
+        eventUuid: { type: string, format: uuid }
+        occurredAt: { type: string, format: date-time }
+        records:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: '#/components/schemas/DailyAttendance' }
+    LeaveRequest:
+      type: object
+      required: [requestUuid, externalRequestId, hrpulseEmployeeUuid, leaveType, startDate, endDate, sourceVersion, sourceUpdatedAt]
+      properties:
+        requestUuid: { type: string, format: uuid }
+        externalRequestId: { type: string }
+        hrpulseEmployeeUuid: { type: string, format: uuid }
+        leaveType: { type: string, enum: [CASUAL, SICK, EMERGENCY] }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        startDayPart: { type: string, enum: [full, first_half, second_half], default: full }
+        endDayPart: { type: string, enum: [full, first_half, second_half], default: full }
+        reason: { type: [string, 'null'], maxLength: 1000 }
+        sourceVersion: { type: integer, minimum: 1 }
+        sourceUpdatedAt: { type: string, format: date-time }
+    LeaveRequestUpdate:
+      type: object
+      required: [sourceVersion, sourceUpdatedAt]
+      properties:
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        startDayPart: { type: string, enum: [full, first_half, second_half] }
+        endDayPart: { type: string, enum: [full, first_half, second_half] }
+        reason: { type: [string, 'null'], maxLength: 1000 }
+        sourceVersion: { type: integer, minimum: 1 }
+        sourceUpdatedAt: { type: string, format: date-time }
+    LeaveRequestCancellation:
+      type: object
+      required: [sourceVersion, sourceUpdatedAt]
+      properties:
+        reason: { type: [string, 'null'], maxLength: 1000 }
+        sourceVersion: { type: integer, minimum: 1 }
+        sourceUpdatedAt: { type: string, format: date-time }
+    DocumentUploadRequest:
+      type: object
+      required: [hrpulseEmployeeUuid, documentType, originalFilename, mimeType, fileSize, sha256]
+      properties:
+        hrpulseEmployeeUuid: { type: string, format: uuid }
+        documentType:
+          type: string
+          enum: [RESUME_CV, EDUCATIONAL_QUALIFICATION, IDENTITY_DOCUMENT, PROFESSIONAL_REGISTRATION, EXPERIENCE_CERTIFICATE, EMPLOYMENT_CONTRACT, PAYSLIP, GENERAL_HR_DOCUMENT]
+        originalFilename: { type: string, maxLength: 255 }
+        mimeType:
+          type: string
+          enum: [application/pdf, image/png, image/jpeg, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/plain]
+        fileSize: { type: integer, minimum: 1, maximum: 10485760 }
+        sha256: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        expiryDate: { type: [string, 'null'], format: date }

@@ -89,6 +89,31 @@ Open http://localhost:5173
 | `HRPULSE_ESS_TOKEN` | - | Shared server-to-server token required by Adamrit ESS proxy calls |
 | `ADAMRIT_HR_NOTIFICATIONS_URL` | - | Adamrit server endpoint that receives mirrored HRPulse notifications, for example `https://adamrit.com/api/hrpulse-notifications` |
 | `ADAMRIT_HR_NOTIFICATIONS_TOKEN` | `HRPULSE_ESS_TOKEN` | Bearer token HRPulse uses when pushing notifications to Adamrit |
+| `OPENROUTER_API_KEY` | - | Server-side OpenRouter API key used by backend rule generation only |
+| `OPENROUTER_MODEL` | `openrouter/free` | OpenRouter model used for initial rule generation and verification |
+| `OPENROUTER_SITE_URL` | - | Optional HTTP referer sent to OpenRouter from the backend |
+| `OPENROUTER_APP_TITLE` | `HRPulse` | Optional application title sent to OpenRouter from the backend |
+
+## OpenRouter Rule Generator
+
+HRPulse can use OpenRouter from the backend for **Rules > Rule Generator**. Keep the key only in `backend/.env` locally or in the backend deployment environment:
+
+```env
+OPENROUTER_API_KEY=your-rotated-server-side-key
+OPENROUTER_MODEL=openrouter/free
+OPENROUTER_SITE_URL=http://localhost:5173
+OPENROUTER_APP_TITLE=HRPulse
+```
+
+Do not add the key to frontend `.env` files, React components, `VITE_` variables, `NEXT_PUBLIC_` variables, GitHub, logs, screenshots, or browser code. If the key is exposed, rotate it in OpenRouter and replace the backend environment value.
+
+Verify locally after starting the backend:
+
+```bash
+curl http://localhost:3001/health/openrouter
+```
+
+The health response reports only booleans and model name, never the key or Authorization header.
 
 ## Adamrit ESS Integration
 
@@ -97,6 +122,42 @@ HRPulse exposes employee-scoped ESS APIs under `/api/ess/*` for Adamrit. Adamrit
 Apply `backend/supabase/migrations/20260722_ess_integration.sql` before enabling leave requests, ESS notifications, audit logs, and optional employee `external_uuid` mapping.
 
 For near-real-time employee notification display inside Adamrit, set `ADAMRIT_HR_NOTIFICATIONS_URL` and `ADAMRIT_HR_NOTIFICATIONS_TOKEN` in HRPulse. HRPulse will mirror newly created ESS notifications to Adamrit's `/api/hrpulse-notifications` endpoint. Adamrit stores only the employee-facing notification/read state; HRPulse remains the source system for all HR rules and message generation.
+
+## Reusable HIMS Connector
+
+The versioned connector foundation supersedes one-off sync for attendance,
+employee master, leave decisions, finalized payroll, and private HR documents.
+
+1. Apply `backend/supabase/migrations/20260730_hims_connector_foundation.sql`.
+2. Create a Supabase Auth user and set its email as
+   `HRPULSE_BOOTSTRAP_ADMIN_EMAIL`.
+3. Configure frontend `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+4. Configure the connector and scanner variables documented in
+   `backend/.env.example`.
+5. Start the API and integration worker separately:
+
+```bash
+npm run dev --workspace=backend
+npm run worker:dev --workspace=backend
+```
+
+The seeded `adamrit-hope` connector starts disabled. Configure its base URL from
+the Integrations page, enable `shadow` mode, and complete reconciliation before
+using `active`.
+
+Contract artifacts:
+
+- `docs/integrations/hrpulse-inbound-v1.openapi.yaml`
+- `docs/integrations/adamrit-required-v1.openapi.yaml`
+- `docs/integrations/ADAMRIT_IMPLEMENTATION_HANDOFF.md`
+
+Legacy employee documents can be inspected and migrated without deleting local
+files:
+
+```bash
+npm run documents:migrate:dry-run --workspace=backend
+npm run documents:migrate --workspace=backend
+```
 
 ## License
 

@@ -1,7 +1,10 @@
 import { Router, Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { supabase } from '../db/supabase';
 import { insertHrNotification, updateHrNotificationAndPush } from '../services/hrNotificationService';
+import { AuthenticatedRequest } from '../middleware/auth';
+import { enqueueForActiveConnectors } from '../services/connectorService';
 
 const router = Router();
 
@@ -35,6 +38,13 @@ function inclusiveDays(startDate: string, endDate: string) {
   const end = Date.parse(`${endDate}T00:00:00Z`);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 0;
   return Math.floor((end - start) / 86_400_000) + 1;
+}
+
+function requestedDays(request: { start_date: string; end_date: string; start_day_part?: string; end_day_part?: string }) {
+  let days = inclusiveDays(request.start_date, request.end_date);
+  if (request.start_day_part && request.start_day_part !== 'full') days -= 0.5;
+  if (request.end_date !== request.start_date && request.end_day_part && request.end_day_part !== 'full') days -= 0.5;
+  return Math.max(0.5, days);
 }
 
 function mapBalance(row: any) {
@@ -75,7 +85,10 @@ function mapRequest(row: any, balances: any[] = []) {
     leaveType: row.leave_type,
     startDate: row.start_date,
     endDate: row.end_date,
-    days: inclusiveDays(row.start_date, row.end_date),
+    days: requestedDays(row),
+    startDayPart: row.start_day_part || 'full',
+    endDayPart: row.end_day_part || 'full',
+    requestUuid: row.request_uuid || null,
     reason: row.reason || '',
     status: row.status,
     source: row.source || 'hrpulse',
@@ -230,7 +243,7 @@ router.put('/balances/:employeeId', async (req: Request, res: Response) => {
   }
 });
 
-router.patch('/:id/decision', async (req: Request, res: Response) => {
+router.patch('/:id/decision', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const id = Number(req.params.id);
     const parsed = decisionSchema.safeParse(req.body || {});
@@ -250,7 +263,7 @@ router.patch('/:id/decision', async (req: Request, res: Response) => {
       return;
     }
 
-    const days = inclusiveDays(request.start_date, request.end_date);
+    const days = requestedDays(request);
     const year = Number(String(request.start_date).slice(0, 4));
     const balanceResult = await supabase
       .from('leave_balances')
@@ -274,12 +287,13 @@ router.patch('/:id/decision', async (req: Request, res: Response) => {
     }
 
     const decidedAt = new Date().toISOString();
+    const decidedBy = req.hrActor?.email || parsed.data.decidedBy;
     const updateResult = await supabase
       .from('leave_requests')
       .update({
         status: parsed.data.decision,
         approver_notes: parsed.data.approverNotes || null,
-        decided_by: parsed.data.decidedBy,
+        decided_by: decidedBy,
         decided_at: decidedAt,
       })
       .eq('id', id)
@@ -318,10 +332,55 @@ router.patch('/:id/decision', async (req: Request, res: Response) => {
         days,
         parsed.data.decision,
         parsed.data.approverNotes,
-        parsed.data.decidedBy,
+        decidedBy,
       );
     } catch (notificationError) {
       console.error(`Leave request ${id} was decided, but its employee notification could not be updated:`, notificationError);
+    }
+
+    try {
+      const employeeResult = await supabase
+        .from('employees')
+        .select('public_uuid, organization_id')
+        .eq('id', request.employee_id)
+        .maybeSingle();
+      if (employeeResult.data?.public_uuid) {
+        await enqueueForActiveConnectors({
+          organizationId: employeeResult.data.organization_id,
+          eventType: `leave.request.${parsed.data.decision}`,
+          entityUuid: request.request_uuid || undefined,
+          data: {
+            request_uuid: request.request_uuid,
+            status: parsed.data.decision,
+            decision_uuid: randomUUID(),
+            hrpulse_employee_uuid: employeeResult.data.public_uuid,
+            decided_by: { system: 'hrpulse', actor_id: req.hrActor?.authUserId || decidedBy },
+            approver_note: parsed.data.approverNotes || null,
+            decided_at: decidedAt,
+            version: Number(request.source_version || 1) + 1,
+          },
+        });
+        if (updatedBalance) {
+          await enqueueForActiveConnectors({
+            organizationId: employeeResult.data.organization_id,
+            eventType: 'leave.balance.updated',
+            entityUuid: employeeResult.data.public_uuid,
+            data: {
+              hrpulse_employee_uuid: employeeResult.data.public_uuid,
+              as_of: new Date().toISOString().slice(0, 10),
+              balances: [{
+                leave_type: updatedBalance.leave_type,
+                available: Number(updatedBalance.available) || 0,
+                used: Number(updatedBalance.used) || 0,
+                pending: Number(updatedBalance.pending) || 0,
+              }],
+              source_updated_at: new Date().toISOString(),
+            },
+          });
+        }
+      }
+    } catch (syncError) {
+      console.error(`Leave request ${id} decision was saved but could not be queued for connector sync:`, syncError);
     }
 
     const rows = await loadRequests(request.employee_id);

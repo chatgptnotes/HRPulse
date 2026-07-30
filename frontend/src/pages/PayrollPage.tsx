@@ -79,6 +79,9 @@ const months = [
   { value: '12', label: 'December' },
 ];
 
+const currentYear = new Date().getFullYear();
+const allYears = Array.from({ length: currentYear - 2000 + 6 }, (_, index) => String(2000 + index)).reverse();
+
 const columns: Array<{ key: string; label: string; sortable?: SortKey; align?: 'left' | 'right'; defaultVisible?: boolean }> = [
   { key: 'employee', label: 'Employee', sortable: 'employeeName', defaultVisible: true },
   { key: 'employeeNumber', label: 'Employee ID', sortable: 'employeeNumber', defaultVisible: true },
@@ -109,38 +112,50 @@ function Icon({ name, className = 'text-base' }: { name: string; className?: str
 }
 
 function MetricCard({
-  icon, label, value, helper, tone,
-}: { icon: string; label: string; value: string | number; helper: string; tone: string }) {
+  icon, label, value, helper, tone, bar, progress,
+}: { icon: string; label: string; value: string | number; helper: string; tone: string; bar: string; progress: number }) {
   return (
-    <div className="group rounded-2xl border border-white/70 bg-white p-4 shadow-sm shadow-slate-200/70 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-100">
-      <div className="flex items-start justify-between gap-3">
+    <div className="group rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+      <div className="flex min-h-[78px] items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+          <p className="mt-3 text-2xl font-black leading-7 text-slate-950">{value}</p>
           <p className="mt-1 text-xs text-slate-500">{helper}</p>
         </div>
-        <div className={clsx('flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition-transform group-hover:scale-105', tone)}>
-          <Icon name={icon} className="text-xl" />
+        <div className={clsx('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border shadow-sm transition group-hover:shadow', tone)}>
+          <Icon name={icon} className="text-lg" />
         </div>
+      </div>
+      <div className="mt-4 h-[3px] rounded-full bg-slate-100">
+        <div
+          className={clsx('h-full rounded-full transition-all group-hover:brightness-95', bar)}
+          style={{ width: `${Math.max(4, Math.min(100, progress))}%` }}
+        />
       </div>
     </div>
   );
 }
 
 function SummaryTile({
-  icon, label, value, helper, tone,
-}: { icon: string; label: string; value: string; helper: string; tone: string }) {
+  icon, label, value, helper, tone, bar, progress,
+}: { icon: string; label: string; value: string; helper: string; tone: string; bar: string; progress: number }) {
   return (
-    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 transition hover:bg-white hover:shadow-md hover:shadow-indigo-100/60">
+    <div className="group flex min-w-[160px] flex-1 flex-col justify-between gap-2 px-4 py-3 transition hover:bg-slate-50/80">
       <div className="flex items-start gap-3">
-        <div className={clsx('flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm', tone)}>
-          <Icon name={icon} className="text-lg" />
+        <div className={clsx('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-white', tone)}>
+          <Icon name={icon} className="text-base" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-          <p className="mt-1 text-xl font-bold text-slate-950">{value}</p>
-          <p className="mt-1 text-xs text-slate-500">{helper}</p>
+          <p className="truncate text-lg font-black leading-6 text-slate-950">{value}</p>
+          <p className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+          <p className="truncate text-[11px] text-slate-500">{helper}</p>
         </div>
+      </div>
+      <div className="h-1 rounded-full bg-slate-100">
+        <div
+          className={clsx('h-full rounded-full transition-all group-hover:brightness-95', bar)}
+          style={{ width: `${Math.max(4, Math.min(100, progress))}%` }}
+        />
       </div>
     </div>
   );
@@ -210,7 +225,6 @@ export default function PayrollPage() {
   const [fShift, setFShift] = useState('');
   const [fEmp, setFEmp] = useState('');
   const [onlyNoPunch, setOnlyNoPunch] = useState(false);
-  const [tableSearch, setTableSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('netSalary');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
@@ -230,6 +244,11 @@ export default function PayrollPage() {
     queryKey: ['payroll-run', uploadId],
     queryFn: () => api.getPayrollRun(uploadId!).then(r => r.data),
     enabled: !!uploadId,
+  });
+  const { data: finalization } = useQuery({
+    queryKey: ['payroll-finalization', periodMonth],
+    queryFn: () => api.getPayrollFinalizationStatus(periodMonth).then(response => response.data),
+    enabled: /^\d{4}-\d{2}$/.test(periodMonth),
   });
 
   useEffect(() => {
@@ -284,13 +303,15 @@ export default function PayrollPage() {
     multiple: false,
   });
 
-  const years = useMemo(() => [...new Set(history.map(h => h.year).filter(Boolean))].sort(), [history]);
+  const years = useMemo(() => {
+    const uploadYears = history.map(h => h.year).filter(Boolean);
+    return [...new Set([...allYears, ...uploadYears])].sort((a, b) => Number(b) - Number(a));
+  }, [history]);
   const deptOptions = useMemo(() => [...new Set([...DEPARTMENTS, ...(filters?.departments || [])])].sort(), [filters]);
   const shiftOptions = useMemo(() => mergeShiftOptions(filters?.shifts || []), [filters]);
   const activeColumns = columns.filter(c => visible[c.key]);
 
   const filtered = useMemo(() => {
-    const search = tableSearch.trim().toLowerCase();
     return rows.filter(r => {
       if (fMonth && periodMonth.substring(5, 7) !== fMonth) return false;
       if (fYear && periodYear !== fYear) return false;
@@ -299,10 +320,9 @@ export default function PayrollPage() {
       if (onlyNoPunch && (r.punchCount ?? 0) > 0) return false;
       const employeeQuery = fEmp.trim().toLowerCase();
       if (employeeQuery && !`${r.employeeName} ${idFor(r)}`.toLowerCase().includes(employeeQuery)) return false;
-      if (search && !`${r.employeeName} ${idFor(r)} ${r.department || ''} ${r.shift || ''} ${r.status}`.toLowerCase().includes(search)) return false;
       return true;
     });
-  }, [rows, fMonth, fYear, fDept, fShift, fEmp, onlyNoPunch, tableSearch, periodMonth, periodYear]);
+  }, [rows, fMonth, fYear, fDept, fShift, fEmp, onlyNoPunch, periodMonth, periodYear]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -319,7 +339,7 @@ export default function PayrollPage() {
   const currentPage = Math.min(page, pageCount);
   const paged = sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  useEffect(() => setPage(1), [fMonth, fYear, fDept, fShift, fEmp, onlyNoPunch, tableSearch, pageSize]);
+  useEffect(() => setPage(1), [fMonth, fYear, fDept, fShift, fEmp, onlyNoPunch, pageSize]);
 
   const payrollTotals = useMemo(() => {
     const totalGross = filtered.reduce((sum, r) => sum + (r.grossSalary || 0), 0);
@@ -337,7 +357,6 @@ export default function PayrollPage() {
     setFShift('');
     setFEmp('');
     setOnlyNoPunch(false);
-    setTableSearch('');
   };
 
   const handleSort = (key: SortKey) => {
@@ -466,6 +485,11 @@ export default function PayrollPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {finalization?.latestRun && (
+                <span className="inline-flex h-10 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-700">
+                  Finalized v{finalization.latestRun.version} · {finalization.latestRun.publish_status}
+                </span>
+              )}
               <button
                 onClick={() => refetchRun()}
                 disabled={!uploadId || isFetching}
@@ -557,6 +581,104 @@ export default function PayrollPage() {
           </section>
         )}
 
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            icon="groups"
+            label="Total Employees"
+            value={summary.totalEmployees}
+            helper="100% payroll base"
+            tone="border-slate-200 bg-slate-50 text-slate-700"
+            bar="bg-slate-700"
+            progress={100}
+          />
+          <MetricCard
+            icon="check_circle"
+            label="Present Employees"
+            value={summary.presentEmployees}
+            helper={`${pct(summary.presentEmployees, summary.totalEmployees)}% attendance`}
+            tone="border-emerald-100 bg-emerald-50 text-emerald-600"
+            bar="bg-emerald-500"
+            progress={pct(summary.presentEmployees, summary.totalEmployees)}
+          />
+          <MetricCard
+            icon="pending_actions"
+            label="Pending Employees"
+            value={payrollTotals.pending}
+            helper="Need payroll review"
+            tone="border-amber-100 bg-amber-50 text-amber-600"
+            bar="bg-amber-500"
+            progress={pct(payrollTotals.pending, Math.max(summary.totalEmployees, filtered.length))}
+          />
+          <MetricCard
+            icon="payments"
+            label="Salary Payable"
+            value={`INR ${fmtINR(summary.totalSalaryPayable)}`}
+            helper="Net payroll value"
+            tone="border-purple-100 bg-purple-50 text-purple-600"
+            bar="bg-purple-500"
+            progress={pct(summary.totalSalaryPayable, payrollTotals.totalGross)}
+          />
+        </section>
+
+        <section className="rounded-xl border border-slate-200/80 bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5">
+            <div>
+              <h2 className="text-sm font-bold text-slate-950">Payroll Summary</h2>
+              <p className="text-[11px] text-slate-400">Selected payroll run totals</p>
+            </div>
+            <span className="whitespace-nowrap rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700">
+              {filtered.length} Employees Selected
+            </span>
+          </div>
+          <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3 xl:grid-cols-5">
+            <SummaryTile
+              icon="account_balance_wallet"
+              label="Gross Salary"
+              value={`INR ${fmtINR(payrollTotals.totalGross)}`}
+              helper="Before deductions"
+              tone="border-violet-100 text-violet-600"
+              bar="bg-violet-500"
+              progress={100}
+            />
+            <SummaryTile
+              icon="remove_circle"
+              label="Total Deductions"
+              value={`INR ${fmtINR(payrollTotals.totalDeductions)}`}
+              helper="PF, ESI, loans, advances"
+              tone="border-rose-100 text-rose-600"
+              bar="bg-rose-500"
+              progress={pct(payrollTotals.totalDeductions, payrollTotals.totalGross)}
+            />
+            <SummaryTile
+              icon="payments"
+              label="Net Payable"
+              value={`INR ${fmtINR(payrollTotals.net)}`}
+              helper="Final payable salary"
+              tone="border-emerald-100 text-emerald-600"
+              bar="bg-emerald-500"
+              progress={pct(payrollTotals.net, payrollTotals.totalGross)}
+            />
+            <SummaryTile
+              icon="task_alt"
+              label="Processed"
+              value={String(payrollTotals.processed)}
+              helper="Employees calculated"
+              tone="border-teal-100 text-teal-600"
+              bar="bg-teal-500"
+              progress={pct(payrollTotals.processed, filtered.length)}
+            />
+            <SummaryTile
+              icon="hourglass_top"
+              label="Pending"
+              value={String(payrollTotals.pending)}
+              helper="Employees pending"
+              tone="border-amber-100 text-amber-600"
+              bar="bg-amber-500"
+              progress={pct(payrollTotals.pending, filtered.length)}
+            />
+          </div>
+        </section>
+
         <section className="rounded-3xl border border-slate-200/70 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
@@ -575,7 +697,7 @@ export default function PayrollPage() {
             <Field label="Year">
               <select value={fYear} onChange={e => setFYear(e.target.value)} className={controlClass()}>
                 <option value="">All years</option>
-                {(years.length ? years : (periodYear ? [periodYear] : [])).map(y => <option key={y} value={y}>{y}</option>)}
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </Field>
             <Field label="Department">
@@ -605,57 +727,6 @@ export default function PayrollPage() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard icon="groups" label="Total Employees" value={summary.totalEmployees} helper="100% payroll base" tone="from-slate-600 to-slate-800" />
-          <MetricCard icon="check_circle" label="Present Employees" value={summary.presentEmployees} helper={`${pct(summary.presentEmployees, summary.totalEmployees)}% attendance`} tone="from-emerald-500 to-teal-500" />
-          <MetricCard icon="pending_actions" label="Pending Employees" value={payrollTotals.pending} helper="Need payroll review" tone="from-amber-500 to-orange-500" />
-          <MetricCard icon="payments" label="Salary Payable" value={`INR ${fmtINR(summary.totalSalaryPayable)}`} helper="Net payroll value" tone="from-purple-500 to-fuchsia-500" />
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_320px]">
-          <div className="rounded-3xl border border-slate-200/70 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-base font-bold text-slate-950">Payroll Summary</h2>
-                <p className="text-xs text-slate-400">Simple salary totals for the selected payroll run and filters.</p>
-              </div>
-              <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">{filtered.length} employees selected</span>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <SummaryTile icon="account_balance_wallet" label="Gross Salary" value={`INR ${fmtINR(payrollTotals.totalGross)}`} helper="Before deductions" tone="bg-indigo-600" />
-              <SummaryTile icon="remove_circle" label="Total Deductions" value={`INR ${fmtINR(payrollTotals.totalDeductions)}`} helper="PF, ESI, loans, advances" tone="bg-rose-500" />
-              <SummaryTile icon="payments" label="Net Payable" value={`INR ${fmtINR(payrollTotals.net)}`} helper="Final payable salary" tone="bg-emerald-600" />
-              <SummaryTile icon="task_alt" label="Processed" value={String(payrollTotals.processed)} helper="Employees calculated" tone="bg-teal-600" />
-              <SummaryTile icon="hourglass_top" label="Pending" value={String(payrollTotals.pending)} helper="Employees pending" tone="bg-amber-500" />
-            </div>
-          </div>
-
-          <aside className="rounded-3xl border border-slate-200/70 bg-white p-5 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-base font-bold text-slate-950">Quick Actions</h2>
-              <p className="text-xs text-slate-400">Common payroll tasks in one place.</p>
-            </div>
-            <div className="space-y-2">
-              <button className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700">
-                <span className="inline-flex items-center gap-2"><Icon name="mail" className="text-base" /> Send Salary Emails</span>
-                <Icon name="chevron_right" className="text-base" />
-              </button>
-              <button onClick={exportCsv} disabled={!sorted.length} className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-40">
-                <span className="inline-flex items-center gap-2"><Icon name="download" className="text-base" /> Export Excel</span>
-                <Icon name="chevron_right" className="text-base" />
-              </button>
-              <button
-                onClick={() => refetchRun()}
-                disabled={!uploadId || isFetching}
-                className="flex h-11 w-full items-center justify-between rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 text-sm font-bold text-white shadow-lg shadow-indigo-100 transition hover:from-indigo-700 hover:to-purple-700 disabled:opacity-40"
-              >
-                <span className="inline-flex items-center gap-2"><Icon name={isFetching ? 'sync' : 'calculate'} className={clsx('text-base', isFetching && 'animate-spin')} /> Process Salary</span>
-                <Icon name="chevron_right" className="text-base" />
-              </button>
-            </div>
-          </aside>
-        </section>
-
         <section className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-5">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -664,10 +735,6 @@ export default function PayrollPage() {
                 <p className="text-xs text-slate-400">Sticky headers, sorting, search, pagination, export, and column controls.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <div className="relative">
-                  <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-slate-400" />
-                  <input value={tableSearch} onChange={e => setTableSearch(e.target.value)} placeholder="Search table" className={controlClass('w-56 pl-9')} />
-                </div>
                 <button onClick={exportCsv} disabled={!sorted.length} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40">
                   <Icon name="download" className="text-base" />
                   Export

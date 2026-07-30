@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { createHash, randomUUID } from 'crypto';
 import { supabase, getSettings } from '../db/supabase';
 import { upload } from '../middleware/upload';
 import { parseAttendanceExcel } from '../services/excelParser';
@@ -15,6 +16,8 @@ import { matchEmployees } from '../services/employeeMatch';
 import { loadSalaryRules, buildSummary, evaluateSalaryRules, MatchedRuleEffect, SalaryRule } from '../services/salaryRules';
 import { ensureAttendanceAlertNotificationsForUpload } from '../services/attendanceAlertService';
 import { writeAttendanceRecordBatch } from '../services/attendanceRecordWriter';
+import { AuthenticatedRequest, requireRoles } from '../middleware/auth';
+import { enqueueConnectorEvent } from '../services/connectorService';
 
 const router = Router();
 
@@ -62,6 +65,11 @@ function shouldMarkHalfDay(status: string, timeIn: string | null | undefined, ti
 function monthFromDays(days: Array<{ recordDate: string }>) {
   const first = days.find((day) => day.recordDate)?.recordDate;
   return first ? String(first).slice(0, 7) : '';
+}
+
+function monthEndFor(periodMonth: string) {
+  const [year, month] = periodMonth.split('-').map(Number);
+  return `${periodMonth}-${String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, '0')}`;
 }
 
 function fillNotAttemptedMonth(days: Array<{ recordDate: string; status: string; timeIn: string | null; timeOut: string | null }>, periodMonth?: string) {
@@ -333,7 +341,38 @@ async function computeForUpload(uploadId: number): Promise<PayrollResult | null>
   return { rows, summary: summarize(rows) };
 }
 
-async function computeForMonth(periodMonth: string): Promise<PayrollResult | null> {
+type PayrollInputDay = {
+  recordDate: string;
+  status: string;
+  timeIn: string | null;
+  timeOut: string | null;
+  approvedLeaveFraction?: number;
+  approvedLeavePaid?: boolean;
+};
+
+function overlayApprovedLeave(
+  days: PayrollInputDay[],
+  leaveDays: Array<{ date: string; fraction: number; paid: boolean }>,
+  department?: string | null,
+) {
+  if (!leaveDays.length) return days;
+  const byDate = new Map<string, PayrollInputDay>(days.map(day => [day.recordDate, day]));
+  for (const leave of leaveDays) {
+    const current = byDate.get(leave.date) || { recordDate: leave.date, status: 'Not Attempted', timeIn: null, timeOut: null };
+    const isHoliday = String(current.status || '').toLowerCase() === 'holiday';
+    const date = new Date(`${leave.date}T00:00:00Z`);
+    const isItWeeklyOff = String(department || '').trim().toLowerCase() === 'it' && date.getUTCDay() === 0;
+    if (isHoliday || isItWeeklyOff) continue;
+    byDate.set(leave.date, {
+      ...current,
+      approvedLeaveFraction: leave.fraction,
+      approvedLeavePaid: leave.paid,
+    });
+  }
+  return [...byDate.values()].sort((a, b) => a.recordDate.localeCompare(b.recordDate));
+}
+
+export async function computeForMonth(periodMonth: string): Promise<PayrollResult | null> {
   const settingsRaw = await getSettings();
   const settings = parseSettings(settingsRaw);
   const start = `${periodMonth}-01`;
@@ -341,6 +380,7 @@ async function computeForMonth(periodMonth: string): Promise<PayrollResult | nul
   const next = mon === 12
     ? `${year + 1}-01-01`
     : `${year}-${String(mon + 1).padStart(2, '0')}-01`;
+  const monthEnd = `${periodMonth}-${String(new Date(Date.UTC(year, mon, 0)).getUTCDate()).padStart(2, '0')}`;
 
   const recs: any[] = [];
   let offset = 0;
@@ -387,11 +427,53 @@ async function computeForMonth(periodMonth: string): Promise<PayrollResult | nul
     });
   }
 
+  const approvedLeaveByEmployee: Record<number, Array<{ date: string; fraction: number; paid: boolean }>> = {};
+  const leaveResult = await supabase
+    .from('leave_requests')
+    .select('employee_id, start_date, end_date, start_day_part, end_day_part, leave_request_days(leave_date, day_fraction, is_paid)')
+    .eq('status', 'approved')
+    .lte('start_date', monthEnd)
+    .gte('end_date', `${periodMonth}-01`);
+  if (!leaveResult.error) {
+    for (const leave of leaveResult.data || []) {
+      const explicit = Array.isArray(leave.leave_request_days) ? leave.leave_request_days : [];
+      if (explicit.length) {
+        for (const day of explicit) {
+          if (!String(day.leave_date).startsWith(periodMonth)) continue;
+          if (!approvedLeaveByEmployee[leave.employee_id]) approvedLeaveByEmployee[leave.employee_id] = [];
+          approvedLeaveByEmployee[leave.employee_id].push({
+            date: day.leave_date,
+            fraction: Number(day.day_fraction) || 1,
+            paid: day.is_paid !== false,
+          });
+        }
+        continue;
+      }
+      const cursor = new Date(`${leave.start_date}T00:00:00Z`);
+      const end = new Date(`${leave.end_date}T00:00:00Z`);
+      while (cursor <= end) {
+        const date = cursor.toISOString().slice(0, 10);
+        if (date.startsWith(periodMonth)) {
+          let fraction = 1;
+          if (date === leave.start_date && leave.start_day_part && leave.start_day_part !== 'full') fraction = 0.5;
+          if (date === leave.end_date && leave.end_day_part && leave.end_day_part !== 'full') fraction = 0.5;
+          if (!approvedLeaveByEmployee[leave.employee_id]) approvedLeaveByEmployee[leave.employee_id] = [];
+          approvedLeaveByEmployee[leave.employee_id].push({ date, fraction, paid: true });
+        }
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+    }
+  }
+
   const salaryRules = await loadSalaryRules();
   const rows: PayrollRow[] = employees.map((emp: any) => {
     const monthly = Number(emp.monthly_salary) || latestSalary[emp.id]?.amount || 0;
     const paidLeaveDays = emp.paid_leaves_eligible === true ? settings.paidLeaveDays : 0;
-    const filledDays = fillNotAttemptedMonth(byEmployee[emp.id] || [], periodMonth);
+    const filledDays = overlayApprovedLeave(
+      fillNotAttemptedMonth(byEmployee[emp.id] || [], periodMonth),
+      approvedLeaveByEmployee[emp.id] || [],
+      emp.department,
+    );
     const row = computeEmployeePayroll(emp, filledDays, monthly, paidLeaveDays, settings);
     applyRulesToRow(row, filledDays, emp.department || null, emp.shift || null, emp.shift_end_time || null, emp.overtime_eligible === true, monthly, salaryRules, settings);
     return row;
@@ -656,6 +738,234 @@ router.get('/filters', async (_req: Request, res: Response) => {
     });
   } catch (err) {
     res.status(500).json({ error: String(err) });
+  }
+});
+
+router.get('/finalization/:periodMonth/status', async (req: AuthenticatedRequest, res: Response) => {
+  const periodMonth = String(req.params.periodMonth || '');
+  if (!/^\d{4}-\d{2}$/.test(periodMonth)) {
+    res.status(400).json({ error: 'periodMonth must be YYYY-MM' });
+    return;
+  }
+  const latest = await supabase
+    .from('payroll_runs')
+    .select('id, run_uuid, period_month, version, status, finalized_at, finalized_by_email, publish_status, snapshot_hash, supersedes_version')
+    .eq('period_month', periodMonth)
+    .order('version', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (latest.error && !/payroll_runs|does not exist|schema cache/i.test(latest.error.message || '')) {
+    res.status(500).json({ error: latest.error.message });
+    return;
+  }
+  const pendingLeaves = await supabase
+    .from('leave_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+    .lte('start_date', monthEndFor(periodMonth))
+    .gte('end_date', `${periodMonth}-01`);
+  res.json({
+    periodMonth,
+    latestRun: latest.data || null,
+    readiness: {
+      pendingLeaveRequests: pendingLeaves.count || 0,
+      canFinalize: (pendingLeaves.count || 0) === 0,
+    },
+  });
+});
+
+router.post('/finalize/:periodMonth', requireRoles('super_admin', 'payroll_admin'), async (req: AuthenticatedRequest, res: Response) => {
+  const periodMonth = String(req.params.periodMonth || '');
+  if (!/^\d{4}-\d{2}$/.test(periodMonth)) {
+    res.status(400).json({ error: 'periodMonth must be YYYY-MM' });
+    return;
+  }
+  const overrideReason = String(req.body?.overrideReason || '').trim();
+  if (overrideReason && req.hrActor?.role !== 'super_admin') {
+    res.status(403).json({ error: 'Only a super admin can finalize with an override' });
+    return;
+  }
+  try {
+    const payroll = await computeForMonth(periodMonth);
+    if (!payroll || !payroll.rows.length) {
+      res.status(409).json({ error: 'No attendance-backed payroll rows are available for this period' });
+      return;
+    }
+    const employeeIds = payroll.rows.map(row => row.employeeId);
+    const [organization, employeesResult, pendingLeaves, uploads, connectors] = await Promise.all([
+      req.hrActor?.organizationId
+        ? supabase.from('organizations').select('*').eq('id', req.hrActor.organizationId).maybeSingle()
+        : supabase.from('organizations').select('*').eq('code', 'hope').maybeSingle(),
+      supabase.from('employees').select('id, public_uuid, employee_number, organization_id').in('id', employeeIds),
+      supabase.from('leave_requests').select('id, employee_id, start_date, end_date').eq('status', 'pending').in('employee_id', employeeIds).lte('start_date', monthEndFor(periodMonth)).gte('end_date', `${periodMonth}-01`),
+      supabase.from('attendance_uploads').select('id').eq('period_month', periodMonth).order('uploaded_at', { ascending: false }).limit(1),
+      supabase.from('integration_connectors').select('*').in('status', ['shadow', 'active']),
+    ]);
+    if (!organization.data) throw new Error('Hope organization is not configured');
+    const organizationId = organization.data.id;
+    const employeeMap = new Map<number, any>((employeesResult.data || []).map((employee: any) => [employee.id, employee]));
+    const scopedConnectors = (connectors.data || []).filter((item: any) => item.organization_id === organizationId);
+    const mappingResults = await Promise.all(scopedConnectors.map(async (connector: any) => {
+      const result = await supabase
+        .from('employee_integration_mappings')
+        .select('*')
+        .eq('connector_id', connector.id)
+        .in('employee_id', employeeIds)
+        .eq('is_active', true);
+      return { connector, mappings: result.data || [] };
+    }));
+    const missingMappings = mappingResults.flatMap(({ connector, mappings }) => {
+      const mapped = new Set(mappings.map((mapping: any) => mapping.employee_id));
+      return employeeIds.filter(id => !mapped.has(id)).map(id => ({
+        connectorKey: connector.connector_key,
+        employeeId: id,
+        employeeNumber: employeeMap.get(id)?.employee_number || '',
+      }));
+    });
+    const issues = {
+      pendingLeaveRequests: pendingLeaves.data || [],
+      missingMappings,
+    };
+    if (!overrideReason && ((pendingLeaves.data || []).length || missingMappings.length)) {
+      res.status(409).json({
+        error: 'Payroll is not ready to finalize',
+        code: 'payroll_readiness_failed',
+        issues,
+      });
+      return;
+    }
+
+    const previous = await supabase
+      .from('payroll_runs')
+      .select('version, status, snapshot_hash')
+      .eq('organization_id', organizationId)
+      .eq('period_month', periodMonth)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const version = Number(previous.data?.version || 0) + 1;
+    const snapshotHash = createHash('sha256').update(JSON.stringify(payroll)).digest('hex');
+    if (previous.data?.snapshot_hash === snapshotHash) {
+      res.status(409).json({
+        error: 'This payroll calculation is identical to the latest finalized version',
+        code: 'payroll_already_finalized',
+        latestVersion: previous.data.version,
+      });
+      return;
+    }
+    const runUuid = randomUUID();
+    const savedRun = await supabase.from('payroll_runs').insert({
+      upload_id: uploads.data?.[0]?.id || null,
+      period_month: periodMonth,
+      status: 'finalized',
+      summary: payroll.summary,
+      rows: payroll.rows,
+      run_uuid: runUuid,
+      organization_id: organizationId,
+      version,
+      supersedes_version: previous.data ? Number(previous.data.version) : null,
+      correction_type: previous.data ? 'correction' : null,
+      snapshot_hash: snapshotHash,
+      finalized_at: new Date().toISOString(),
+      finalized_by: req.hrActor?.authUserId || null,
+      finalized_by_email: req.hrActor?.email || '',
+      publish_status: scopedConnectors.length ? 'pending' : 'not_published',
+      override_reason: overrideReason || null,
+    }).select('*').single();
+    if (savedRun.error) throw new Error(savedRun.error.message);
+
+    const paymentResult = await supabase.from('salary_payments').select('*').eq('period_month', periodMonth).in('employee_id', employeeIds);
+    const paymentByEmployee = new Map<number, any>((paymentResult.data || []).map((payment: any) => [payment.employee_id, payment]));
+    const items = payroll.rows.map(row => {
+      const employee = employeeMap.get(row.employeeId);
+      return {
+        payroll_run_id: savedRun.data.id,
+        employee_id: row.employeeId,
+        employee_public_uuid: employee.public_uuid,
+        employee_number: row.employeeNumber,
+        monthly_salary: row.monthlySalary,
+        gross_earnings: row.grossSalary,
+        allowances: row.ruleAllowanceAmount ? [{ code: 'RULE_ALLOWANCE', amount: row.ruleAllowanceAmount }] : [],
+        overtime_minutes: Math.round((row.overtimeHours || 0) * 60),
+        overtime_amount: row.overtimePay || 0,
+        paid_days: row.payableDays,
+        paid_leave_days: row.paidLeave,
+        unpaid_leave_days: row.absentDays,
+        attendance_deductions: (row.absentDeduction || 0) + (row.halfDayDeduction || 0),
+        rule_deductions: row.ruleDeductionAmount ? [{ code: 'RULE_DEDUCTION', amount: row.ruleDeductionAmount }] : [],
+        other_deductions: [],
+        total_deductions: row.totalDeductions,
+        net_salary: row.netSalary,
+        payment_status: paymentByEmployee.get(row.employeeId)?.status || 'pending',
+        calculation_summary: {
+          dailySalary: row.dailySalary,
+          presentDays: row.presentDays,
+          halfDays: row.halfDays,
+          lateDays: row.lateDays,
+          formulaVersion: 'hrpulse-2026.07',
+        },
+        publish_status: scopedConnectors.length ? 'pending' : 'not_published',
+      };
+    });
+    const itemInsert = await supabase.from('payroll_run_items').insert(items);
+    if (itemInsert.error) throw new Error(itemInsert.error.message);
+
+    for (const { connector, mappings } of mappingResults) {
+      const externalByEmployee = new Map<number, any>(mappings.map((mapping: any) => [mapping.employee_id, mapping]));
+      const employees = items.map(item => {
+        const mapping = externalByEmployee.get(item.employee_id);
+        return {
+          hrpulse_employee_uuid: item.employee_public_uuid,
+          hims_employee_id: mapping?.external_employee_id || null,
+          employee_number: item.employee_number,
+          monthly_salary: item.monthly_salary,
+          gross_earnings: item.gross_earnings,
+          allowances: item.allowances,
+          overtime: { minutes: item.overtime_minutes, amount: item.overtime_amount },
+          paid_days: item.paid_days,
+          paid_leave_days: item.paid_leave_days,
+          unpaid_leave_days: item.unpaid_leave_days,
+          attendance_deductions: item.attendance_deductions,
+          rule_based_deductions: item.rule_deductions,
+          other_deductions: item.other_deductions,
+          total_deductions: item.total_deductions,
+          net_salary: item.net_salary,
+          payment_status: item.payment_status,
+          calculation_summary: item.calculation_summary,
+        };
+      });
+      await enqueueConnectorEvent({
+        connectorId: connector.id,
+        eventType: 'payroll.finalized',
+        entityUuid: runUuid,
+        organizationId,
+        data: {
+          payroll_period: periodMonth,
+          hrpulse_payroll_run_uuid: runUuid,
+          payroll_version: version,
+          supersedes_version: previous.data ? Number(previous.data.version) : null,
+          status: 'finalized',
+          finalized_at: savedRun.data.finalized_at,
+          finalized_by: { hrpulse_user_id: req.hrActor?.authUserId, email: req.hrActor?.email },
+          published_at: new Date().toISOString(),
+          currency: 'INR',
+          employees,
+        },
+      });
+    }
+    res.status(201).json({
+      run: {
+        runUuid,
+        version,
+        periodMonth,
+        status: 'finalized',
+        publishStatus: savedRun.data.publish_status,
+        snapshotHash,
+      },
+      issuesOverridden: overrideReason ? issues : null,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
 });
 

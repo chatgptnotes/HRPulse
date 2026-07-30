@@ -15,7 +15,7 @@ import {
   SalaryRule,
 } from '../services/salaryRules';
 import { insertHrNotification, upsertHrNotification } from '../services/hrNotificationService';
-import { employeeDocumentUpload, findEmployeeDocument, listEmployeeDocuments, saveEmployeeDocument } from '../services/employeeDocumentService';
+import { createEmployeeDocumentSignedUrl, employeeDocumentUpload, listEmployeeDocuments, saveEmployeeDocument } from '../services/employeeDocumentService';
 
 const router = Router();
 
@@ -205,10 +205,21 @@ function payslipRect(x: number, y: number, w: number, h: number, fill = false) {
   return fill ? `${x} ${y} ${w} ${h} re f` : `${x} ${y} ${w} ${h} re S`;
 }
 
+function payslipFill(r: number, g: number, b: number) {
+  return `${r} ${g} ${b} rg`;
+}
+
+function payslipStroke(r: number, g: number, b: number) {
+  return `${r} ${g} ${b} RG`;
+}
+
 function payslipRow(label: string, value: string, x: number, y: number, w = 230) {
   return [
+    payslipFill(0.25, 0.32, 0.43),
     payslipPdfText(x, y, label, 9),
+    payslipFill(0.05, 0.09, 0.18),
     payslipPdfText(x + w - 85, y, value, 9, 'F2'),
+    payslipStroke(0.88, 0.91, 0.96),
     payslipLine(x, y - 8, x + w, 0.4),
   ];
 }
@@ -216,55 +227,62 @@ function payslipRow(label: string, value: string, x: number, y: number, w = 230)
 function buildPayslipPdf(employee: EssEmployee, detail: any, periodMonth: string) {
   const generated = new Date().toLocaleString('en-IN');
   const employeeId = employee.employee_number || String(employee.id);
+  const paidLeaves = Number(detail.paidLeave) || 0;
+  const unpaidLeaves = Number(detail.absentDays) || 0;
+  const totalLeaves = paidLeaves + unpaidLeaves;
   const lines = [
-    '0.96 0.98 1 rg',
+    payslipFill(0.96, 0.98, 1),
     payslipRect(0, 0, 612, 792, true),
-    '0.05 0.09 0.18 rg',
+    payslipFill(0.05, 0.09, 0.18),
     payslipRect(40, 660, 532, 78, true),
-    '1 1 1 rg',
+    payslipFill(1, 1, 1),
     payslipPdfText(58, 708, 'HRPulse Payslip', 22, 'F2'),
     payslipPdfText(58, 686, `Salary period: ${periodMonth}`, 10),
     payslipPdfText(438, 708, 'FINAL NET SALARY', 9, 'F2'),
     payslipPdfText(438, 685, money(detail.netSalary), 20, 'F2'),
 
-    '0 0 0 RG',
-    '1 1 1 rg',
+    payslipStroke(0, 0, 0),
+    payslipFill(1, 1, 1),
     payslipRect(40, 520, 255, 115, true),
     payslipRect(317, 520, 255, 115, true),
-    '0.88 0.91 0.96 RG',
+    payslipStroke(0.88, 0.91, 0.96),
     payslipRect(40, 520, 255, 115),
     payslipRect(317, 520, 255, 115),
+    payslipFill(0.05, 0.09, 0.18),
     payslipPdfText(58, 612, 'Employee Details', 12, 'F2'),
     ...payslipRow('Employee', employee.name || '-', 58, 590),
     ...payslipRow('Employee ID', employeeId, 58, 568),
     ...payslipRow('Department', employee.department || '-', 58, 546),
     ...payslipRow('Designation', employee.designation || '-', 58, 524),
+    payslipFill(0.05, 0.09, 0.18),
     payslipPdfText(335, 612, 'Salary Summary', 12, 'F2'),
     ...payslipRow('Gross Salary', money(detail.grossSalary), 335, 590),
     ...payslipRow('Total Deductions', money(detail.totalDeductions), 335, 568),
     ...payslipRow('Net Salary', money(detail.netSalary), 335, 546),
     ...payslipRow('Payable Days', `${detail.payableDays || 0}`, 335, 524),
 
+    payslipFill(0.05, 0.09, 0.18),
     payslipPdfText(58, 485, 'Attendance Summary', 13, 'F2'),
-    '1 1 1 rg',
+    payslipFill(1, 1, 1),
     payslipRect(40, 348, 532, 118, true),
-    '0.88 0.91 0.96 RG',
+    payslipStroke(0.88, 0.91, 0.96),
     payslipRect(40, 348, 532, 118),
     ...payslipRow('Present Days', String(detail.presentDays || 0), 58, 444),
-    ...payslipRow('Absent Days', String(detail.absentDays || 0), 58, 422),
-    ...payslipRow('Half Days', String(detail.halfDays || 0), 58, 400),
+    ...payslipRow('Total Leaves', String(totalLeaves), 58, 422),
+    ...payslipRow('Paid Leaves', String(paidLeaves), 58, 400),
+    ...payslipRow('Unpaid Leaves', String(unpaidLeaves), 58, 378),
     ...payslipRow('Late Count', String(detail.lateDays || 0), 335, 444),
     ...payslipRow('Missing Punches', String(detail.missingPunches || 0), 335, 422),
     ...payslipRow('Working Days', String(detail.workingDays || 0), 335, 400),
     ...payslipRow('Overtime Pay', money(detail.overtimePay), 335, 378),
-    ...payslipRow('Half Day Deduction', money(detail.halfDayDeduction), 58, 378),
 
+    payslipFill(0.05, 0.09, 0.18),
     payslipPdfText(58, 312, 'Earnings', 13, 'F2'),
     payslipPdfText(335, 312, 'Deductions', 13, 'F2'),
-    '1 1 1 rg',
+    payslipFill(1, 1, 1),
     payslipRect(40, 185, 255, 105, true),
     payslipRect(317, 185, 255, 105, true),
-    '0.88 0.91 0.96 RG',
+    payslipStroke(0.88, 0.91, 0.96),
     payslipRect(40, 185, 255, 105),
     payslipRect(317, 185, 255, 105),
     ...payslipRow('Monthly Salary', money(detail.monthlySalary), 58, 268),
@@ -276,12 +294,12 @@ function buildPayslipPdf(employee: EssEmployee, detail: any, periodMonth: string
     ...payslipRow('Rule Deductions', money(detail.ruleDeductionAmount), 335, 224),
     ...payslipRow('Total Deductions', money(detail.totalDeductions), 335, 202),
 
-    '0.91 0.98 0.94 rg',
+    payslipFill(0.91, 0.98, 0.94),
     payslipRect(40, 120, 532, 46, true),
-    '0.06 0.47 0.30 rg',
+    payslipFill(0.06, 0.47, 0.30),
     payslipPdfText(58, 148, 'Final Net Salary', 11, 'F2'),
     payslipPdfText(430, 142, money(detail.netSalary), 20, 'F2'),
-    '0.39 0.45 0.55 rg',
+    payslipFill(0.39, 0.45, 0.55),
     payslipPdfText(40, 76, `Generated by HRPulse on ${generated}. This is a system generated payslip.`, 8),
   ].join('\n');
 
@@ -588,6 +606,8 @@ function summarizeAttendance(records: any[], workingDaysSetting: number, halfDay
   const summary = {
     present: 0,
     absent: 0,
+    paidLeaves: 0,
+    unpaidLeaves: 0,
     halfDay: 0,
     lateCount: 0,
     missingPunches: 0,
@@ -732,17 +752,25 @@ router.post('/documents', employeeDocumentUpload.single('file'), async (req: Ess
 
 router.get('/documents/:documentId/download', async (req: EssRequest, res: Response) => {
   try {
-    const document = await findEmployeeDocument(req.essEmployee!.id, req.params.documentId);
+    const document = await createEmployeeDocumentSignedUrl(req.essEmployee!.id, req.params.documentId);
     if (!document) {
       res.status(404).json({ error: 'Document not found' });
       return;
     }
     await audit(req, 'documents.download', 'success', { documentId: document.client.id });
-    res.setHeader('Content-Type', document.row.mime_type || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.row.original_filename)}"`);
-    res.sendFile(document.absolutePath);
+    if (document.legacyLocal && document.absolutePath) {
+      res.setHeader('Content-Type', document.row.mime_type || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.row.original_filename)}"`);
+      res.sendFile(document.absolutePath);
+      return;
+    }
+    res.redirect(302, document.signedUrl as string);
   } catch (err: any) {
     await audit(req, 'documents.download', 'error', { error: err.message });
+    if (err?.code === 'DOCUMENT_QUARANTINED') {
+      res.status(423).json({ error: err.message });
+      return;
+    }
     res.status(500).json({ error: err.message });
   }
 });
@@ -775,7 +803,11 @@ router.get('/attendance/monthly', async (req: EssRequest, res: Response) => {
     const records = await allAttendanceRecords(req.essEmployee!.id, month);
     const summary = summarizeAttendance(records, settings.workingDays, settings.halfDayHours);
     const payrollDetail = await payrollDetailForMonth(req.essEmployee!, month);
-    if (payrollDetail) summary.overtimeHours = payrollDetail.overtimeHours;
+    if (payrollDetail) {
+      summary.overtimeHours = payrollDetail.overtimeHours;
+      summary.paidLeaves = payrollDetail.paidLeave || 0;
+      summary.unpaidLeaves = payrollDetail.absentDays || 0;
+    }
     await ensureAlertNotifications(req.essEmployee!, month, records, summary).catch(() => []);
     await audit(req, 'attendance.monthly.read', 'success', { month });
     res.json({ month, ...summary });

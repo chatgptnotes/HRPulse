@@ -34,6 +34,8 @@ export default function UploadCard({
     return 0;
   };
 
+  if (ready && !uploading) return null;
+
   return (
     <div
       {...getRootProps()}

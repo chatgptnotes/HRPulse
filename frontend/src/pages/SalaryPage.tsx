@@ -78,6 +78,21 @@ const STATUS_META: Record<SalaryStatus, { label: string; icon: string; color: st
 };
 
 const tabs: SalaryStatus[] = ['paid', 'pending', 'on_hold', 'resigned'];
+const monthOptions = [
+  { value: '01', label: 'January' },
+  { value: '02', label: 'February' },
+  { value: '03', label: 'March' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'June' },
+  { value: '07', label: 'July' },
+  { value: '08', label: 'August' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+];
+const yearOptions = Array.from({ length: new Date().getFullYear() - 2000 + 6 }, (_, index) => String(2000 + index)).reverse();
 
 const fmtINR = (n: number | null | undefined) =>
   n == null || isNaN(n) ? '-' : n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
@@ -99,6 +114,43 @@ function controlClass(extra = '') {
   );
 }
 
+function MonthYearSelect({
+  value,
+  onChange,
+  compact = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  compact?: boolean;
+}) {
+  const [year = String(new Date().getFullYear()), selectedMonth = '01'] = value.split('-');
+  const update = (nextYear: string, nextMonth: string) => onChange(`${nextYear}-${nextMonth}`);
+  const selectedLabel = monthOptions.find(option => option.value === selectedMonth)?.label || selectedMonth;
+
+  return (
+    <div className={clsx('rounded-xl border border-slate-200 bg-white px-3 py-2 transition hover:border-slate-300 focus-within:border-purple-300 focus-within:ring-4 focus-within:ring-purple-100', compact ? 'min-w-[250px]' : 'w-full')}>
+      <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+        <Icon name="calendar_month" className="text-sm text-purple-500" />
+        Payroll Period
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          <select value={selectedMonth} onChange={e => update(year, e.target.value)} className="h-6 min-w-[78px] appearance-none bg-transparent pr-5 text-sm font-bold text-slate-900 outline-none">
+            {monthOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+          <Icon name="keyboard_arrow_down" className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-base text-slate-900" />
+        </div>
+        <div className="relative">
+          <select value={year} onChange={e => update(e.target.value, selectedMonth)} aria-label={`${selectedLabel} year`} className="h-6 w-[74px] appearance-none bg-transparent pr-5 text-sm font-bold text-slate-900 outline-none">
+            {yearOptions.map(option => <option key={option} value={option}>{option}</option>)}
+          </select>
+          <Icon name="keyboard_arrow_down" className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-base text-slate-900" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SummaryCard({
   status,
   amount,
@@ -115,26 +167,39 @@ function SummaryCard({
   onClick: () => void;
 }) {
   const meta = STATUS_META[status];
+  const iconTone: Record<SalaryStatus, string> = {
+    paid: 'border-emerald-100 bg-emerald-50 text-emerald-600',
+    pending: 'border-amber-100 bg-amber-50 text-amber-600',
+    on_hold: 'border-rose-100 bg-rose-50 text-rose-600',
+    resigned: 'border-purple-100 bg-purple-50 text-purple-600',
+  };
+  const selectedTone: Record<SalaryStatus, string> = {
+    paid: 'border-emerald-400 shadow-emerald-100/80 ring-2 ring-emerald-100',
+    pending: 'border-amber-400 shadow-amber-100/80 ring-2 ring-amber-100',
+    on_hold: 'border-rose-400 shadow-rose-100/80 ring-2 ring-rose-100',
+    resigned: 'border-purple-400 shadow-purple-100/80 ring-2 ring-purple-100',
+  };
+  const safePercent = Math.max(0, Math.min(100, percent));
   return (
     <button
       onClick={onClick}
       className={clsx(
-        'group rounded-3xl border bg-white p-5 text-left shadow-sm shadow-slate-200/70 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-100',
-        selected ? 'border-indigo-300 ring-4 ring-indigo-100' : 'border-white/70',
+        'group rounded-xl border bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md',
+        selected ? selectedTone[status] : 'border-slate-200/80 shadow-slate-200/60',
       )}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex min-h-[66px] items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{meta.label}</p>
-          <p className="mt-2 truncate text-2xl font-bold text-slate-950">INR {fmtINR(amount)}</p>
-          <p className="mt-1 text-sm text-slate-500">{count} employee{count === 1 ? '' : 's'} - {percent}% of payroll</p>
+          <p className="mt-2 truncate text-xl font-black leading-6 text-slate-950">INR {fmtINR(amount)}</p>
+          <p className="mt-1 text-xs text-slate-500">{count} employee{count === 1 ? '' : 's'} &bull; {safePercent}% of payroll</p>
         </div>
-        <div className={clsx('flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition-transform group-hover:scale-105', meta.color)}>
-          <Icon name={meta.icon} className="text-2xl" />
+        <div className={clsx('flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border shadow-sm transition group-hover:shadow', iconTone[status])}>
+          <Icon name={meta.icon} className="text-lg" />
         </div>
       </div>
-      <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
-        <div className={clsx('h-full rounded-full transition-all', meta.bar)} style={{ width: `${percent}%` }} />
+      <div className="mt-3 h-1 overflow-hidden rounded-full bg-slate-100">
+        <div className={clsx('h-full rounded-full transition-all group-hover:brightness-95', meta.bar)} style={{ width: `${Math.max(4, safePercent)}%` }} />
       </div>
     </button>
   );
@@ -870,20 +935,20 @@ export default function SalaryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-4 md:p-6">
       <div className="mx-auto max-w-[1500px] space-y-5">
-        <header className="rounded-3xl border border-white/70 bg-white/90 p-5 shadow-sm shadow-slate-200/70 backdrop-blur">
+        <header className="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm md:px-7 md:py-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-950">Salary Dashboard</h1>
+            <div className="min-w-0">
+              <h1 className="text-[28px] font-bold leading-tight tracking-tight text-slate-950">Salary Dashboard</h1>
               <p className="mt-1 max-w-3xl text-sm text-slate-500">Track salary payments and payroll status in one place.</p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <input type="month" value={month} onChange={e => setMonth(e.target.value)} className={controlClass('w-40')} />
-              <button onClick={exportCsv} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition hover:bg-slate-50">
+            <div className="flex flex-wrap items-center gap-3">
+              <MonthYearSelect value={month} onChange={setMonth} compact />
+              <button onClick={exportCsv} className="inline-flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm">
                 <Icon name="download" className="text-base" />
                 Export
               </button>
-              <button onClick={() => showToast('Salary uses Employee salary; payment status is saved month-wise from Actions')} className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:from-indigo-700 hover:to-purple-700">
-                <Icon name="payments" className="text-base" />
+              <button onClick={() => showToast('Salary uses Employee salary; payment status is saved month-wise from Actions')} className="inline-flex h-12 items-center gap-2 rounded-xl bg-purple-600 px-5 text-sm font-bold text-white shadow-sm shadow-purple-200 transition hover:-translate-y-0.5 hover:bg-purple-700 hover:shadow-md">
+                <Icon name="credit_card" className="text-base" />
                 Process Salary
               </button>
             </div>
@@ -961,7 +1026,7 @@ export default function SalaryPage() {
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-slate-500">Month</span>
-                  <input type="month" value={month} onChange={e => setMonth(e.target.value)} className={controlClass('w-full')} />
+                  <MonthYearSelect value={month} onChange={setMonth} />
                 </label>
                 <div className="flex items-end">
                   <button onClick={() => { setDeptFilter(''); setSearch(''); }} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 hover:bg-slate-50">

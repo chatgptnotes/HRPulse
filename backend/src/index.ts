@@ -16,8 +16,16 @@ import analyticsRoutes from './routes/analytics';
 import essRoutes from './routes/ess';
 import leaveRoutes from './routes/leaves';
 import notificationRoutes from './routes/notifications';
+import { checkOpenRouterHealth, openRouterErrorResponse } from './services/openRouterService';
+import integrationRoutes from './routes/integrations';
+import integrationAdminRoutes from './routes/integrationAdmin';
+import authRoutes from './routes/auth';
+import { adminAuth, adminWriteGuard, AuthenticatedRequest } from './middleware/auth';
 
-dotenv.config();
+const backendEnvPath = path.basename(process.cwd()).toLowerCase() === 'backend'
+  ? path.resolve(process.cwd(), '.env')
+  : path.resolve(process.cwd(), 'backend', '.env');
+dotenv.config({ path: backendEnvPath });
 
 // Prevent transient errors (e.g. Supabase "JWT issued at future" clock skew,
 // network blips) from crashing the whole backend via unhandled rejections.
@@ -36,15 +44,30 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true,
 }));
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({
+  limit: '20mb',
+  verify: (req, _res, buffer) => {
+    (req as AuthenticatedRequest).rawBody = Buffer.from(buffer);
+  },
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // Seed DB on startup
 seedDatabase().catch(console.error);
 
-// Serve uploaded photos
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Legacy photos remain static. Employee documents are no longer exposed here;
+// private storage/download routes enforce authorization and scan state.
+app.use('/uploads/photos', express.static(path.join(process.cwd(), 'uploads', 'photos')));
 
+// Public machine/employee surfaces use their own connector/ESS authentication.
+app.use('/api/integrations/v1', integrationRoutes);
+app.use('/api/ess', essRoutes);
+
+// All HR administration APIs below require a Supabase session and HR role.
+app.use('/api', adminAuth);
+app.use('/api', adminWriteGuard);
+app.use('/api/auth', authRoutes);
+app.use('/api/integration-admin', integrationAdminRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/emails', emailRoutes);
 app.use('/api/employees', employeeRoutes);
@@ -55,9 +78,19 @@ app.use('/api/rules', rulesRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
-app.use('/api/ess', essRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/notifications', notificationRoutes);
+
+app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString(), db: 'supabase' }));
+
+app.get('/health/openrouter', async (_req, res) => {
+  try {
+    res.json(await checkOpenRouterHealth());
+  } catch (err) {
+    const openRouterError = openRouterErrorResponse(err);
+    res.status(openRouterError.status).json(openRouterError.body);
+  }
+});
 
 // Serve frontend in production (cwd = repo root on Railway)
 if (process.env.NODE_ENV === 'production') {
@@ -65,8 +98,6 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(frontendPath));
   app.get('*', (_req, res) => res.sendFile(path.join(frontendPath, 'index.html')));
 }
-
-app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString(), db: 'supabase' }));
 
 app.listen(PORT, () => {
   console.log(`HRPulse backend running on http://localhost:${PORT}`);

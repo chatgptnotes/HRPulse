@@ -3,7 +3,9 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { supabase } from '../db/supabase';
-import { listEmployeeDocuments } from '../services/employeeDocumentService';
+import { createEmployeeDocumentSignedUrl, listEmployeeDocuments } from '../services/employeeDocumentService';
+import { AuthenticatedRequest, requireRoles } from '../middleware/auth';
+import { enqueueForActiveConnectors } from '../services/connectorService';
 
 const router = Router();
 
@@ -77,8 +79,7 @@ async function selectAll() {
     await ensureOvertimeColKnown();
     await ensureShiftTimingColsKnown();
   }
-  const cols = hasMasterCols ? masterSelectCols() : BASE_COLS;
-  const res = await supabase.from('employees').select(cols).order('name', { ascending: true });
+  const res = await supabase.from('employees').select('*').order('name', { ascending: true });
   if (res.error) throw new Error(res.error.message);
   return res.data;
 }
@@ -86,6 +87,7 @@ async function selectAll() {
 function mapEmployee(e: any) {
   return {
     id: e.id,
+    publicUuid: e.public_uuid || '',
     employeeNumber: e.employee_number || '',
     name: e.name,
     email: e.email || '',
@@ -102,6 +104,29 @@ function mapEmployee(e: any) {
     photoUrl: e.photo_url || null,
     createdAt: e.created_at,
   };
+}
+
+async function queueEmployeeSync(employee: any, eventType: 'employee.created' | 'employee.updated' | 'employee.deactivated') {
+  if (!employee?.public_uuid) return;
+  await enqueueForActiveConnectors({
+    organizationId: employee.organization_id || null,
+    eventType,
+    entityUuid: employee.public_uuid,
+    data: {
+      hrpulse_employee_uuid: employee.public_uuid,
+      employee_number: employee.employee_number || '',
+      name: { display: employee.name || '' },
+      email: employee.email || null,
+      mobile_number: employee.mobile || null,
+      department: employee.department ? { code: String(employee.department).toUpperCase().replace(/\s+/g, '_'), name: employee.department } : null,
+      designation: employee.designation ? { code: String(employee.designation).toUpperCase().replace(/\s+/g, '_'), name: employee.designation } : null,
+      joining_date: employee.joining_date || null,
+      employment_status: String(employee.status || 'Active').toLowerCase(),
+      shift: employee.shift ? { code: String(employee.shift).toUpperCase().replace(/\s+/g, '_'), name: employee.shift } : null,
+      source_updated_at: employee.updated_at || new Date().toISOString(),
+      version: Number(employee.record_version || 1),
+    },
+  });
 }
 
 function normalizeTimeValue(value: unknown) {
@@ -134,7 +159,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   res.json(mapEmployee(data));
 });
 
-router.get('/:id/documents', async (req: Request, res: Response) => {
+router.get('/:id/documents', requireRoles('super_admin', 'hr_admin'), async (req: Request, res: Response) => {
   try {
     const employeeId = parseInt(req.params.id);
     if (!Number.isInteger(employeeId) || employeeId <= 0) {
@@ -143,6 +168,34 @@ router.get('/:id/documents', async (req: Request, res: Response) => {
     }
     res.json(await listEmployeeDocuments(employeeId));
   } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/documents/:documentId/download', requireRoles('super_admin', 'hr_admin'), async (req: Request, res: Response) => {
+  try {
+    const employeeId = parseInt(req.params.id);
+    if (!Number.isInteger(employeeId) || employeeId <= 0) {
+      res.status(400).json({ error: 'Valid employee id is required' });
+      return;
+    }
+    const document = await createEmployeeDocumentSignedUrl(employeeId, req.params.documentId);
+    if (!document) {
+      res.status(404).json({ error: 'Document not found' });
+      return;
+    }
+    if (document.legacyLocal && document.absolutePath) {
+      res.setHeader('Content-Type', document.row.mime_type || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.row.original_filename)}"`);
+      res.sendFile(document.absolutePath);
+      return;
+    }
+    res.redirect(302, document.signedUrl as string);
+  } catch (err: any) {
+    if (err?.code === 'DOCUMENT_QUARANTINED') {
+      res.status(423).json({ error: err.message });
+      return;
+    }
     res.status(500).json({ error: err.message });
   }
 });
@@ -173,7 +226,7 @@ function buildMasterPayload(body: any): Record<string, unknown> {
   return p;
 }
 
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name } = req.body;
     if (!name || !String(name).trim()) { res.status(400).json({ error: 'Employee name is required' }); return; }
@@ -188,16 +241,21 @@ router.post('/', async (req: Request, res: Response) => {
     // email is required by the legacy schema; auto-generate a unique one when not supplied.
     const slug = String(name).toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'employee';
     payload.email = (req.body.email || `${slug}_${Date.now()}@hrpulse.local`).trim();
+    const organizationId = req.hrActor?.organizationId
+      || (await supabase.from('organizations').select('id').eq('code', 'hope').maybeSingle()).data?.id
+      || null;
+    payload.organization_id = organizationId;
 
     const { data, error } = await supabase.from('employees').insert(payload).select().single();
     if (error) { res.status(500).json({ error: error.message }); return; }
+    try { await queueEmployeeSync(data, 'employee.created'); } catch (syncError) { console.error('Employee sync queue failed:', syncError); }
     res.status(201).json(mapEmployee(data));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.patch('/:id', async (req: Request, res: Response) => {
+router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
     await ensureMasterColsKnown();
     if (hasMasterCols) {
@@ -207,6 +265,9 @@ router.patch('/:id', async (req: Request, res: Response) => {
     }
     const update = buildMasterPayload(req.body);
     if (req.body.email !== undefined) update.email = (req.body.email || '').trim() || null;
+    const current = await supabase.from('employees').select('record_version').eq('id', parseInt(req.params.id)).maybeSingle();
+    update.record_version = Number(current.data?.record_version || 1) + 1;
+    update.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase
       .from('employees')
@@ -215,16 +276,30 @@ router.patch('/:id', async (req: Request, res: Response) => {
       .select()
       .single();
     if (error) { res.status(500).json({ error: error.message }); return; }
+    try { await queueEmployeeSync(data, 'employee.updated'); } catch (syncError) { console.error('Employee sync queue failed:', syncError); }
     res.json(mapEmployee(data));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.delete('/:id', async (req: Request, res: Response) => {
-  const { error } = await supabase.from('employees').delete().eq('id', parseInt(req.params.id));
+router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
+  const current = await supabase.from('employees').select('*').eq('id', parseInt(req.params.id)).maybeSingle();
+  if (current.error || !current.data) { res.status(404).json({ error: 'Employee not found' }); return; }
+  const { data, error } = await supabase
+    .from('employees')
+    .update({
+      status: 'Inactive',
+      deactivated_at: new Date().toISOString(),
+      record_version: Number(current.data.record_version || 1) + 1,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', parseInt(req.params.id))
+    .select()
+    .single();
   if (error) { res.status(500).json({ error: error.message }); return; }
-  res.json({ ok: true });
+  try { await queueEmployeeSync(data, 'employee.deactivated'); } catch (syncError) { console.error('Employee sync queue failed:', syncError); }
+  res.json({ ok: true, employee: mapEmployee(data) });
 });
 
 router.post('/:id/photo', photoUpload.single('photo'), async (req: Request, res: Response) => {

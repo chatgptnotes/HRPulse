@@ -1,0 +1,462 @@
+openapi: 3.1.0
+info:
+  title: Adamrit Endpoints Required by HRPulse
+  version: 1.0.0
+  description: Handoff contract. These endpoints were not present in the inspected Adamrit repository and must be implemented there.
+servers:
+  - url: https://{adamrit-host}/api/integrations/hrpulse/v1
+    variables:
+      adamrit-host:
+        default: adamrit.example.invalid
+security:
+  - connectorBearer: []
+paths:
+  /employees:
+    post:
+      summary: Idempotently create an HRPulse-owned employee
+      operationId: createEmployee
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EventId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeEvent' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeAck' }
+        '200':
+          description: Duplicate acknowledged
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeAck' }
+  /employees/{employeeUuid}:
+    put:
+      summary: Replace the synchronized employee projection when the source version is newer
+      operationId: updateEmployee
+      parameters:
+        - $ref: '#/components/parameters/EmployeeUuid'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EventId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeEvent' }
+      responses:
+        '200': { description: Updated }
+        '409': { description: Stale or conflicting version }
+  /employees/{employeeUuid}/deactivate:
+    post:
+      summary: Deactivate without deleting history
+      operationId: deactivateEmployee
+      parameters:
+        - $ref: '#/components/parameters/EmployeeUuid'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EventId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeEvent' }
+      responses:
+        '200': { description: Deactivated or already inactive }
+  /attendance-records:
+    get:
+      summary: Incremental daily attendance recovery endpoint
+      operationId: listAttendanceRecords
+      parameters:
+        - in: query
+          name: updated_since
+          schema: { type: string, format: date-time }
+        - in: query
+          name: cursor
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 200, maximum: 500 }
+      responses:
+        '200':
+          description: Stable ascending page ordered by sourceUpdatedAt and sourceRecordId
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendancePage' }
+  /leave-requests:
+    post:
+      summary: Store/display an HRPulse-originated request idempotently
+      operationId: receiveLeaveRequest
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EventId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LeaveRequestEvent' }
+      responses:
+        '201': { description: Created }
+  /leave-requests/{requestUuid}/decision:
+    post:
+      summary: Apply HRPulse's authoritative approval or rejection
+      operationId: receiveLeaveDecision
+      parameters:
+        - $ref: '#/components/parameters/RequestUuid'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EventId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LeaveDecisionEvent' }
+      responses:
+        '200': { description: Decision applied }
+        '409': { description: Stale decision version }
+  /leave-requests/{requestUuid}/cancel:
+    post:
+      summary: Apply an HRPulse cancellation while pending
+      operationId: receiveLeaveCancellation
+      parameters:
+        - $ref: '#/components/parameters/RequestUuid'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EventId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LeaveRequestEvent' }
+      responses:
+        '200': { description: Cancelled }
+  /employees/{employeeUuid}/leave-balances:
+    put:
+      summary: Replace the HRPulse-owned versioned leave balance projection
+      operationId: receiveLeaveBalances
+      parameters:
+        - $ref: '#/components/parameters/EmployeeUuid'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EventId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LeaveBalanceEvent' }
+      responses:
+        '200': { description: Applied }
+  /payroll-runs:
+    post:
+      summary: Receive an immutable finalized payroll version
+      operationId: receiveFinalizedPayroll
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EventId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PayrollEvent' }
+      responses:
+        '201': { description: All employee rows accepted }
+        '200': { description: Identical duplicate acknowledged }
+        '207': { description: Per-employee partial acceptance }
+        '409': { description: Conflicting duplicate or stale version }
+  /employee-documents:
+    post:
+      summary: Store employee document metadata without persisting signed URLs
+      operationId: receiveDocumentMetadata
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EventId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DocumentEvent' }
+      responses:
+        '201': { description: Metadata created }
+        '200': { description: Metadata updated or duplicate acknowledged }
+components:
+  securitySchemes:
+    connectorBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    EmployeeUuid:
+      in: path
+      name: employeeUuid
+      required: true
+      schema: { type: string, format: uuid }
+    RequestUuid:
+      in: path
+      name: requestUuid
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string, format: uuid }
+    EventId:
+      in: header
+      name: X-HRPulse-Event-Id
+      required: true
+      schema: { type: string, format: uuid }
+    Timestamp:
+      in: header
+      name: X-HRPulse-Timestamp
+      required: true
+      schema: { type: string, pattern: '^[0-9]{10}$' }
+    Signature:
+      in: header
+      name: X-HRPulse-Signature
+      required: true
+      schema: { type: string, pattern: '^v1=[a-f0-9]{64}$' }
+  schemas:
+    EventEnvelope:
+      type: object
+      required: [event_uuid, event_type, event_version, source_system, destination_system, organization_id, occurred_at, data]
+      properties:
+        event_uuid: { type: string, format: uuid }
+        event_type: { type: string }
+        event_version: { type: integer, minimum: 1 }
+        entity_uuid: { type: [string, 'null'], format: uuid }
+        source_system: { type: string, const: hrpulse }
+        destination_system: { type: string, const: hims }
+        organization_id: { type: string, format: uuid }
+        occurred_at: { type: string, format: date-time }
+        data: { type: object, additionalProperties: true }
+    EmployeeEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventEnvelope'
+        - type: object
+          properties:
+            event_type: { type: string, enum: [employee.created, employee.updated, employee.deactivated] }
+            data: { $ref: '#/components/schemas/EmployeeProjection' }
+    EmployeeProjection:
+      type: object
+      required: [hrpulse_employee_uuid, employee_number, name, employment_status, source_updated_at, version]
+      properties:
+        hrpulse_employee_uuid: { type: string, format: uuid }
+        employee_number: { type: string }
+        name:
+          type: object
+          required: [display]
+          properties:
+            display: { type: string }
+        email: { type: [string, 'null'], format: email }
+        mobile_number: { type: [string, 'null'] }
+        department: { $ref: '#/components/schemas/CodeName' }
+        designation: { $ref: '#/components/schemas/CodeName' }
+        joining_date: { type: [string, 'null'], format: date }
+        employment_status: { type: string, enum: [active, inactive, terminated, resigned] }
+        shift: { $ref: '#/components/schemas/CodeName' }
+        source_updated_at: { type: string, format: date-time }
+        version: { type: integer, minimum: 1 }
+    CodeName:
+      type: [object, 'null']
+      properties:
+        code: { type: string }
+        name: { type: string }
+    EmployeeAck:
+      oneOf:
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              required: [hims_employee_id]
+              properties:
+                hims_employee_id: { type: string }
+                hims_user_id: { type: [string, 'null'] }
+                employee_number: { type: string }
+        - type: object
+          required: [hims_employee_id]
+          properties:
+            hims_employee_id: { type: string }
+            hims_user_id: { type: [string, 'null'] }
+            employee_number: { type: string }
+    DailyAttendance:
+      type: object
+      required: [sourceRecordId, hrpulseEmployeeUuid, workDate, timezone, status, sourceVersion, sourceUpdatedAt]
+      properties:
+        sourceRecordId: { type: string, maxLength: 200 }
+        hrpulseEmployeeUuid: { type: string, format: uuid }
+        workDate: { type: string, format: date }
+        checkInAt: { type: [string, 'null'], format: date-time }
+        checkOutAt: { type: [string, 'null'], format: date-time }
+        timezone: { type: string, const: Asia/Kolkata }
+        shiftType: { type: [string, 'null'] }
+        status:
+          type: string
+          enum: [present, absent, half_day, on_leave, weekly_off, holiday, missing_punch, late]
+        notes: { type: [string, 'null'] }
+        sourceVersion: { type: integer, minimum: 1 }
+        sourceUpdatedAt: { type: string, format: date-time }
+        reversed: { type: boolean, default: false }
+    AttendancePage:
+      oneOf:
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              required: [records]
+              properties:
+                records:
+                  type: array
+                  items: { $ref: '#/components/schemas/DailyAttendance' }
+                nextCursor: { type: [string, 'null'] }
+        - type: object
+          required: [records]
+          properties:
+            records:
+              type: array
+              description: Top-level records is accepted for compatibility; prefer data.records.
+              items: { $ref: '#/components/schemas/DailyAttendance' }
+            nextCursor: { type: [string, 'null'] }
+    LeaveRequestEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventEnvelope'
+        - type: object
+          properties:
+            event_type: { type: string, enum: [leave.request.submitted, leave.request.cancelled] }
+            data:
+              type: object
+              required: [request_uuid, hrpulse_employee_uuid]
+              properties:
+                request_uuid: { type: string, format: uuid }
+                hrpulse_employee_uuid: { type: string, format: uuid }
+                leave_type: { type: string }
+                start_date: { type: string, format: date }
+                end_date: { type: string, format: date }
+                start_day_part: { type: string, enum: [full, first_half, second_half] }
+                end_day_part: { type: string, enum: [full, first_half, second_half] }
+                reason: { type: [string, 'null'] }
+                status: { type: string }
+                version: { type: integer, minimum: 1 }
+    LeaveDecisionEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventEnvelope'
+        - type: object
+          properties:
+            event_type: { type: string, enum: [leave.request.approved, leave.request.rejected] }
+            data:
+              type: object
+              required: [request_uuid, status, decision_uuid, hrpulse_employee_uuid, decided_at, version]
+              properties:
+                request_uuid: { type: string, format: uuid }
+                status: { type: string, enum: [approved, rejected] }
+                decision_uuid: { type: string, format: uuid }
+                hrpulse_employee_uuid: { type: string, format: uuid }
+                decided_by: { type: object, additionalProperties: true }
+                approver_note: { type: [string, 'null'] }
+                decided_at: { type: string, format: date-time }
+                version: { type: integer, minimum: 1 }
+    LeaveBalanceEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventEnvelope'
+        - type: object
+          properties:
+            event_type: { type: string, const: leave.balance.updated }
+            data:
+              type: object
+              required: [hrpulse_employee_uuid, as_of, balances, source_updated_at]
+              properties:
+                hrpulse_employee_uuid: { type: string, format: uuid }
+                as_of: { type: string, format: date }
+                balances:
+                  type: array
+                  items:
+                    type: object
+                    required: [leave_type, available, used, pending]
+                    properties:
+                      leave_type: { type: string }
+                      available: { type: number }
+                      used: { type: number }
+                      pending: { type: number }
+                source_updated_at: { type: string, format: date-time }
+    PayrollEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventEnvelope'
+        - type: object
+          properties:
+            event_type: { type: string, const: payroll.finalized }
+            data:
+              type: object
+              required: [payroll_period, hrpulse_payroll_run_uuid, payroll_version, status, currency, employees]
+              properties:
+                payroll_period: { type: string, pattern: '^[0-9]{4}-[0-9]{2}$' }
+                hrpulse_payroll_run_uuid: { type: string, format: uuid }
+                payroll_version: { type: integer, minimum: 1 }
+                supersedes_version: { type: [integer, 'null'], minimum: 1 }
+                status: { type: string, const: finalized }
+                finalized_at: { type: string, format: date-time }
+                finalized_by: { type: object, additionalProperties: true }
+                published_at: { type: string, format: date-time }
+                currency: { type: string, const: INR }
+                employees:
+                  type: array
+                  items: { $ref: '#/components/schemas/PayrollEmployee' }
+    PayrollEmployee:
+      type: object
+      required: [hrpulse_employee_uuid, hims_employee_id, monthly_salary, gross_earnings, total_deductions, net_salary, payment_status]
+      properties:
+        hrpulse_employee_uuid: { type: string, format: uuid }
+        hims_employee_id: { type: string }
+        employee_number: { type: string }
+        monthly_salary: { type: number }
+        gross_earnings: { type: number }
+        allowances: { type: array, items: { type: object, additionalProperties: true } }
+        overtime: { type: object, additionalProperties: true }
+        paid_days: { type: number }
+        paid_leave_days: { type: number }
+        unpaid_leave_days: { type: number }
+        attendance_deductions: { type: number }
+        rule_based_deductions: { type: array, items: { type: object, additionalProperties: true } }
+        other_deductions: { type: array, items: { type: object, additionalProperties: true } }
+        total_deductions: { type: number }
+        net_salary: { type: number }
+        payment_status: { type: string }
+        calculation_summary: { type: object, additionalProperties: true }
+    DocumentEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventEnvelope'
+        - type: object
+          properties:
+            event_type: { type: string, enum: [document.uploaded, document.metadata.updated] }
+            data:
+              type: object
+              required: [hrpulse_document_uuid, hrpulse_employee_uuid, document_type, original_filename, mime_type, file_size, sha256, scan_status, version]
+              properties:
+                hrpulse_document_uuid: { type: string, format: uuid }
+                hrpulse_employee_uuid: { type: string, format: uuid }
+                document_type: { type: string }
+                original_filename: { type: string }
+                mime_type: { type: string }
+                file_size: { type: integer }
+                sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+                uploaded_at: { type: string, format: date-time }
+                expiry_date: { type: [string, 'null'], format: date }
+                verification_status: { type: string }
+                scan_status: { type: string, const: clean }
+                version: { type: integer, minimum: 1 }

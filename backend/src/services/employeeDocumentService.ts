@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { supabase } from '../db/supabase';
 
 const documentDir = path.join(process.cwd(), 'uploads', 'documents');
@@ -32,6 +32,14 @@ export type EmployeeDocumentRow = {
   source: string;
   uploaded_by: string | null;
   created_at: string;
+  public_uuid?: string | null;
+  storage_bucket?: string | null;
+  storage_path?: string | null;
+  sha256?: string | null;
+  scan_status?: string | null;
+  verification_status?: string | null;
+  expiry_date?: string | null;
+  version?: number | null;
 };
 
 function isMissingRelation(message: string) {
@@ -65,7 +73,13 @@ function toClient(row: EmployeeDocumentRow) {
     source: row.source,
     uploadedBy: row.uploaded_by,
     createdAt: row.created_at,
-    url: `/uploads/documents/${row.stored_filename}`,
+    publicUuid: row.public_uuid || row.id,
+    version: Number(row.version || 1),
+    sha256: row.sha256 || '',
+    scanStatus: row.scan_status || (row.storage_path ? 'quarantined' : 'legacy_local'),
+    verificationStatus: row.verification_status || 'pending',
+    expiryDate: row.expiry_date || null,
+    url: null,
   };
 }
 
@@ -79,8 +93,16 @@ export async function saveEmployeeDocument(input: {
   const id = randomUUID();
   const original = safeName(input.file.originalname || 'document');
   const stored = `${input.employeeId}-${Date.now()}-${id.slice(0, 8)}-${original}`;
-  const fullPath = path.join(documentDir, stored);
-  fs.writeFileSync(fullPath, input.file.buffer);
+  const storageBucket = 'employee-documents-private';
+  const storagePath = `${input.employeeId}/${id}/${stored}`;
+  const checksum = createHash('sha256').update(input.file.buffer).digest('hex');
+  const uploaded = await supabase.storage
+    .from(storageBucket)
+    .upload(storagePath, input.file.buffer, {
+      contentType: input.file.mimetype || 'application/octet-stream',
+      upsert: false,
+    });
+  if (uploaded.error) throw new Error(`Secure document upload failed: ${uploaded.error.message}`);
 
   const row: EmployeeDocumentRow = {
     id,
@@ -90,22 +112,28 @@ export async function saveEmployeeDocument(input: {
     stored_filename: stored,
     mime_type: input.file.mimetype || 'application/octet-stream',
     file_size: input.file.size || input.file.buffer.length,
-    file_path: `/uploads/documents/${stored}`,
+    file_path: storagePath,
     source: input.source || 'hrpulse',
     uploaded_by: input.uploadedBy || null,
     created_at: new Date().toISOString(),
+    public_uuid: id,
+    storage_bucket: storageBucket,
+    storage_path: storagePath,
+    sha256: checksum,
+    scan_status: 'quarantined',
+    verification_status: 'pending',
+    version: 1,
   };
-
-  const index = readIndex().filter((item) => item.id !== row.id);
-  index.unshift(row);
-  writeIndex(index);
 
   const { data, error } = await supabase
     .from('employee_documents')
     .insert(row)
     .select('*')
     .single();
-  if (error && !isMissingRelation(error.message)) throw new Error(error.message);
+  if (error) {
+    await supabase.storage.from(storageBucket).remove([storagePath]);
+    throw new Error(error.message);
+  }
 
   return toClient((data || row) as EmployeeDocumentRow);
 }
@@ -144,6 +172,24 @@ export async function findEmployeeDocument(employeeId: number, documentId: strin
   return {
     row,
     client: toClient(row),
-    absolutePath: path.join(documentDir, row.stored_filename),
+    absolutePath: row.storage_path ? null : path.join(documentDir, row.stored_filename),
   };
+}
+
+export async function createEmployeeDocumentSignedUrl(employeeId: number, documentId: string, expiresInSeconds = 300) {
+  const document = await findEmployeeDocument(employeeId, documentId);
+  if (!document) return null;
+  if (!document.row.storage_path || !document.row.storage_bucket) {
+    return { ...document, signedUrl: null, legacyLocal: true };
+  }
+  if (document.row.scan_status !== 'clean') {
+    const error = new Error('Document is quarantined until malware scanning passes');
+    (error as Error & { code?: string }).code = 'DOCUMENT_QUARANTINED';
+    throw error;
+  }
+  const signed = await supabase.storage
+    .from(document.row.storage_bucket)
+    .createSignedUrl(document.row.storage_path, expiresInSeconds);
+  if (signed.error) throw new Error(signed.error.message);
+  return { ...document, signedUrl: signed.data.signedUrl, legacyLocal: false };
 }

@@ -9,6 +9,7 @@ import { supabase } from '../db/supabase';
 //   - deductPercent     : % of monthly salary deducted
 //   - allowanceAmount   : flat rupee addition
 //   - allowancePercent  : % of monthly salary added
+//   - overtimeHalfDayAllowance : add half-day salary (dailySalary / 2)
 //
 // `conditions.department` and `conditions.shift` optionally scope a rule; when omitted
 // the rule applies to everyone. Conditions reuse the same attendance metrics as the
@@ -40,6 +41,8 @@ export interface SalaryRule {
   deductPercent: number;
   allowanceAmount: number;
   allowancePercent: number;
+  overtimeHalfDayAllowance: boolean;
+  repeat: boolean;
   priority: number;
 }
 
@@ -63,6 +66,16 @@ export interface MatchedRuleEffect {
   deductionAmount: number;
   allowanceAmount: number;
   amount: number;
+  repeatCount?: number;
+  conditionMetric?: keyof AttendanceSummary;
+  threshold?: number;
+  amountPerDate?: number;
+  formula?: string;
+  reason?: string;
+  effectType?: 'deduction' | 'allowance' | 'neutral';
+  source?: 'salary_rule' | 'payroll_policy';
+  policyDeductionAmount?: number;
+  dates?: string[];
 }
 
 export interface SalaryRuleResult {
@@ -131,13 +144,46 @@ export async function loadSalaryRules(): Promise<SalaryRule[]> {
         deductPercent: Math.max(0, Number(a.deductPercent) || 0),
         allowanceAmount: Math.max(0, Number(a.allowanceAmount) || 0),
         allowancePercent: Math.max(0, Number(a.allowancePercent) || 0),
+        overtimeHalfDayAllowance: a.overtimeHalfDayAllowance === true,
+        repeat: a.repeat === true,
         priority: r.priority,
       };
     })
     .filter((r: SalaryRule) =>
       r.deductDays > 0 || r.deductAmount > 0 || r.deductPercent > 0 ||
-      r.allowanceAmount > 0 || r.allowancePercent > 0,
+      r.allowanceAmount > 0 || r.allowancePercent > 0 || r.overtimeHalfDayAllowance,
     );
+}
+
+const REPEAT_METRICS: Array<keyof AttendanceSummary> = [
+  'absentDays',
+  'lateComingDays',
+  'missedSwipeDays',
+  'earlyLeavingDays',
+  'halfDays',
+  'overtimeDays',
+  'overtimeHours',
+  'totalFlagged',
+];
+
+function repeatCountForRule(rule: SalaryRule, summary: AttendanceSummary): number {
+  if (!rule.repeat) return 1;
+  for (const metric of REPEAT_METRICS) {
+    const cond = rule.conditions[metric];
+    const threshold = Number(cond?.gte);
+    if (!Number.isFinite(threshold) || threshold <= 0) continue;
+    return Math.max(1, Math.floor((Number(summary[metric]) || 0) / threshold));
+  }
+  return 1;
+}
+
+function primaryCondition(rule: SalaryRule): { metric?: keyof AttendanceSummary; threshold?: number } {
+  for (const metric of REPEAT_METRICS) {
+    const cond = rule.conditions[metric];
+    const threshold = cond?.gte ?? cond?.lte;
+    if (threshold !== undefined) return { metric, threshold: Number(threshold) || 0 };
+  }
+  return {};
 }
 
 // Compute one matched rule's rupee impact. Returns deduction and allowance amounts
@@ -146,33 +192,73 @@ function ruleImpact(
   rule: SalaryRule,
   monthlySalary: number,
   dailySalary: number,
-): { deduction: number; allowance: number; label: string } {
+  repeatCount: number,
+): { deduction: number; allowance: number; label: string; amountPerDate: number; formula: string; reason: string; effectType: 'deduction' | 'allowance' | 'neutral' } {
   const parts: string[] = [];
   let deduction = 0;
   let allowance = 0;
+  let amountPerDate = 0;
+  let formula = 'Salary rule calculation';
+  let reason = 'Rule matched this employee attendance summary';
+  let effectType: 'deduction' | 'allowance' | 'neutral' = 'neutral';
+  const scaledDeductDays = rule.deductDays * repeatCount;
+  const scaledDeductAmount = rule.deductAmount * repeatCount;
+  const scaledDeductPercent = rule.deductPercent * repeatCount;
+  const scaledAllowanceAmount = rule.allowanceAmount * repeatCount;
+  const scaledAllowancePercent = rule.allowancePercent * repeatCount;
+  const scaledOvertimeHalfDayAllowance = (dailySalary / 2) * repeatCount;
   if (rule.deductDays > 0) {
-    deduction += dailySalary * rule.deductDays;
-    parts.push(`deduct ${rule.deductDays} day${rule.deductDays > 1 ? 's' : ''}`);
+    deduction += dailySalary * scaledDeductDays;
+    parts.push(`deduct ${scaledDeductDays} day${scaledDeductDays > 1 ? 's' : ''}`);
+    amountPerDate = Math.round(dailySalary);
+    formula = `${scaledDeductDays} salary day${scaledDeductDays > 1 ? 's' : ''} x INR ${Math.round(dailySalary)}`;
+    reason = 'Attendance rule deducted salary days';
+    effectType = 'deduction';
   }
   if (rule.deductAmount > 0) {
-    deduction += rule.deductAmount;
-    parts.push(`deduct INR ${rule.deductAmount}`);
+    deduction += scaledDeductAmount;
+    parts.push(`deduct INR ${scaledDeductAmount}`);
+    amountPerDate = Math.round(scaledDeductAmount / Math.max(1, repeatCount));
+    formula = `Fixed rule deduction INR ${scaledDeductAmount}`;
+    reason = 'Attendance rule deducted a fixed amount';
+    effectType = 'deduction';
   }
   if (rule.deductPercent > 0) {
-    const v = monthlySalary * rule.deductPercent / 100;
+    const v = monthlySalary * scaledDeductPercent / 100;
     deduction += v;
-    parts.push(`deduct ${rule.deductPercent}%`);
+    parts.push(`deduct ${scaledDeductPercent}%`);
+    amountPerDate = Math.round(v / Math.max(1, repeatCount));
+    formula = `${scaledDeductPercent}% of monthly salary INR ${Math.round(monthlySalary)}`;
+    reason = 'Attendance rule deducted a salary percentage';
+    effectType = 'deduction';
   }
   if (rule.allowanceAmount > 0) {
-    allowance += rule.allowanceAmount;
-    parts.push(`allowance INR ${rule.allowanceAmount}`);
+    allowance += scaledAllowanceAmount;
+    parts.push(`allowance INR ${scaledAllowanceAmount}`);
+    amountPerDate = Math.round(scaledAllowanceAmount / Math.max(1, repeatCount));
+    formula = `Fixed rule allowance INR ${scaledAllowanceAmount}`;
+    reason = 'Attendance rule added a fixed allowance';
+    effectType = 'allowance';
   }
   if (rule.allowancePercent > 0) {
-    const v = monthlySalary * rule.allowancePercent / 100;
+    const v = monthlySalary * scaledAllowancePercent / 100;
     allowance += v;
-    parts.push(`allowance ${rule.allowancePercent}%`);
+    parts.push(`allowance ${scaledAllowancePercent}%`);
+    amountPerDate = Math.round(v / Math.max(1, repeatCount));
+    formula = `${scaledAllowancePercent}% of monthly salary INR ${Math.round(monthlySalary)}`;
+    reason = 'Attendance rule added a salary percentage';
+    effectType = 'allowance';
   }
-  return { deduction, allowance, label: parts.join(' + ') };
+  if (rule.overtimeHalfDayAllowance) {
+    allowance += scaledOvertimeHalfDayAllowance;
+    parts.push(`add ${repeatCount} half-day overtime pay`);
+    amountPerDate = Math.round(dailySalary / 2);
+    formula = `${repeatCount} overtime day${repeatCount > 1 ? 's' : ''} x Monthly Salary / 30 / 2`;
+    reason = 'Overtime eligible employee worked more than 2 hours after shift end';
+    effectType = 'allowance';
+  }
+  if (rule.repeat && repeatCount > 1) parts.push(`${repeatCount}x repeat`);
+  return { deduction, allowance, label: parts.join(' + '), amountPerDate, formula, reason, effectType };
 }
 
 // Evaluate salary rules for one employee. Returns total deduction days, deduction
@@ -206,8 +292,10 @@ export function evaluateSalaryRules(
   let allowanceAmount = 0;
   const matchedRules: MatchedRuleEffect[] = [];
   for (const r of matched) {
-    const impact = ruleImpact(r, monthlySalary, dailySalary);
-    deductDays += r.deductDays;
+    const repeatCount = repeatCountForRule(r, summary);
+    const condition = primaryCondition(r);
+    const impact = ruleImpact(r, monthlySalary, dailySalary, repeatCount);
+    deductDays += r.deductDays * repeatCount;
     deductionAmount += impact.deduction;
     allowanceAmount += impact.allowance;
     const net = impact.allowance - impact.deduction;
@@ -219,6 +307,13 @@ export function evaluateSalaryRules(
         deductionAmount: Math.round(impact.deduction),
         allowanceAmount: Math.round(impact.allowance),
         amount: Math.round(net),
+        repeatCount,
+        conditionMetric: condition.metric,
+        threshold: condition.threshold,
+        amountPerDate: impact.amountPerDate,
+        formula: impact.formula,
+        reason: impact.reason,
+        effectType: impact.effectType,
       });
     }
   }

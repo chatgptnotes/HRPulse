@@ -1,5 +1,11 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+
+const backendEnvPath = path.basename(process.cwd()).toLowerCase() === 'backend'
+  ? path.resolve(process.cwd(), '.env')
+  : path.resolve(process.cwd(), 'backend', '.env');
+dotenv.config({ path: backendEnvPath });
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey =
@@ -24,4 +30,3 @@ export async function getSettings(): Promise<Record<string, string>> {
 }
 
 export default supabase;
-

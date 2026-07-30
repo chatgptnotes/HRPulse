@@ -7,6 +7,12 @@ export type AttendanceRecordWriteRow = {
   status: string;
   time_in: string | null;
   time_out: string | null;
+  connector_id?: string | null;
+  source_type?: string;
+  source_record_id?: string | null;
+  source_version?: number;
+  source_updated_at?: string;
+  is_reversed?: boolean;
 };
 
 function isMissingConflictConstraint(error: unknown) {
@@ -45,8 +51,48 @@ async function replaceRowsByEmployeeDate(rows: AttendanceRecordWriteRow[]) {
 }
 
 export async function writeAttendanceRecordBatch(rows: AttendanceRecordWriteRow[]) {
-  const batch = uniqueRows(rows);
+  const now = new Date().toISOString();
+  const batch = uniqueRows(rows).map(row => ({
+    ...row,
+    connector_id: row.connector_id || null,
+    source_type: row.source_type || 'excel',
+    source_record_id: row.source_record_id || `excel:${row.upload_id}:${row.employee_id}:${row.record_date}`,
+    source_version: row.source_version || 1,
+    source_updated_at: row.source_updated_at || now,
+    is_reversed: row.is_reversed === true,
+  }));
   if (!batch.length) return { count: 0, usedCompatibilityMode: false };
+
+  const employeeIds = [...new Set(batch.map(row => row.employee_id))];
+  const dates = [...new Set(batch.map(row => row.record_date))];
+  const existingResult = await supabase
+    .from('attendance_records')
+    .select('*')
+    .in('employee_id', employeeIds)
+    .in('record_date', dates);
+  if (!existingResult.error && existingResult.data?.length) {
+    const incomingKeys = new Set(batch.map(row => `${row.employee_id}:${row.record_date}`));
+    const revisions = existingResult.data
+      .filter((row: any) => incomingKeys.has(`${row.employee_id}:${row.record_date}`))
+      .map((row: any) => ({
+        attendance_record_id: row.id,
+        employee_id: row.employee_id,
+        record_date: row.record_date,
+        connector_id: row.connector_id || null,
+        source_type: row.source_type || 'excel',
+        source_record_id: row.source_record_id || null,
+        source_version: row.source_version || 1,
+        source_updated_at: row.source_updated_at || new Date(0).toISOString(),
+        record_snapshot: row,
+        replaced_by_source: 'excel',
+      }));
+    if (revisions.length) {
+      const savedRevisions = await supabase.from('attendance_record_revisions').insert(revisions);
+      if (savedRevisions.error && !/attendance_record_revisions|does not exist|schema cache/i.test(savedRevisions.error.message || '')) {
+        throw new Error(savedRevisions.error.message);
+      }
+    }
+  }
 
   const { error } = await supabase
     .from('attendance_records')

@@ -83,6 +83,7 @@ export interface EmployeePayrollDetail extends PayrollRow {
   overtimePay: number;
   penaltyDeduction: number;
   lateDates: string[];
+  overtimeDates: string[];
   paidLeaveDates: string[];
   unpaidAbsenceDates: string[];
   missingPunchDates: string[];
@@ -189,6 +190,8 @@ interface RawDay {
   status: string;
   timeIn: string | null;
   timeOut: string | null;
+  approvedLeaveFraction?: number;
+  approvedLeavePaid?: boolean;
 }
 
 // recordDate is "YYYY-MM-DD" — parse as a local calendar date to avoid UTC drift.
@@ -246,7 +249,7 @@ export function computeEmployeePayroll(
   const overtimeEligible = emp.overtime_eligible === true;
   const itDepartment = isItDepartment(emp.department);
 
-  let presentDays = 0, halfDays = 0, absentDays = 0, lateDays = 0, missingPunches = 0;
+  let presentDays = 0, halfDays = 0, absentDays = 0, approvedPaidLeave = 0, lateDays = 0, missingPunches = 0;
   let weeklyOffs = 0, holidays = 0, totalWorkingHours = 0, totalOvertimeHours = 0, overtimeDays = 0, punchCount = 0;
 
   for (const day of days) {
@@ -263,6 +266,21 @@ export function computeEmployeePayroll(
       : 0;
     let classification = classifyStatus(day.status, workingHours, settings.halfDayHours);
     classification = applyDepartmentWeeklyOffPolicy(classification, day.recordDate, itDepartment);
+    const leaveFraction = Math.max(0, Math.min(1, Number(day.approvedLeaveFraction || 0)));
+    if (leaveFraction > 0 && classification !== 'weekly_off' && classification !== 'holiday') {
+      if (day.approvedLeavePaid !== false) approvedPaidLeave += leaveFraction;
+      else absentDays += leaveFraction;
+      const uncoveredFraction = 1 - leaveFraction;
+      if (uncoveredFraction > 0) {
+        if (workingHours > 0) {
+          presentDays += uncoveredFraction;
+          totalWorkingHours += workingHours;
+        } else {
+          absentDays += uncoveredFraction;
+        }
+      }
+      continue;
+    }
     const isLate = (classification === 'late') ||
       ((classification === 'present' || classification === 'half') && inMin != null && inMin > shiftStartMin + settings.lateGraceMinutes);
 
@@ -288,10 +306,10 @@ export function computeEmployeePayroll(
     if (classification === 'late') lateDays++;
   }
 
-  // Paid leave excuses up to `paidLeaveDays` actual absent days (those days are
-  // paid, not cut). Remaining absences stay unpaid.
-  const paidLeave = Math.min(paidLeaveAllowance(emp), absentDays);
-  const unpaidAbsent = absentDays - paidLeave;
+  // Only explicitly approved HRPulse leave is paid. A submitted/rejected request
+  // never silently turns an attendance absence into paid leave.
+  const paidLeave = approvedPaidLeave;
+  const unpaidAbsent = absentDays;
   // Attendance-paid days are counted for reporting, but salary starts from the
   // monthly amount. Unpaid absence and half-day impact are listed as deductions.
   // Missing-punch days count as present and do not cut salary.
@@ -394,12 +412,66 @@ export function buildEmployeeDetail(
   const missedPenalty = 0;
   const latePenalty = row.dailySalary * row.lateDeductionDays;
   const sortedBreakdown = breakdown.sort((a, b) => (a.date < b.date ? -1 : 1));
-  const absenceDays = sortedBreakdown.filter(day => day.classification === 'absent');
-  const paidLeaveDates = absenceDays.slice(0, row.paidLeave).map(day => day.date);
-  const unpaidAbsenceDates = absenceDays.slice(row.paidLeave).map(day => day.date);
+  const sourceDayByDate = new Map(days.map(day => [day.recordDate, day]));
+  const paidLeaveDates = sortedBreakdown
+    .filter(day => {
+      const source = sourceDayByDate.get(day.date);
+      return Number(source?.approvedLeaveFraction || 0) > 0 && source?.approvedLeavePaid !== false;
+    })
+    .map(day => day.date);
+  const unpaidAbsenceDates = sortedBreakdown
+    .filter(day => {
+      const source = sourceDayByDate.get(day.date);
+      const leaveFraction = Math.max(0, Math.min(1, Number(source?.approvedLeaveFraction || 0)));
+      if (leaveFraction > 0 && source?.approvedLeavePaid === false) return true;
+      const paidFraction = source?.approvedLeavePaid !== false ? leaveFraction : 0;
+      return day.classification === 'absent' && paidFraction < 1;
+    })
+    .map(day => day.date);
   const lateDates = sortedBreakdown.filter(day => day.isLate).map(day => day.date);
   const missingPunchDates = sortedBreakdown.filter(day => day.classification === 'missing_punch').map(day => day.date);
   const halfDayDates = sortedBreakdown.filter(day => day.classification === 'half').map(day => day.date);
+  const overtimeDates = sortedBreakdown.filter(day => day.isOvertime).map(day => day.date);
+  const datesByRuleMetric: Record<string, string[]> = {
+    absentDays: unpaidAbsenceDates,
+    lateComingDays: lateDates,
+    missedSwipeDays: missingPunchDates,
+    earlyLeavingDays: sortedBreakdown.filter(day => day.classification === 'early').map(day => day.date),
+    halfDays: halfDayDates,
+    overtimeDays: overtimeDates,
+    overtimeHours: overtimeDates,
+    totalFlagged: sortedBreakdown
+      .filter(day => ['absent', 'late', 'missing_punch', 'early', 'half'].includes(day.classification))
+      .map(day => day.date),
+  };
+  const visibleMatchedRules = matchedRules.map((rule) => {
+    const dates = rule.dates || datesByRuleMetric[String(rule.conditionMetric || '')] || [];
+    const totalAmount = rule.deductionAmount > 0 ? rule.deductionAmount : rule.allowanceAmount;
+    return {
+      ...rule,
+      dates,
+      totalAmount,
+      amountPerDate: rule.amountPerDate || Math.round(totalAmount / Math.max(1, dates.length || Number(rule.repeatCount) || 1)),
+    };
+  });
+  if (row.halfDays > 0) {
+    visibleMatchedRules.push({
+      id: -1001,
+      name: `Working hours below ${settings.halfDayHours} hours mark Half Day`,
+      label: `${row.halfDays} half day${row.halfDays === 1 ? '' : 's'} detected. Deduction is already included in Half-Day Deduction, so it is not added again as a rule deduction.`,
+      deductionAmount: 0,
+      allowanceAmount: 0,
+      amount: 0,
+      source: 'payroll_policy',
+      policyDeductionAmount: row.halfDayDeduction,
+      dates: halfDayDates,
+      amountPerDate: Math.round(row.dailySalary / 2),
+      totalAmount: row.halfDayDeduction,
+      formula: `${row.halfDays} half day${row.halfDays === 1 ? '' : 's'} x Monthly Salary / 30 / 2`,
+      reason: 'Worked less than configured half-day hours',
+      effectType: 'deduction',
+    });
+  }
 
   return {
     ...row,
@@ -410,11 +482,12 @@ export function buildEmployeeDetail(
     overtimePay,
     penaltyDeduction: Math.round(absencePenalty + missedPenalty + latePenalty),
     lateDates,
+    overtimeDates,
     paidLeaveDates,
     unpaidAbsenceDates,
     missingPunchDates,
     halfDayDates,
-    matchedRules,
+    matchedRules: visibleMatchedRules,
     days: sortedBreakdown,
   };
 }

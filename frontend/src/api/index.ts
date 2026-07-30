@@ -1,6 +1,14 @@
 import axios from 'axios';
+import { supabase } from '../lib/supabase';
 
 export const api = axios.create({ baseURL: '/api' });
+api.interceptors.request.use(async config => {
+  const { data } = await supabase.auth.getSession();
+  if (data.session?.access_token) {
+    config.headers.Authorization = `Bearer ${data.session.access_token}`;
+  }
+  return config;
+});
 
 // Attendance
 export const uploadAttendance = (file: File) => {
@@ -51,6 +59,27 @@ export const getPayrollRun = (uploadId: number) => api.get(`/payroll/runs/${uplo
 export const getPayrollEmployeeDetail = (uploadId: number, employeeId: number) => api.get(`/payroll/employee/${uploadId}/${employeeId}`);
 export const getPayrollHistory = () => api.get('/payroll/history');
 export const getPayrollFilters = () => api.get('/payroll/filters');
+export const getPayrollFinalizationStatus = (periodMonth: string) => api.get(`/payroll/finalization/${periodMonth}/status`);
+export const finalizePayroll = (periodMonth: string, overrideReason?: string) =>
+  api.post(`/payroll/finalize/${periodMonth}`, { overrideReason: overrideReason || undefined });
+
+// Reusable HIMS connector administration
+export const getIntegrationOverview = () => api.get('/integration-admin/overview');
+export const updateConnector = (
+  connectorKey: string,
+  data: { status?: 'disabled' | 'shadow' | 'active' | 'error'; baseUrl?: string | null; pollIntervalSeconds?: number },
+) => api.patch(`/integration-admin/connectors/${connectorKey}`, data);
+export const getIntegrationEvents = (params?: { direction?: 'inbound' | 'outbound'; status?: string; limit?: number }) =>
+  api.get('/integration-admin/events', { params });
+export const retryIntegrationEvent = (id: number) => api.post(`/integration-admin/events/${id}/retry`);
+export const backfillConnectorEmployees = (connectorKey: string) =>
+  api.post(`/integration-admin/connectors/${connectorKey}/backfill-employees`);
+export const getConnectorMappings = (connectorKey: string) =>
+  api.get(`/integration-admin/connectors/${connectorKey}/mappings`);
+export const saveConnectorMapping = (
+  connectorKey: string,
+  data: { employeeId: number; externalEmployeeId: string; externalUserId?: string | null; externalEmployeeNumber?: string | null },
+) => api.put(`/integration-admin/connectors/${connectorKey}/mappings`, data);
 
 // Settings
 export const getSettings = () => api.get('/settings');
@@ -149,6 +178,7 @@ export const createRule = (data: { name: string; description: string; ruleType: 
 export const updateRule = (id: number, data: object) => api.put(`/rules/${id}`, data);
 export const deleteRule = (id: number) => api.delete(`/rules/${id}`);
 export const toggleRule = (id: number) => api.patch(`/rules/${id}/toggle`);
+export const generateRule = (prompt: string) => api.post('/rules/generate', { prompt });
 export const evaluateRules = (uploadId: number, autoCreateDrafts = true) =>
   api.post<{ matches: any[]; draftsCreated: number; employeesEvaluated: number }>(`/rules/evaluate/${uploadId}`, { autoCreateDrafts });
 

@@ -2,8 +2,138 @@ import { Router, Request, Response } from 'express';
 import { supabase, getSettings } from '../db/supabase';
 import { evaluateRulesForUpload } from '../services/ruleEngine';
 import { calculateLOP } from '../services/lopService';
+import { openRouterErrorResponse, openRouterModel, sendOpenRouterChat } from '../services/openRouterService';
 
 const router = Router();
+
+const RULE_TYPES = new Set([
+  'absence_threshold',
+  'late_coming',
+  'missed_swipe',
+  'early_leaving',
+  'half_day',
+  'overtime',
+  'shift',
+  'holiday',
+  'leave',
+  'payroll',
+  'ai_notification',
+  'custom',
+]);
+
+const RULE_METRICS = new Set([
+  'absentDays',
+  'lateComingDays',
+  'missedSwipeDays',
+  'earlyLeavingDays',
+  'workingHours',
+  'halfDays',
+  'overtimeDays',
+  'overtimeHours',
+  'totalFlagged',
+]);
+
+const SALARY_EFFECTS = new Set([
+  'deduct_days',
+  'deduct_amount',
+  'deduct_percent',
+  'allowance_amount',
+  'allowance_percent',
+  'half_day_policy',
+  'overtime_half_day_allowance',
+]);
+
+function sanitizeGeneratedRule(raw: any, prompt: string) {
+  const condition = Array.isArray(raw?.conditions) ? raw.conditions[0] || {} : {};
+  const metric = RULE_METRICS.has(condition.metric) ? condition.metric : 'lateComingDays';
+  const op = condition.op === 'lte' ? 'lte' : 'gte';
+  const value = Math.max(0, Number(condition.value) || (metric === 'workingHours' ? 4 : 1));
+  const ruleType = RULE_TYPES.has(raw?.ruleType) ? raw.ruleType : metric === 'workingHours' ? 'half_day' : 'custom';
+  const salaryEffect = SALARY_EFFECTS.has(raw?.salaryEffect) ? raw.salaryEffect : 'deduct_days';
+  return {
+    name: String(raw?.name || prompt || 'AI generated attendance rule').trim().slice(0, 80),
+    description: String(raw?.description || prompt || 'Generated from plain English.').trim(),
+    ruleType,
+    conditions: [{ metric, op, value }],
+    salaryEffect,
+    salaryValue: salaryEffect === 'half_day_policy' || salaryEffect === 'overtime_half_day_allowance' ? 0 : Math.max(0, Number(raw?.salaryValue) || 1),
+    repeat: Boolean(raw?.repeat),
+    severity: ['notice', 'warning', 'critical'].includes(raw?.severity) ? raw.severity : 'warning',
+    notifyManager: Boolean(raw?.notifyManager),
+    sendEmail: raw?.sendEmail !== false,
+    priority: Math.max(0, Number(raw?.priority) || 5),
+  };
+}
+
+function fallbackGeneratedRule(prompt: string) {
+  const lower = prompt.toLowerCase();
+  const overtimeHalfDay = lower.includes('overtime') && lower.includes('half') && lower.includes('salary');
+  if (overtimeHalfDay) {
+    return {
+      name: prompt.trim().slice(0, 80) || 'Overtime half-day salary rule',
+      description: prompt.trim() || 'Generated from plain English.',
+      ruleType: 'overtime',
+      conditions: [{ metric: 'overtimeDays', op: 'gte', value: 1 }],
+      salaryEffect: 'overtime_half_day_allowance',
+      salaryValue: 0,
+      repeat: true,
+      severity: 'warning',
+      notifyManager: false,
+      sendEmail: true,
+      priority: 5,
+    };
+  }
+
+  return sanitizeGeneratedRule({}, prompt);
+}
+
+router.post('/generate', async (req: Request, res: Response) => {
+  try {
+    const prompt = String(req.body?.prompt || '').trim();
+    if (!prompt) {
+      res.status(400).json({ error: 'prompt is required' });
+      return;
+    }
+
+    const payload = await sendOpenRouterChat({
+      model: openRouterModel(),
+      temperature: 0.1,
+      responseFormat: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: [
+            'You convert HR attendance policy text into one HRPulse rule draft JSON object.',
+            'Return JSON only with: name, description, ruleType, conditions, salaryEffect, salaryValue, repeat, severity, notifyManager, sendEmail, priority.',
+            'Allowed ruleType: absence_threshold, late_coming, missed_swipe, early_leaving, half_day, overtime, shift, holiday, leave, payroll, ai_notification, custom.',
+            'Allowed condition metric: absentDays, lateComingDays, missedSwipeDays, earlyLeavingDays, workingHours, halfDays, overtimeDays, overtimeHours, totalFlagged.',
+            'Allowed condition op: gte or lte.',
+            'Allowed salaryEffect: deduct_days, deduct_amount, deduct_percent, allowance_amount, allowance_percent, half_day_policy, overtime_half_day_allowance.',
+            'For "working hours less than 4", use ruleType half_day, condition workingHours lte 4, salaryEffect half_day_policy, salaryValue 0.',
+            'For "overtime more than 2 hours add half day salary", use ruleType overtime, condition overtimeDays gte 1, salaryEffect overtime_half_day_allowance, salaryValue 0, repeat true.',
+            'For repeated wording like every/per, set repeat true.',
+          ].join(' '),
+        },
+        { role: 'user', content: prompt },
+      ],
+    });
+
+    const content = payload?.choices?.[0]?.message?.content || '{}';
+    try {
+      const parsed = JSON.parse(content);
+      res.json(sanitizeGeneratedRule(parsed, prompt));
+    } catch {
+      res.json(fallbackGeneratedRule(prompt));
+    }
+  } catch (err: any) {
+    const openRouterError = openRouterErrorResponse(err);
+    if (openRouterError.status !== 500) {
+      res.status(openRouterError.status).json(openRouterError.body);
+      return;
+    }
+    res.status(500).json({ error: 'Rule generation failed', message: err?.message || 'Unexpected rule generation failure' });
+  }
+});
 
 router.get('/', async (_req: Request, res: Response) => {
   const { data, error } = await supabase

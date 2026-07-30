@@ -11,19 +11,19 @@ export interface MatchableRecord {
 }
 
 export interface MatchResult {
-  find: (r: MatchableRecord) => { id: number } | null;
+  find: (r: MatchableRecord) => { id: number; shift_start_time?: string | null } | null;
   warnings: string[];
   matched: number;
   skipped: number;
 }
 
 export async function matchEmployees(records: MatchableRecord[]): Promise<MatchResult> {
-  const employees: Array<{ id: number; employee_number: string | null; name: string }> = [];
+  const employees: Array<{ id: number; employee_number: string | null; name: string; shift_start_time?: string | null }> = [];
   let offset = 0;
   while (true) {
     const { data, error } = await supabase
       .from('employees')
-      .select('id, employee_number, name')
+      .select('id, employee_number, name, shift_start_time')
       .range(offset, offset + 999);
     if (error) throw new Error(error.message);
     employees.push(...((data || []) as any[]));
@@ -31,11 +31,12 @@ export async function matchEmployees(records: MatchableRecord[]): Promise<MatchR
     offset += 1000;
   }
 
-  const byNumber = new Map<string, { id: number }>();
-  const byName = new Map<string, { id: number }>();
+  const byNumber = new Map<string, { id: number; shift_start_time?: string | null }>();
+  const byName = new Map<string, { id: number; shift_start_time?: string | null }>();
   for (const e of employees) {
-    if (e.employee_number) byNumber.set(String(e.employee_number).trim(), { id: e.id });
-    if (e.name) byName.set(String(e.name).trim().toLowerCase(), { id: e.id });
+    const match = { id: e.id, shift_start_time: e.shift_start_time || null };
+    if (e.employee_number) byNumber.set(String(e.employee_number).trim(), match);
+    if (e.name) byName.set(String(e.name).trim().toLowerCase(), match);
   }
 
   const seenMissing = new Set<string>();
@@ -43,7 +44,7 @@ export async function matchEmployees(records: MatchableRecord[]): Promise<MatchR
   let matched = 0;
   let skipped = 0;
 
-  function find(r: MatchableRecord): { id: number } | null {
+  function find(r: MatchableRecord): { id: number; shift_start_time?: string | null } | null {
     const num = r.employeeNumber ? String(r.employeeNumber).trim() : '';
     if (num && byNumber.has(num)) { matched++; return byNumber.get(num)!; }
     const name = (r.employeeName || '').trim().toLowerCase();

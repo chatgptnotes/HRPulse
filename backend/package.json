@@ -5,7 +5,12 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/backend/src/index.js",
+    "worker": "node dist/backend/src/workers/integrationWorker.js",
+    "worker:dev": "ts-node-dev --transpile-only src/workers/integrationWorker.ts",
+    "test": "npm run build && node --test dist/backend/src/tests/*.test.js",
+    "documents:migrate:dry-run": "node scripts/migrate-local-documents-to-storage.mjs",
+    "documents:migrate": "node scripts/migrate-local-documents-to-storage.mjs --apply"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",

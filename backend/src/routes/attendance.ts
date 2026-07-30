@@ -34,6 +34,32 @@ function groupRecordsByMonth<T extends { recordDate?: string }>(records: T[], fa
   return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
 }
 
+function timeToMinutes(value?: string | null): number | null {
+  if (!value) return null;
+  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?$/i);
+  if (!match) return null;
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const ampm = match[3]?.toLowerCase();
+  if (Number.isNaN(hour) || Number.isNaN(minute) || hour > 24 || minute > 59) return null;
+  if (ampm === 'pm' && hour < 12) hour += 12;
+  if (ampm === 'am' && hour === 12) hour = 0;
+  return hour * 60 + minute;
+}
+
+function isNonWorkingStatus(status: string) {
+  return /^(absent|weekend|weekly off|holiday)$/i.test(String(status || '').trim());
+}
+
+function classifyLateStatus(status: string, timeIn?: string | null, shiftStart?: string | null) {
+  if (isNonWorkingStatus(status)) return status;
+  const inMinutes = timeToMinutes(timeIn);
+  if (inMinutes == null) return status;
+  const shiftStartMinutes = timeToMinutes(shiftStart) ?? 9 * 60;
+  const graceMinutes = 30;
+  return inMinutes > shiftStartMinutes + graceMinutes ? 'Late Coming' : status;
+}
+
 async function fetchAllRecords(uploadId: number, columns = '*'): Promise<any[]> {
   const out: any[] = [];
   let offset = 0;
@@ -94,7 +120,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         upload_id: uploadRow.id,
         employee_id: emp.id,
         record_date: r.recordDate,
-        status: r.status,
+        status: classifyLateStatus(r.status, r.timeIn || null, emp.shift_start_time || null),
         time_in: r.timeIn || null,
         time_out: r.timeOut || null,
       });
@@ -259,8 +285,44 @@ router.get('/sheet/:uploadId', async (req: Request, res: Response) => {
 
 router.delete('/uploads/:uploadId', async (req: Request, res: Response) => {
   const uploadId = parseInt(req.params.uploadId);
+  const upload = await supabase.from('attendance_uploads').select('*').eq('id', uploadId).maybeSingle();
+  if (upload.error || !upload.data) {
+    res.status(404).json({ error: 'Upload not found' });
+    return;
+  }
+  if (upload.data.source_type === 'hims_daily') {
+    res.status(409).json({ error: 'HIMS attendance is authoritative and cannot be deleted as an upload' });
+    return;
+  }
+  const finalized = await supabase
+    .from('payroll_runs')
+    .select('id, run_uuid, version')
+    .eq('period_month', upload.data.period_month)
+    .eq('status', 'finalized')
+    .limit(1);
+  if (!finalized.error && finalized.data?.length) {
+    res.status(409).json({ error: 'This attendance period has finalized payroll. Create a correction version instead of deleting source data.' });
+    return;
+  }
   await supabase.from('email_drafts').delete().eq('upload_id', uploadId);
-  await supabase.from('attendance_records').delete().eq('upload_id', uploadId);
+  const records = await supabase.from('attendance_records').select('*').eq('upload_id', uploadId);
+  for (const record of records.data || []) {
+    const revision = await supabase
+      .from('attendance_record_revisions')
+      .select('*')
+      .eq('employee_id', record.employee_id)
+      .eq('record_date', record.record_date)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (revision.data?.record_snapshot) {
+      const { id: _snapshotId, ...snapshot } = revision.data.record_snapshot;
+      await supabase.from('attendance_records').update(snapshot).eq('id', record.id);
+      await supabase.from('attendance_record_revisions').delete().eq('id', revision.data.id);
+    } else {
+      await supabase.from('attendance_records').delete().eq('id', record.id);
+    }
+  }
   const { error } = await supabase.from('attendance_uploads').delete().eq('id', uploadId);
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ ok: true });

@@ -166,11 +166,12 @@ function DeductionDateDetails({
     );
   }
   const total = totalAmount ?? Math.round(list.length * amountPerDate);
+  const isDeductionTone = tone === 'red' || tone === 'amber';
   return (
     <div className="border-b border-slate-100 py-2 last:border-0">
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-        <span className={clsx('text-xs font-bold', total > 0 ? 'text-rose-600' : 'text-emerald-700')}>
+        <span className={clsx('text-xs font-bold', total > 0 && isDeductionTone ? 'text-rose-600' : 'text-emerald-700')}>
           Total INR {fmtINR(total)}
         </span>
       </div>
@@ -188,7 +189,7 @@ function DeductionDateDetails({
           >
             <span className="font-bold">{formatDateChip(date)}</span>
             <span className="text-slate-600">{reason}</span>
-            <span className={clsx('font-bold', amountPerDate > 0 ? 'text-rose-600' : 'text-emerald-700')}>
+            <span className={clsx('font-bold', amountPerDate > 0 && isDeductionTone ? 'text-rose-600' : 'text-emerald-700')}>
               INR {fmtINR(amountPerDate)}
             </span>
           </div>
@@ -235,6 +236,80 @@ function LateDeductionDetails({ dates, dailySalary, deductionDays, totalAmount }
         <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
           <span className="font-bold">Warning only:</span> {warningDates.map(formatDateChip).join(', ')} - INR 0 deducted
         </div>
+      )}
+    </div>
+  );
+}
+
+function RuleMoneyDetails({ rule }: { rule: any }) {
+  const dates = Array.isArray(rule?.dates) ? rule.dates.filter(Boolean) : [];
+  const deducted = ruleDeductionAmount(rule);
+  const policyDeducted = rulePolicyDeductionAmount(rule);
+  const allowance = ruleAllowanceAmount(rule);
+  const amount = deducted || policyDeducted || allowance || 0;
+  const amountPerDate = Number(rule?.amountPerDate) || Math.round(amount / Math.max(1, dates.length || Number(rule?.repeatCount) || 1));
+  const isAllowance = allowance > 0;
+  const threshold = Math.max(0, Number(rule?.threshold) || 0);
+  const repeatCount = Math.max(0, Number(rule?.repeatCount) || 0);
+  const shouldGroupDeduction = !isAllowance && deducted > 0 && threshold > 1 && repeatCount > 0;
+  const groupedDates = shouldGroupDeduction
+    ? Array.from({ length: repeatCount }, (_, index) => dates.slice(index * threshold, index * threshold + threshold).filter(Boolean))
+    : [];
+  const warningDates = shouldGroupDeduction ? dates.slice(repeatCount * threshold) : [];
+  const totalLabel = isAllowance ? `+ INR ${fmtINR(allowance)}` : amount > 0 ? `- INR ${fmtINR(amount)}` : 'INR 0';
+
+  return (
+    <div className={clsx(
+      'rounded-xl border px-3 py-2 text-xs',
+      isAllowance && 'border-emerald-100 bg-emerald-50 text-emerald-800',
+      !isAllowance && amount > 0 && 'border-rose-100 bg-rose-50 text-rose-800',
+      !isAllowance && amount === 0 && 'border-slate-200 bg-slate-50 text-slate-700',
+    )}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-bold">{rule.name}</p>
+          <p className="mt-1 text-slate-600">{rule.reason || rule.label || 'Salary rule matched this employee.'}</p>
+        </div>
+        <span className={clsx('shrink-0 font-bold', isAllowance ? 'text-emerald-700' : amount > 0 ? 'text-rose-600' : 'text-slate-500')}>
+          {totalLabel}
+        </span>
+      </div>
+      {rule.label && <p className="mt-2 rounded-lg bg-white/70 px-2 py-1 font-semibold text-slate-600">{rule.label}</p>}
+      {rule.formula && <p className="mt-2 text-slate-600">Formula: {rule.formula}</p>}
+      {shouldGroupDeduction && groupedDates.length > 0 ? (
+        <div className="mt-2 space-y-1.5">
+          {groupedDates.map((group, index) => (
+            <div key={index} className="rounded-lg bg-white/80 px-2 py-1.5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-bold text-slate-700">Deduction group {index + 1}</p>
+                  <p className="mt-1 text-slate-600">{group.map(formatDateChip).join(', ')}</p>
+                  <p className="mt-1 text-slate-500">{threshold} matching dates = one salary effect</p>
+                </div>
+                <span className="font-bold text-rose-600">- INR {fmtINR(Math.round(deducted / Math.max(1, repeatCount)))}</span>
+              </div>
+            </div>
+          ))}
+          {warningDates.length > 0 && (
+            <p className="rounded-lg bg-white/70 px-2 py-1 text-slate-500">
+              Extra matched dates without salary deduction: {warningDates.map(formatDateChip).join(', ')}
+            </p>
+          )}
+        </div>
+      ) : dates.length > 0 ? (
+        <div className="mt-2 space-y-1.5">
+          {dates.map((date: string) => (
+            <div key={date} className="grid grid-cols-[72px_1fr_auto] items-center gap-2 rounded-lg bg-white/80 px-2 py-1.5">
+              <span className="font-bold">{formatDateChip(date)}</span>
+              <span className="text-slate-600">{rule.reason || 'Rule matched on this date'}</span>
+              <span className={clsx('font-bold', isAllowance ? 'text-emerald-700' : amountPerDate > 0 ? 'text-rose-600' : 'text-slate-500')}>
+                {isAllowance ? '+' : amountPerDate > 0 ? '-' : ''} INR {fmtINR(amountPerDate)}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 rounded-lg bg-white/70 px-2 py-1 text-slate-500">No individual dates found for this rule.</p>
       )}
     </div>
   );
@@ -385,15 +460,7 @@ function DeductionSummaryPanel({ detail, reasons }: { detail: any; reasons: Retu
           </div>
           <div className="space-y-1.5">
             {matchedRules.filter((rule: any) => ruleDeductionAmount(rule) > 0).map((rule: any) => (
-              <div key={rule.id || rule.name} className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-bold">{rule.name}</p>
-                    <p className="mt-1 text-indigo-600">{rule.label}</p>
-                  </div>
-                  <span className="font-bold text-rose-600">INR {fmtINR(ruleDeductionAmount(rule))}</span>
-                </div>
-              </div>
+              <RuleMoneyDetails key={rule.id || rule.name} rule={rule} />
             ))}
           </div>
         </div>
@@ -471,6 +538,10 @@ function BreakdownBar({
 function ruleDeductionAmount(rule: any) {
   if (typeof rule?.deductionAmount === 'number') return rule.deductionAmount;
   return rule?.amount < 0 ? Math.abs(rule.amount) : 0;
+}
+
+function rulePolicyDeductionAmount(rule: any) {
+  return Number(rule?.policyDeductionAmount) || 0;
 }
 
 function ruleAllowanceAmount(rule: any) {
@@ -751,21 +822,7 @@ export default function PayrollDetailModal({ uploadId, employeeId, employeeName,
                     <div className="border-b border-slate-100 py-2 last:border-0">
                       {Array.isArray(d.matchedRules) && d.matchedRules.length > 0 ? (
                         <div className="space-y-1.5">
-                          {d.matchedRules.map((rule: any) => (
-                            <div key={rule.id || rule.name} className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <p className="font-bold">{rule.name}</p>
-                                  <p className="mt-1 text-indigo-600">{rule.label}</p>
-                                </div>
-                                <div className="text-right font-bold">
-                                  {ruleDeductionAmount(rule) > 0 && <p className="text-rose-600">- INR {fmtINR(ruleDeductionAmount(rule))}</p>}
-                                  {ruleAllowanceAmount(rule) > 0 && <p className="text-emerald-700">+ INR {fmtINR(ruleAllowanceAmount(rule))}</p>}
-                                  {ruleDeductionAmount(rule) === 0 && ruleAllowanceAmount(rule) === 0 && <p className="text-slate-500">INR 0</p>}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                          {d.matchedRules.map((rule: any) => <RuleMoneyDetails key={rule.id || rule.name} rule={rule} />)}
                         </div>
                       ) : (
                         <p className="text-xs font-semibold text-slate-500">No salary rule matched this employee.</p>
@@ -803,7 +860,27 @@ export default function PayrollDetailModal({ uploadId, employeeId, employeeName,
                     <div className="mt-3 rounded-2xl border border-emerald-100 bg-white p-3">
                       <Row label="Monthly salary" value={`INR ${fmtINR(d.monthlySalary || 0)}`} />
                       <Row label="Add overtime pay" value={`INR ${fmtINR(d.overtimePay || 0)}`} tone={(d.overtimePay || 0) > 0 ? 'green' : 'default'} />
+                      {(d.overtimePay || 0) > 0 && (
+                        <DeductionDateDetails
+                          label="Overtime pay dates"
+                          dates={d.overtimeDates}
+                          amountPerDate={Math.round((Number(d.dailySalary) || 0) / 2)}
+                          reason="Eligible overtime over 2 hours after shift end"
+                          totalAmount={d.overtimePay || 0}
+                          tone="blue"
+                        />
+                      )}
                       <Row label="Add rule allowances" value={`INR ${fmtINR(d.ruleAllowanceAmount || 0)}`} tone={(d.ruleAllowanceAmount || 0) > 0 ? 'green' : 'default'} />
+                      {(d.ruleAllowanceAmount || 0) > 0 && (
+                        <div className="border-b border-slate-100 py-2 last:border-0">
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Rule allowance details</p>
+                          <div className="space-y-1.5">
+                            {(Array.isArray(d.matchedRules) ? d.matchedRules : [])
+                              .filter((rule: any) => ruleAllowanceAmount(rule) > 0)
+                              .map((rule: any) => <RuleMoneyDetails key={rule.id || rule.name} rule={rule} />)}
+                          </div>
+                        </div>
+                      )}
                       <Row label="Gross salary" value={`INR ${fmtINR(d.grossSalary || 0)}`} tone="strong" />
                       <Row label="Minus total deductions" value={`INR ${fmtINR(d.totalDeductions || 0)}`} tone={(d.totalDeductions || 0) > 0 ? 'red' : 'default'} />
                       <Row label="Final net salary" value={`INR ${fmtINR(d.netSalary || 0)}`} tone="green" />
@@ -814,65 +891,6 @@ export default function PayrollDetailModal({ uploadId, employeeId, employeeName,
                   )}
                 </Section>
               </div>
-
-              <Section title={`Payroll Rules Applied (${Array.isArray(d.matchedRules) ? d.matchedRules.length : 0})`} icon="rule">
-                {Array.isArray(d.matchedRules) && d.matchedRules.length > 0 ? (
-                  <>
-                    <div className="mb-3 grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-2xl bg-rose-50 p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-rose-600">Rule deductions</p>
-                        <p className="mt-1 text-xl font-bold text-rose-800">INR {fmtINR(d.ruleDeductionAmount || 0)}</p>
-                      </div>
-                      <div className="rounded-2xl bg-emerald-50 p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-600">Rule allowances</p>
-                        <p className="mt-1 text-xl font-bold text-emerald-800">INR {fmtINR(d.ruleAllowanceAmount || 0)}</p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-100 p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Deduction days</p>
-                        <p className="mt-1 text-xl font-bold text-slate-900">{fmtNum(d.ruleDeductionDays || 0, 1)}</p>
-                      </div>
-                    </div>
-                    <div className="overflow-hidden rounded-xl border border-slate-200">
-                      <table className="w-full min-w-[620px] text-xs">
-                        <thead className="bg-slate-50 text-slate-500">
-                          <tr>
-                            <th className="px-3 py-2 text-left font-bold">Applied Rule</th>
-                            <th className="px-3 py-2 text-left font-bold">Rule Effect</th>
-                            <th className="px-3 py-2 text-right font-bold">Money Deducted</th>
-                            <th className="px-3 py-2 text-right font-bold">Allowance</th>
-                            <th className="px-3 py-2 text-right font-bold">Net Impact</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {d.matchedRules.map((m: any) => {
-                            const deducted = ruleDeductionAmount(m);
-                            const allowance = ruleAllowanceAmount(m);
-                            return (
-                              <tr key={m.id} className="hover:bg-indigo-50/40">
-                                <td className="px-3 py-2 font-semibold text-slate-800">{m.name}</td>
-                                <td className="px-3 py-2 text-slate-500">{m.label || 'Salary adjustment'}</td>
-                                <td className={clsx('px-3 py-2 text-right font-bold', deducted > 0 ? 'text-rose-600' : 'text-slate-400')}>
-                                  {deducted > 0 ? `INR ${fmtINR(deducted)}` : '-'}
-                                </td>
-                                <td className={clsx('px-3 py-2 text-right font-bold', allowance > 0 ? 'text-emerald-600' : 'text-slate-400')}>
-                                  {allowance > 0 ? `INR ${fmtINR(allowance)}` : '-'}
-                                </td>
-                                <td className={clsx('px-3 py-2 text-right font-bold', m.amount < 0 ? 'text-rose-600' : 'text-emerald-600')}>
-                                  {m.amount < 0 ? '-' : '+'} INR {fmtINR(Math.abs(m.amount || 0))}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                    No active salary-effect rule from the Rules tab matched this employee for the selected payroll run.
-                  </div>
-                )}
-              </Section>
 
               {fullMonthDays.length > 0 && (
                 <Section title="Day-by-Day Records" icon="calendar_month">
