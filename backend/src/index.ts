@@ -10,6 +10,7 @@ import salaryRoutes from './routes/salary';
 import settingsRoutes from './routes/settings';
 import sopRoutes from './routes/sops';
 import rulesRoutes from './routes/rules';
+import punchesRoutes from './routes/punches';
 import aiRoutes from './routes/ai';
 import analyticsRoutes from './routes/analytics';
 
@@ -38,6 +39,7 @@ app.use('/api/salary', salaryRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/sops', sopRoutes);
 app.use('/api/rules', rulesRoutes);
+app.use('/api/punches', punchesRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
 

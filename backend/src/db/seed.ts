@@ -12,6 +12,8 @@ const DEFAULT_SETTINGS: [string, string][] = [
   ['hr_name', process.env.HR_NAME || 'HR Department'],
   ['working_days', '26'],
   ['missed_swipe_weight', '0.5'],
+  // Fraction of a day's pay lost for a biometric HALF_DAY.
+  ['half_day_lop_weight', '0.5'],
 ];
 
 const DEFAULT_TEMPLATES = [
@@ -285,6 +287,15 @@ const DEFAULT_RULES = [
   },
 ];
 
+// Shift patterns currently in scope. Doctors / resident medical officers are
+// deliberately absent — adding them later is adding rows here, not a migration.
+const DEFAULT_SHIFTS = [
+  { name: 'Nurse Morning 08:00-14:00', roleTarget: 'NURSE', startTime: '08:00', endTime: '14:00', graceMinutes: 15, isOvernight: false },
+  { name: 'Nurse Evening 14:00-20:00', roleTarget: 'NURSE', startTime: '14:00', endTime: '20:00', graceMinutes: 15, isOvernight: false },
+  { name: 'Nurse Double 08:00-20:00', roleTarget: 'NURSE', startTime: '08:00', endTime: '20:00', graceMinutes: 15, isOvernight: false },
+  { name: 'General 09:00-18:00', roleTarget: 'GENERAL', startTime: '09:00', endTime: '18:00', graceMinutes: 15, isOvernight: false },
+];
+
 export async function seedDatabase() {
   // Seed settings
   for (const [key, value] of DEFAULT_SETTINGS) {
@@ -310,6 +321,15 @@ export async function seedDatabase() {
     for (const sop of DEFAULT_SOPS) {
       await prisma.sop.create({ data: sop });
     }
+  }
+
+  // Seed shift patterns (idempotent on the unique name)
+  for (const shift of DEFAULT_SHIFTS) {
+    await prisma.shift.upsert({
+      where: { name: shift.name },
+      update: {},
+      create: shift,
+    });
   }
 
   // Seed Rules

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
-import { calculateLOP } from '../services/lopService';
+import { computeDeductionsForUpload } from '../services/deductionService';
 
 const router = Router();
 
@@ -16,7 +16,9 @@ router.get('/configs', async (req: Request, res: Response) => {
     include: { employee: true },
     orderBy: { employee: { name: 'asc' } },
   });
-  res.json(configs.map(c => ({ id: c.id, employeeId: c.employeeId, employeeName: c.employee.name, employeeEmail: c.employee.email, basicSalary: c.basicSalary, effectiveMonth: c.effectiveMonth })));
+  // Decimal serialises to a JSON *string*; the frontend expects a number
+  // (SalaryPage.tsx calls .toLocaleString() on it), so coerce at the boundary.
+  res.json(configs.map(c => ({ id: c.id, employeeId: c.employeeId, employeeName: c.employee.name, employeeEmail: c.employee.email, basicSalary: Number(c.basicSalary), effectiveMonth: c.effectiveMonth })));
 });
 
 router.put('/configs', async (req: Request, res: Response) => {
@@ -42,28 +44,25 @@ router.put('/configs/bulk', async (req: Request, res: Response) => {
 });
 
 router.get('/deductions/:uploadId', async (req: Request, res: Response) => {
-  const uploadId = parseInt(req.params.uploadId);
-  const settings = await getSettings();
-  const workingDays = parseFloat(settings['working_days'] || '26');
-  const missedSwipeWeight = parseFloat(settings['missed_swipe_weight'] || '0.5');
+  const deductions = await computeDeductionsForUpload(parseInt(req.params.uploadId));
 
-  const employees = await prisma.employee.findMany({
-    where: { attendanceRecords: { some: { uploadId } } },
-    include: {
-      attendanceRecords: { where: { uploadId } },
-      salaryConfigs: { orderBy: { effectiveMonth: 'desc' }, take: 1 },
-    },
-  });
-
-  const result = employees.map(emp => {
-    const absent = emp.attendanceRecords.filter(r => r.status === 'Absent').length;
-    const missed = emp.attendanceRecords.filter(r => r.status === 'Missed Swipe').length;
-    const salary = emp.salaryConfigs[0];
-    const { lopDays, lopAmount } = salary ? calculateLOP(salary.basicSalary, absent, missed, workingDays, missedSwipeWeight) : { lopDays: 0, lopAmount: 0 };
-    return { employeeId: emp.id, employeeName: emp.name, basicSalary: salary?.basicSalary || 0, absentDays: absent, missedSwipeDays: missed, lopDays, lopAmount, workingDays };
-  });
-
-  res.json(result);
+  res.json(deductions.map(d => ({
+    employeeId: d.employeeId,
+    employeeName: d.employeeName,
+    basicSalary: d.basicSalary,
+    absentDays: d.counts.absentDays,
+    missedSwipeDays: d.counts.missedSwipeDays,
+    halfDays: d.counts.halfDays,
+    lateComingDays: d.counts.lateComingDays,
+    earlyLeavingDays: d.counts.earlyLeavingDays,
+    baseLopDays: d.baseLopDays,
+    ruleLopDays: d.ruleLopDays,
+    lopDays: d.lopDays,
+    lopAmount: d.lopAmount,
+    workingDays: d.workingDays,
+    // Which rules added days, so a payslip can explain the deduction.
+    lopRules: d.ruleLop ? Object.entries(d.ruleLop.byRuleType).map(([ruleType, v]) => ({ ruleType, ...v })) : [],
+  })));
 });
 
 export default router;

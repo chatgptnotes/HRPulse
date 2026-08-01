@@ -7,26 +7,182 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// IDENTITY
+// ─────────────────────────────────────────────────────────────────────────────
+
 model Employee {
-  id             Int       @id @default(autoincrement())
-  employeeNumber String?   @map("employee_number")
-  name           String
-  email          String    @unique
-  photoUrl       String?   @map("photo_url")
-  organisation   String?
-  entity         String?
-  department     String?
-  designation    String?
-  joiningDate    DateTime? @map("joining_date")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  id Int @id @default(autoincrement())
+
+  /// Biometric / device-facing identifier. Retained as the value the attendance
+  /// hardware and the SmartTime export carry for this person.
+  employeeNumber String? @map("employee_number")
+
+  /// Foreign key into Adamrit's accounting module: the employee's salary ledger.
+  /// Nullable by design — an employee can exist here before a ledger is created
+  /// in Adamrit. NULL means "not yet linked"; Postgres allows many NULLs under a
+  /// UNIQUE index, so unlinked employees do not collide.
+  adamritLedgerId String? @unique @map("adamrit_ledger_id")
+
+  name         String
+  email        String    @unique
+  photoUrl     String?   @map("photo_url")
+  organisation String?
+  entity       String?
+  department   String?
+  designation  String?
+  joiningDate  DateTime? @map("joining_date")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   attendanceRecords AttendanceRecord[]
   emailDrafts       EmailDraft[]
   emailHistory      EmailHistory[]
   salaryConfigs     SalaryConfig[]
+  employeeShifts    EmployeeShift[]
+  biometricPunches  BiometricPunch[]
 
+  @@index([employeeNumber])
   @@map("employees")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHIFTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A shift pattern. Times are stored as 24-hour wall-clock "HH:mm" strings
+/// rather than as timestamps, because a shift is a recurring rule, not an
+/// instant — it has no date and no timezone of its own.
+model Shift {
+  id String @id @default(uuid())
+
+  /// Human label, e.g. "Nurse Morning 08:00-14:00", "General 09:00-18:00".
+  name String @unique
+
+  /// Role this pattern is intended for, e.g. "NURSE", "GENERAL".
+  /// Free text for now — `Employee.designation` is unvalidated free text today,
+  /// so a hard FK to a Role table would have nothing to point at until that
+  /// data is cleaned up and backfilled.
+  roleTarget String @map("role_target")
+
+  /// "HH:mm", 24-hour.
+  startTime String @map("start_time") @db.VarChar(5)
+  /// "HH:mm", 24-hour.
+  endTime   String @map("end_time") @db.VarChar(5)
+
+  /// Minutes after startTime before an arrival counts as late.
+  graceMinutes Int @default(15) @map("grace_minutes")
+
+  /// True when endTime is on the calendar day after startTime. The three nurse
+  /// shifts and the general shift are all same-day, so this is false for them;
+  /// the flag exists so a future night shift does not require a migration.
+  isOvernight Boolean @default(false) @map("is_overnight")
+
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  employeeShifts EmployeeShift[]
+
+  @@index([roleTarget])
+  @@map("shifts")
+}
+
+/// Assignment of a shift to an employee over a date range. Modelled per-employee
+/// per-range rather than as a column on Employee because nurses rotate between
+/// the three nurse patterns.
+///
+/// NOTE: overlapping ranges for one employee are not preventable by a Prisma
+/// constraint (it needs a Postgres exclusion constraint over a daterange).
+/// Resolution logic must therefore pick deterministically — see effectiveFrom
+/// ordering — or a follow-up migration must add the exclusion constraint.
+model EmployeeShift {
+  id         String @id @default(uuid())
+  employeeId Int    @map("employee_id")
+  shiftId    String @map("shift_id")
+
+  /// Inclusive first date this assignment applies.
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  /// Inclusive last date, or NULL for "open ended / current".
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  shift    Shift    @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, shiftId, effectiveFrom])
+  @@index([employeeId, effectiveFrom])
+  @@map("employee_shifts")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ATTENDANCE
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Raw punch events as received from the biometric device. This table is
+/// append-only source data: AttendanceRecord is derived from it, never the
+/// reverse.
+model BiometricPunch {
+  id         String @id @default(uuid())
+  employeeId Int    @map("employee_id")
+
+  punchTime DateTime @map("punch_time")
+
+  /// "IN" or "OUT".
+  punchType String @map("punch_type") @db.VarChar(3)
+
+  /// Identifier of the physical reader that produced the event.
+  deviceId String? @map("device_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  /// Makes re-ingesting the same device export idempotent. Without this, a
+  /// replayed feed silently doubles the punch stream and every derived figure.
+  @@unique([employeeId, punchTime, punchType])
+  @@index([employeeId, punchTime])
+  @@map("biometric_punches")
+}
+
+model AttendanceRecord {
+  id         Int @id @default(autoincrement())
+  uploadId   Int @map("upload_id")
+  employeeId Int @map("employee_id")
+
+  /// True DATE column. Was a "yyyy-MM-dd" string, which could not be compared,
+  /// ranged or indexed as a date.
+  recordDate DateTime @map("record_date") @db.Date
+
+  status String
+
+  /// Resolved first-in / last-out instants for the day, derived from
+  /// BiometricPunch. NULL until a punch feed populates them.
+  timeIn  DateTime? @map("time_in")
+  timeOut DateTime? @map("time_out")
+
+  /// Minutes late against the resolved shift's startTime + graceMinutes, and
+  /// minutes early against its endTime. 0 when on time or not yet computed.
+  lateMinutes  Int @default(0) @map("late_minutes")
+  earlyMinutes Int @default(0) @map("early_minutes")
+
+  /// Original free-text time strings from the Excel import, preserved so the
+  /// migration is not lossy. These are NOT parseable into timeIn/timeOut without
+  /// knowing the source timezone; they exist for backfill and audit only.
+  timeInRaw  String? @map("time_in_raw")
+  timeOutRaw String? @map("time_out_raw")
+
+  upload   AttendanceUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  employee Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  /// One attendance row per person per day, period. Previously absent, which let
+  /// a repeated upload duplicate every row and double the LOP figure derived
+  /// from it. Deliberately NOT scoped by uploadId: two uploads covering the same
+  /// month must collide rather than silently coexist.
+  @@unique([employeeId, recordDate])
+  @@index([uploadId])
+  @@map("attendance_records")
 }
 
 model AttendanceUpload {
@@ -44,33 +200,86 @@ model AttendanceUpload {
   @@map("attendance_uploads")
 }
 
-model AttendanceRecord {
-  id         Int              @id @default(autoincrement())
-  uploadId   Int              @map("upload_id")
-  employeeId Int              @map("employee_id")
-  recordDate String           @map("record_date")
-  status     String
-  timeIn     String?          @map("time_in")
-  timeOut    String?          @map("time_out")
+// ─────────────────────────────────────────────────────────────────────────────
+// PAYROLL
+// ─────────────────────────────────────────────────────────────────────────────
 
-  upload   AttendanceUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
-  employee Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+/// Monetary fields are Decimal(12,2), not Float. Binary floating point cannot
+/// represent most decimal currency values exactly, and these amounts become
+/// ledger debits in Adamrit.
+model SalaryConfig {
+  id             Int    @id @default(autoincrement())
+  employeeId     Int    @map("employee_id")
+  effectiveMonth String @map("effective_month")
 
-  @@map("attendance_records")
+  basicSalary Decimal @default(0) @map("basic_salary") @db.Decimal(12, 2)
+
+  housingAllowance   Decimal @default(0) @map("housing_allowance") @db.Decimal(12, 2)
+  transportAllowance Decimal @default(0) @map("transport_allowance") @db.Decimal(12, 2)
+  otherAllowances    Decimal @default(0) @map("other_allowances") @db.Decimal(12, 2)
+  otherDeductions    Decimal @default(0) @map("other_deductions") @db.Decimal(12, 2)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, effectiveMonth])
+  @@map("salary_configs")
 }
 
+/// One payroll calculation batch for one period. This is the artifact that makes
+/// posting to Adamrit idempotent: amounts are frozen here at calculation time,
+/// so a retry re-sends the same payload instead of recomputing a possibly
+/// different one.
+model PayrollRun {
+  id String @id @default(uuid())
+
+  /// "yyyy-MM". One run per period.
+  periodMonth String @unique @map("period_month")
+
+  /// draft | calculated | approved | posted | failed
+  status String @default("draft")
+
+  employeeCount   Int     @default(0) @map("employee_count")
+  totalGross      Decimal @default(0) @map("total_gross") @db.Decimal(14, 2)
+  totalDeductions Decimal @default(0) @map("total_deductions") @db.Decimal(14, 2)
+  totalNet        Decimal @default(0) @map("total_net") @db.Decimal(14, 2)
+
+  /// Frozen snapshot of the exact JSON body sent to Adamrit, and what came back.
+  adamritPayload   Json?   @map("adamrit_payload")
+  adamritResponse  Json?   @map("adamrit_response")
+  /// Voucher / journal-voucher reference returned by Adamrit on success.
+  adamritVoucherNo String? @map("adamrit_voucher_no")
+
+  /// Stable key sent with the push so Adamrit can reject a duplicate retry.
+  /// Derived from the run, not from wall-clock time.
+  idempotencyKey String? @unique @map("idempotency_key")
+
+  errorMessage String?   @map("error_message")
+  calculatedAt DateTime? @map("calculated_at")
+  approvedAt   DateTime? @map("approved_at")
+  postedAt     DateTime? @map("posted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("payroll_runs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATIONS / CONFIG (unchanged)
+// ─────────────────────────────────────────────────────────────────────────────
+
 model EmailDraft {
-  id           Int      @id @default(autoincrement())
-  uploadId     Int      @map("upload_id")
-  employeeId   Int      @map("employee_id")
-  templateType String   @default("initial") @map("template_type")
-  subject      String   @default("")
-  body         String   @default("")
-  isEdited     Boolean  @default(false) @map("is_edited")
-  status       String   @default("pending")
+  id           Int       @id @default(autoincrement())
+  uploadId     Int       @map("upload_id")
+  employeeId   Int       @map("employee_id")
+  templateType String    @default("initial") @map("template_type")
+  subject      String    @default("")
+  body         String    @default("")
+  isEdited     Boolean   @default(false) @map("is_edited")
+  status       String    @default("pending")
   sentAt       DateTime? @map("sent_at")
-  errorMessage String?  @map("error_message")
-  createdAt    DateTime @default(now()) @map("created_at")
+  errorMessage String?   @map("error_message")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   upload   AttendanceUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
   employee Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -80,31 +289,19 @@ model EmailDraft {
 }
 
 model EmailHistory {
-  id           Int       @id @default(autoincrement())
-  employeeId   Int       @map("employee_id")
-  uploadId     Int?      @map("upload_id")
+  id           Int      @id @default(autoincrement())
+  employeeId   Int      @map("employee_id")
+  uploadId     Int?     @map("upload_id")
   subject      String
   body         String
-  sentAt       DateTime  @map("sent_at")
+  sentAt       DateTime @map("sent_at")
   status       String
-  errorMessage String?   @map("error_message")
+  errorMessage String?  @map("error_message")
 
   employee Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   upload   AttendanceUpload? @relation(fields: [uploadId], references: [id], onDelete: SetNull)
 
   @@map("email_history")
-}
-
-model SalaryConfig {
-  id             Int      @id @default(autoincrement())
-  employeeId     Int      @map("employee_id")
-  basicSalary    Float    @default(0) @map("basic_salary")
-  effectiveMonth String   @map("effective_month")
-
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@unique([employeeId, effectiveMonth])
-  @@map("salary_configs")
 }
 
 model Setting {

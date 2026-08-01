@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
+import { NON_FLAGGED_STATUSES, ABSENT_STATUSES, MISSED_SWIPE_STATUSES, LATE_STATUSES, isFlagged } from '../services/attendanceStatus';
 
 const router = Router();
 
@@ -66,7 +67,7 @@ router.post('/analyze/:uploadId', async (req: Request, res: Response) => {
 
   const topAbsentees = await prisma.attendanceRecord.groupBy({
     by: ['employeeId'],
-    where: { uploadId, status: 'Absent' },
+    where: { uploadId, status: { in: ABSENT_STATUSES } },
     _count: { id: true },
     orderBy: { _count: { id: 'desc' } },
     take: 5,
@@ -74,7 +75,7 @@ router.post('/analyze/:uploadId', async (req: Request, res: Response) => {
 
   const topMissed = await prisma.attendanceRecord.groupBy({
     by: ['employeeId'],
-    where: { uploadId, status: 'Missed Swipe' },
+    where: { uploadId, status: { in: MISSED_SWIPE_STATUSES } },
     _count: { id: true },
     orderBy: { _count: { id: 'desc' } },
     take: 5,
@@ -138,7 +139,7 @@ router.post('/predict', async (req: Request, res: Response) => {
   });
 
   const riskEmployees = employees.map(emp => {
-    const flagged = emp.attendanceRecords.filter(r => !['Normal', 'Weekend', 'Holiday'].includes(r.status));
+    const flagged = emp.attendanceRecords.filter(r => isFlagged(r.status));
     const riskScore = Math.min(100, (flagged.length / Math.max(emp.attendanceRecords.length, 1)) * 100 * 2);
     return { id: emp.id, name: emp.name, email: emp.email, riskScore: Math.round(riskScore), flaggedCount: flagged.length };
   }).filter(e => e.riskScore > 20).sort((a, b) => b.riskScore - a.riskScore).slice(0, 10);
@@ -155,10 +156,10 @@ router.post('/generate-report/:uploadId', async (req: Request, res: Response) =>
 
   const [totalEmployees, flaggedCount, absentCount, missedCount, lateCount, sentEmails] = await Promise.all([
     prisma.employee.count({ where: { attendanceRecords: { some: { uploadId } } } }),
-    prisma.attendanceRecord.count({ where: { uploadId, status: { notIn: ['Normal', 'Weekend', 'Holiday'] } } }),
-    prisma.attendanceRecord.count({ where: { uploadId, status: 'Absent' } }),
-    prisma.attendanceRecord.count({ where: { uploadId, status: 'Missed Swipe' } }),
-    prisma.attendanceRecord.count({ where: { uploadId, status: 'Late Coming' } }),
+    prisma.attendanceRecord.count({ where: { uploadId, status: { notIn: NON_FLAGGED_STATUSES } } }),
+    prisma.attendanceRecord.count({ where: { uploadId, status: { in: ABSENT_STATUSES } } }),
+    prisma.attendanceRecord.count({ where: { uploadId, status: { in: MISSED_SWIPE_STATUSES } } }),
+    prisma.attendanceRecord.count({ where: { uploadId, status: { in: LATE_STATUSES } } }),
     prisma.emailHistory.count({ where: { uploadId, status: 'sent' } }),
   ]);
 

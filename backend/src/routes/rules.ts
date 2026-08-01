@@ -1,7 +1,9 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
 import { evaluateRulesForUpload } from '../services/ruleEngine';
-import { calculateLOP } from '../services/lopService';
+import { computeDeductionsForUpload } from '../services/deductionService';
+import { FLAGGED_STATUSES } from '../services/attendanceStatus';
+import { toDateOnly } from '../utils/date';
 
 const router = Router();
 
@@ -50,47 +52,28 @@ router.post('/evaluate/:uploadId', async (req: Request, res: Response) => {
   const uploadId = parseInt(req.params.uploadId);
   const autoCreateDrafts = req.body.autoCreateDrafts !== false;
 
-  const [settings, upload] = await Promise.all([
-    prisma.setting.findMany().then(rows => Object.fromEntries(rows.map(r => [r.key, r.value]))),
+  const [upload, deductions, settings] = await Promise.all([
     prisma.attendanceUpload.findUnique({ where: { id: uploadId } }),
+    computeDeductionsForUpload(uploadId),
+    prisma.setting.findMany().then(rows => Object.fromEntries(rows.map(r => [r.key, r.value]))),
   ]);
 
   if (!upload) { res.status(404).json({ error: 'Upload not found' }); return; }
 
   const periodMonth = upload.periodMonth;
-  const workingDays = parseFloat(settings['working_days'] || '26');
-  const missedSwipeWeight = parseFloat(settings['missed_swipe_weight'] || '0.5');
 
   // Compute previous month string (yyyy-MM)
   const [y, m] = periodMonth.split('-').map(Number);
   const prevDate = new Date(y, m - 2, 1);
   const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
 
+  const deductionByEmployee = new Map(deductions.map(d => [d.employeeId, d]));
+  const matches = deductions.map(d => d.ruleMatch).filter((m): m is NonNullable<typeof m> => m !== null);
+
   const employees = await prisma.employee.findMany({
-    where: { attendanceRecords: { some: { uploadId } } },
-    include: {
-      attendanceRecords: { where: { uploadId }, orderBy: { recordDate: 'asc' } },
-      salaryConfigs: { orderBy: { effectiveMonth: 'desc' }, take: 1 },
-    },
+    where: { id: { in: matches.map(match => match.employeeId) } },
+    include: { attendanceRecords: { where: { uploadId }, orderBy: { recordDate: 'asc' } } },
   });
-
-  const summaries = employees.map(emp => {
-    let absentDays = 0, missedSwipeDays = 0, lateComingDays = 0, earlyLeavingDays = 0;
-    for (const r of emp.attendanceRecords) {
-      if (r.status === 'Absent') absentDays++;
-      else if (r.status === 'Missed Swipe') missedSwipeDays++;
-      else if (r.status === 'Late Coming') lateComingDays++;
-      else if (r.status === 'Early Leaving') earlyLeavingDays++;
-    }
-    const flaggedTotal = absentDays + missedSwipeDays + lateComingDays + earlyLeavingDays;
-    const salary = emp.salaryConfigs[0];
-    const { lopDays } = salary
-      ? calculateLOP(salary.basicSalary, absentDays, missedSwipeDays, workingDays, missedSwipeWeight)
-      : { lopDays: 0 };
-    return { employeeId: emp.id, employeeName: emp.name, employeeEmail: emp.email, absentDays, missedSwipeDays, lateComingDays, earlyLeavingDays, flaggedTotal, lopDays };
-  });
-
-  const matches = await evaluateRulesForUpload(uploadId, summaries);
 
   let draftsCreated = 0;
   if (autoCreateDrafts) {
@@ -112,7 +95,8 @@ router.post('/evaluate/:uploadId', async (req: Request, res: Response) => {
 
     for (const match of matches) {
       const emp = employees.find(e => e.id === match.employeeId)!;
-      const summary = summaries.find(s => s.employeeId === match.employeeId)!;
+      const deduction = deductionByEmployee.get(match.employeeId)!;
+      const summary = deduction.counts;
 
       // Escalate template if employee had an unresolved email last month
       const wasEscalated = hadPreviousEmail.has(match.employeeId);
@@ -121,11 +105,9 @@ router.post('/evaluate/:uploadId', async (req: Request, res: Response) => {
       if (!tpl) continue;
 
       // Build date-by-date attendance table (specific dates, as requested)
-      const flaggedRecords = emp.attendanceRecords.filter(r =>
-        ['Absent', 'Missed Swipe', 'Late Coming', 'Early Leaving'].includes(r.status)
-      );
+      const flaggedRecords = emp.attendanceRecords.filter(r => FLAGGED_STATUSES.includes(r.status));
       const dateTable = flaggedRecords
-        .map(r => `  ${String(r.recordDate).substring(0, 10)}  |  ${r.status}`)
+        .map(r => `  ${toDateOnly(r.recordDate)}  |  ${r.status}`)
         .join('\n');
 
       const ruleFlags = match.flags.awol ? '\n⚠ AWOL NOTICE: This constitutes Absence Without Official Leave.' : '';
@@ -138,6 +120,16 @@ router.post('/evaluate/:uploadId', async (req: Request, res: Response) => {
 
       const rulesTriggered = match.triggeredRules.map(r => `• ${r.name}`).join('\n');
 
+      // Spell out any rule-imposed deduction, so the notice matches the payslip.
+      const ruleLopLines = deduction.ruleLop
+        ? Object.entries(deduction.ruleLop.byRuleType).map(([, v]) => `• ${v.ruleName}: ${v.lopDays} day(s)`)
+        : [];
+      const lopNotice = deduction.lopDays > 0
+        ? `\nLoss of Pay for this period: ${deduction.lopDays} day(s)`
+          + (deduction.ruleLopDays > 0 ? ` (${deduction.baseLopDays} from attendance, ${deduction.ruleLopDays} from policy rules)\n${ruleLopLines.join('\n')}` : '')
+          + '\n'
+        : '';
+
       const body = `Dear ${emp.name},
 
 This notice is issued in accordance with Dubai Government Human Resources Policy and UAE Federal Civil Service Law No. 11 of 2008.
@@ -148,8 +140,8 @@ Date         | Status
 -------------|------------------
 ${dateTable}
 
-Summary: Absent ${summary.absentDays}d | Missed Biometric ${summary.missedSwipeDays}x | Late Arrival ${summary.lateComingDays}x | Early Departure ${summary.earlyLeavingDays}x
-
+Summary: Absent ${summary.absentDays}d | Missed Biometric ${summary.missedSwipeDays}x | Late Arrival ${summary.lateComingDays}x | Early Departure ${summary.earlyLeavingDays}x | Half Day ${summary.halfDays}x
+${lopNotice}
 Policy Rules Triggered:
 ${rulesTriggered}
 ${ruleFlags}${disciplinary}
@@ -181,7 +173,28 @@ ${settings['company_name'] || ''}`;
     }
   }
 
-  res.json({ matches, draftsCreated, employeesEvaluated: summaries.length });
+  res.json({
+    matches,
+    draftsCreated,
+    employeesEvaluated: deductions.length,
+    // Rule-imposed LOP, so the caller can see policy penalties separately from
+    // the attendance-derived base.
+    lopAdjustments: deductions
+      .filter(d => d.ruleLopDays > 0)
+      .map(d => ({
+        employeeId: d.employeeId,
+        employeeName: d.employeeName,
+        baseLopDays: d.baseLopDays,
+        ruleLopDays: d.ruleLopDays,
+        lopDays: d.lopDays,
+        lopAmount: d.lopAmount,
+        rules: Object.entries(d.ruleLop?.byRuleType ?? {}).map(([ruleType, v]) => ({ ruleType, ...v })),
+      })),
+    // Rules declaring lopMultiplier, which is intentionally not applied.
+    ignoredMultipliers: deductions.flatMap(d =>
+      (d.ruleLop?.ignoredMultipliers ?? []).map(m => ({ employeeId: d.employeeId, ...m }))
+    ),
+  });
 });
 
 export default router;

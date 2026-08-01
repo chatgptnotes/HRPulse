@@ -2,7 +2,8 @@ import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
 import { upload } from '../middleware/upload';
 import { parseAttendanceExcel } from '../services/excelParser';
-import { calculateLOP } from '../services/lopService';
+import { computeDeductionsForUpload } from '../services/deductionService';
+import { toDateOnly, fromDateOnly } from '../utils/date';
 
 const router = Router();
 
@@ -33,8 +34,14 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         create: { employeeNumber: r.employeeNumber || null, name: r.employeeName, email, organisation: r.organisation || null, entity: r.entity || null },
       });
 
-      await prisma.attendanceRecord.create({
-        data: { uploadId: uploadRow.id, employeeId: emp.id, recordDate: r.recordDate, status: r.status, timeIn: r.timeIn || null, timeOut: r.timeOut || null },
+      // Upsert, not create: (employeeId, recordDate) is now unique, so a repeated
+      // upload of the same period corrects the existing row instead of adding a
+      // duplicate one (which used to double every count feeding the LOP figure).
+      const recordDate = fromDateOnly(r.recordDate);
+      await prisma.attendanceRecord.upsert({
+        where: { employeeId_recordDate: { employeeId: emp.id, recordDate } },
+        update: { uploadId: uploadRow.id, status: r.status, timeInRaw: r.timeIn || null, timeOutRaw: r.timeOut || null },
+        create: { uploadId: uploadRow.id, employeeId: emp.id, recordDate, status: r.status, timeInRaw: r.timeIn || null, timeOutRaw: r.timeOut || null },
       });
       recordCount++;
     }
@@ -53,35 +60,23 @@ router.get('/uploads', async (_req: Request, res: Response) => {
 
 router.get('/summary/:uploadId', async (req: Request, res: Response) => {
   const uploadId = parseInt(req.params.uploadId);
-  const settings = await getSettings();
-  const workingDays = parseFloat(settings['working_days'] || '26');
-  const missedSwipeWeight = parseFloat(settings['missed_swipe_weight'] || '0.5');
 
-  const employees = await prisma.employee.findMany({
-    where: { attendanceRecords: { some: { uploadId } } },
-    include: {
-      attendanceRecords: { where: { uploadId } },
-      salaryConfigs: { orderBy: { effectiveMonth: 'desc' }, take: 1 },
-      emailDrafts: { where: { uploadId } },
-    },
-  });
+  const [deductions, drafts] = await Promise.all([
+    computeDeductionsForUpload(uploadId),
+    prisma.emailDraft.findMany({ where: { uploadId } }),
+  ]);
+  const draftByEmployee = new Map(drafts.map(d => [d.employeeId, d]));
 
-  const summary = employees.map(emp => {
-    let absent = 0, missed = 0, late = 0, early = 0;
-    for (const r of emp.attendanceRecords) {
-      if (r.status === 'Absent') absent++;
-      else if (r.status === 'Missed Swipe') missed++;
-      else if (r.status === 'Late Coming') late++;
-      else if (r.status === 'Early Leaving') early++;
-    }
-    const flaggedTotal = absent + missed + late + early;
-    const salary = emp.salaryConfigs[0];
-    const { lopDays, lopAmount } = salary ? calculateLOP(salary.basicSalary, absent, missed, workingDays, missedSwipeWeight) : { lopDays: 0, lopAmount: 0 };
-    const draft = emp.emailDrafts[0];
+  const summary = deductions.map(d => {
+    const draft = draftByEmployee.get(d.employeeId);
     return {
-      employeeId: emp.id, employeeName: emp.name, employeeEmail: emp.email,
-      absentDays: absent, missedSwipeDays: missed, lateComingDays: late, earlyLeavingDays: early,
-      flaggedTotal, lopDays, lopAmount,
+      employeeId: d.employeeId, employeeName: d.employeeName, employeeEmail: d.employeeEmail,
+      absentDays: d.counts.absentDays, missedSwipeDays: d.counts.missedSwipeDays,
+      lateComingDays: d.counts.lateComingDays, earlyLeavingDays: d.counts.earlyLeavingDays,
+      halfDays: d.counts.halfDays,
+      flaggedTotal: d.counts.flaggedTotal,
+      baseLopDays: d.baseLopDays, ruleLopDays: d.ruleLopDays,
+      lopDays: d.lopDays, lopAmount: d.lopAmount,
       hasDraft: !!draft, draftStatus: draft?.status || null, draftId: draft?.id || null,
     };
   });
@@ -95,7 +90,10 @@ router.get('/records/:uploadId/:employeeId', async (req: Request, res: Response)
     where: { uploadId: parseInt(req.params.uploadId), employeeId: parseInt(req.params.employeeId) },
     orderBy: { recordDate: 'asc' },
   });
-  res.json(records.map(r => ({ id: r.id, recordDate: r.recordDate, status: r.status, timeIn: r.timeIn, timeOut: r.timeOut })));
+  // timeInRaw/timeOutRaw are the imported free-text times. The typed timeIn/timeOut
+  // columns stay null until a biometric punch feed populates them, so the API keeps
+  // returning what it always did.
+  res.json(records.map(r => ({ id: r.id, recordDate: toDateOnly(r.recordDate), status: r.status, timeIn: r.timeInRaw, timeOut: r.timeOutRaw })));
 });
 
 router.delete('/uploads/:uploadId', async (req: Request, res: Response) => {

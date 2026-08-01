@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
 import { generateEmailDraft } from '../services/ollamaService';
 import { sendEmail } from '../services/emailService';
-import { calculateLOP } from '../services/lopService';
+import { computeDeductionsForUpload } from '../services/deductionService';
+import { NON_FLAGGED_STATUSES } from '../services/attendanceStatus';
 import { format, subMonths, parseISO } from 'date-fns';
+import { toDateOnly } from '../utils/date';
 
 const router = Router();
 
@@ -23,8 +25,10 @@ router.post('/generate/:uploadId', async (req: Request, res: Response) => {
 
   try {
     const settings = await getSettings();
-    const workingDays = parseFloat(settings['working_days'] || '26');
-    const missedSwipeWeight = parseFloat(settings['missed_swipe_weight'] || '0.5');
+
+    // Single authoritative LOP figure, matching the salary and summary endpoints.
+    const deductions = await computeDeductionsForUpload(uploadId);
+    const deductionByEmployee = new Map(deductions.map(d => [d.employeeId, d]));
 
     const uploadRow = await prisma.attendanceUpload.findUnique({ where: { id: uploadId } });
     if (!uploadRow) { send({ error: 'Upload not found' }); res.end(); return; }
@@ -38,7 +42,7 @@ router.post('/generate/:uploadId', async (req: Request, res: Response) => {
     const employees = await prisma.employee.findMany({
       where: {
         attendanceRecords: {
-          some: { uploadId, status: { notIn: ['Normal', 'Weekend', 'Holiday'] } },
+          some: { uploadId, status: { notIn: NON_FLAGGED_STATUSES } },
         },
       },
     });
@@ -51,7 +55,7 @@ router.post('/generate/:uploadId', async (req: Request, res: Response) => {
       send({ type: 'progress', completed: i, total, currentEmployee: emp.name });
 
       const records = await prisma.attendanceRecord.findMany({
-        where: { uploadId, employeeId: emp.id, status: { notIn: ['Normal', 'Weekend', 'Holiday'] } },
+        where: { uploadId, employeeId: emp.id, status: { notIn: NON_FLAGGED_STATUSES } },
         orderBy: { recordDate: 'asc' },
       });
 
@@ -64,15 +68,12 @@ router.post('/generate/:uploadId', async (req: Request, res: Response) => {
       const templateType = prevSent ? 'reminder' : 'initial';
       const template = (templateType === 'reminder' ? reminderTemplate : initialTemplate)!;
 
-      const salary = await prisma.salaryConfig.findFirst({ where: { employeeId: emp.id }, orderBy: { effectiveMonth: 'desc' } });
-      const absentDays = records.filter(r => r.status === 'Absent').length;
-      const missedSwipeDays = records.filter(r => r.status === 'Missed Swipe').length;
-      const { lopAmount } = salary ? calculateLOP(salary.basicSalary, absentDays, missedSwipeDays, workingDays, missedSwipeWeight) : { lopAmount: 0 };
+      const lopAmount = deductionByEmployee.get(emp.id)?.lopAmount ?? 0;
 
       try {
         const { subject, body } = await generateEmailDraft(
           emp.name, emp.email, periodMonth,
-          records.map(r => ({ recordDate: r.recordDate, status: r.status })),
+          records.map(r => ({ recordDate: toDateOnly(r.recordDate), status: r.status })),
           template.subject, template.body, lopAmount
         );
 
