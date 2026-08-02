@@ -1,8 +1,8 @@
--- Adamrit integration foundation — PARALLEL TABLES, NON-DESTRUCTIVE.
+-- Adamrit integration foundation — PARALLEL TABLES, NON-DESTRUCTIVE, IDEMPOTENT.
 --
 -- The existing `attendance_records` and `salary_configs` tables hold production
--- data and are NOT modified by this migration. Not one row is deleted, not one
--- column is altered, renamed or dropped. Instead:
+-- data and are NOT modified. Not one row is deleted, not one column is altered,
+-- renamed or dropped. Instead:
 --
 --   attendance_records  ──copy──>  attendance_days       (DATE, typed times, unique)
 --   salary_configs      ──copy──>  salary_structures     (DECIMAL money)
@@ -12,34 +12,38 @@
 -- `attendance_records_unmigrated` with a reason. They also still exist,
 -- untouched, in the original table.
 --
--- The only change to a pre-existing table is `ALTER TABLE employees ADD COLUMN
--- adamrit_ledger_id` — a nullable ADD COLUMN, which in PostgreSQL 11+ is a
--- catalog-only operation: no table rewrite, no row touched, no existing column
--- affected.
+-- The only change to a pre-existing table is `ADD COLUMN IF NOT EXISTS
+-- adamrit_ledger_id` on employees — a nullable ADD COLUMN, which in PostgreSQL
+-- 11+ is a catalog-only operation: no table rewrite, no row touched.
 --
--- Prisma runs each migration inside a transaction, so if any statement below
--- fails the whole thing rolls back and the original tables are exactly as they
--- were. The deploy fails loudly rather than half-migrating.
+-- EVERY STATEMENT IS IDEMPOTENT. This migration may have been applied by hand
+-- (e.g. pasted into the Supabase SQL editor) without Prisma recording it in
+-- `_prisma_migrations`. Re-running it must therefore be a safe no-op rather than
+-- an error that fails the deploy. Hence IF NOT EXISTS guards throughout and
+-- ON CONFLICT DO NOTHING on every copy.
+--
+-- Prisma runs each migration inside a transaction: any failure rolls the whole
+-- thing back and leaves the originals exactly as they were.
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. Employee → Adamrit ledger linkage (additive)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-ALTER TABLE "employees" ADD COLUMN "adamrit_ledger_id" TEXT;
+ALTER TABLE "employees" ADD COLUMN IF NOT EXISTS "adamrit_ledger_id" TEXT;
 
 -- Postgres allows unlimited NULLs under a UNIQUE index, so every not-yet-linked
 -- employee coexists while linked ones stay distinct.
-CREATE UNIQUE INDEX "employees_adamrit_ledger_id_key"
+CREATE UNIQUE INDEX IF NOT EXISTS "employees_adamrit_ledger_id_key"
     ON "employees" ("adamrit_ledger_id");
 
-CREATE INDEX "employees_employee_number_idx"
+CREATE INDEX IF NOT EXISTS "employees_employee_number_idx"
     ON "employees" ("employee_number");
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. Shifts (new tables)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE TABLE "shifts" (
+CREATE TABLE IF NOT EXISTS "shifts" (
     "id"            TEXT         NOT NULL,
     "name"          TEXT         NOT NULL,
     "role_target"   TEXT         NOT NULL,
@@ -54,10 +58,10 @@ CREATE TABLE "shifts" (
     CONSTRAINT "shifts_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "shifts_name_key" ON "shifts" ("name");
-CREATE INDEX "shifts_role_target_idx" ON "shifts" ("role_target");
+CREATE UNIQUE INDEX IF NOT EXISTS "shifts_name_key" ON "shifts" ("name");
+CREATE INDEX IF NOT EXISTS "shifts_role_target_idx" ON "shifts" ("role_target");
 
-CREATE TABLE "employee_shifts" (
+CREATE TABLE IF NOT EXISTS "employee_shifts" (
     "id"             TEXT         NOT NULL,
     "employee_id"    INTEGER      NOT NULL,
     "shift_id"       TEXT         NOT NULL,
@@ -68,28 +72,37 @@ CREATE TABLE "employee_shifts" (
     CONSTRAINT "employee_shifts_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "employee_shifts_employee_id_shift_id_effective_from_key"
+CREATE UNIQUE INDEX IF NOT EXISTS "employee_shifts_employee_id_shift_id_effective_from_key"
     ON "employee_shifts" ("employee_id", "shift_id", "effective_from");
-CREATE INDEX "employee_shifts_employee_id_effective_from_idx"
+CREATE INDEX IF NOT EXISTS "employee_shifts_employee_id_effective_from_idx"
     ON "employee_shifts" ("employee_id", "effective_from");
 
-ALTER TABLE "employee_shifts"
-    ADD CONSTRAINT "employee_shifts_employee_id_fkey"
-    FOREIGN KEY ("employee_id") REFERENCES "employees" ("id")
-    ON DELETE CASCADE ON UPDATE CASCADE;
+-- ALTER TABLE ... ADD CONSTRAINT has no IF NOT EXISTS, so each FK is guarded.
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'employee_shifts_employee_id_fkey') THEN
+        ALTER TABLE "employee_shifts"
+            ADD CONSTRAINT "employee_shifts_employee_id_fkey"
+            FOREIGN KEY ("employee_id") REFERENCES "employees" ("id")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- RESTRICT, not CASCADE: deleting a shift pattern must not silently delete the
 -- assignment history that payroll was calculated against.
-ALTER TABLE "employee_shifts"
-    ADD CONSTRAINT "employee_shifts_shift_id_fkey"
-    FOREIGN KEY ("shift_id") REFERENCES "shifts" ("id")
-    ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'employee_shifts_shift_id_fkey') THEN
+        ALTER TABLE "employee_shifts"
+            ADD CONSTRAINT "employee_shifts_shift_id_fkey"
+            FOREIGN KEY ("shift_id") REFERENCES "shifts" ("id")
+            ON DELETE RESTRICT ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 3. Biometric punches (new table)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE TABLE "biometric_punches" (
+CREATE TABLE IF NOT EXISTS "biometric_punches" (
     "id"          TEXT         NOT NULL,
     "employee_id" INTEGER      NOT NULL,
     "punch_time"  TIMESTAMP(3) NOT NULL,
@@ -100,21 +113,25 @@ CREATE TABLE "biometric_punches" (
     CONSTRAINT "biometric_punches_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "biometric_punches_employee_id_punch_time_punch_type_key"
+CREATE UNIQUE INDEX IF NOT EXISTS "biometric_punches_employee_id_punch_time_punch_type_key"
     ON "biometric_punches" ("employee_id", "punch_time", "punch_type");
-CREATE INDEX "biometric_punches_employee_id_punch_time_idx"
+CREATE INDEX IF NOT EXISTS "biometric_punches_employee_id_punch_time_idx"
     ON "biometric_punches" ("employee_id", "punch_time");
 
-ALTER TABLE "biometric_punches"
-    ADD CONSTRAINT "biometric_punches_employee_id_fkey"
-    FOREIGN KEY ("employee_id") REFERENCES "employees" ("id")
-    ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'biometric_punches_employee_id_fkey') THEN
+        ALTER TABLE "biometric_punches"
+            ADD CONSTRAINT "biometric_punches_employee_id_fkey"
+            FOREIGN KEY ("employee_id") REFERENCES "employees" ("id")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. attendance_days — the new attendance table
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE TABLE "attendance_days" (
+CREATE TABLE IF NOT EXISTS "attendance_days" (
     "id"            SERIAL       NOT NULL,
     "upload_id"     INTEGER      NOT NULL,
     "employee_id"   INTEGER      NOT NULL,
@@ -132,7 +149,7 @@ CREATE TABLE "attendance_days" (
 
 -- Archive of rows not carried across, with the reason. Intentionally has no
 -- foreign keys: it is a record of what happened, not live relational data.
-CREATE TABLE "attendance_records_unmigrated" (
+CREATE TABLE IF NOT EXISTS "attendance_records_unmigrated" (
     "id"          INTEGER      NOT NULL,
     "upload_id"   INTEGER      NOT NULL,
     "employee_id" INTEGER      NOT NULL,
@@ -146,10 +163,16 @@ CREATE TABLE "attendance_records_unmigrated" (
     CONSTRAINT "attendance_records_unmigrated_pkey" PRIMARY KEY ("id")
 );
 
+-- Indexes created BEFORE the copy so ON CONFLICT has a constraint to target.
+CREATE UNIQUE INDEX IF NOT EXISTS "attendance_days_employee_id_record_date_key"
+    ON "attendance_days" ("employee_id", "record_date");
+CREATE INDEX IF NOT EXISTS "attendance_days_upload_id_idx"
+    ON "attendance_days" ("upload_id");
+
 -- A cast that yields NULL instead of raising, so one malformed date cannot abort
 -- the whole migration. '2026-02-30' matches a date-shaped regex but is not a
 -- real date, so a regex test is not sufficient — this actually attempts the cast.
-CREATE FUNCTION "hrpulse_safe_date"(t TEXT) RETURNS DATE AS $$
+CREATE OR REPLACE FUNCTION "hrpulse_safe_date"(t TEXT) RETURNS DATE AS $$
 BEGIN
     RETURN t::date;
 EXCEPTION WHEN others THEN
@@ -173,7 +196,8 @@ SELECT DISTINCT ON ("employee_id", "hrpulse_safe_date"("record_date"))
     NULLIF("time_out", '')
 FROM "attendance_records"
 WHERE "hrpulse_safe_date"("record_date") IS NOT NULL
-ORDER BY "employee_id", "hrpulse_safe_date"("record_date"), "id" DESC;
+ORDER BY "employee_id", "hrpulse_safe_date"("record_date"), "id" DESC
+ON CONFLICT DO NOTHING;
 
 -- 4b. Record rows whose date could not be parsed.
 INSERT INTO "attendance_records_unmigrated" (
@@ -182,7 +206,8 @@ INSERT INTO "attendance_records_unmigrated" (
 SELECT "id", "upload_id", "employee_id", "record_date", "status", "time_in", "time_out",
        'unparseable record_date'
 FROM "attendance_records"
-WHERE "hrpulse_safe_date"("record_date") IS NULL;
+WHERE "hrpulse_safe_date"("record_date") IS NULL
+ON CONFLICT ("id") DO NOTHING;
 
 -- 4c. Record duplicates that were superseded, so the collapse is auditable.
 INSERT INTO "attendance_records_unmigrated" (
@@ -193,7 +218,8 @@ SELECT ar."id", ar."upload_id", ar."employee_id", ar."record_date", ar."status",
        'duplicate — superseded by a later row for the same employee and date'
 FROM "attendance_records" ar
 WHERE "hrpulse_safe_date"(ar."record_date") IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM "attendance_days" ad WHERE ad."id" = ar."id");
+  AND NOT EXISTS (SELECT 1 FROM "attendance_days" ad WHERE ad."id" = ar."id")
+ON CONFLICT ("id") DO NOTHING;
 
 -- 4d. Original ids were preserved above, so move the sequence past them.
 SELECT setval(
@@ -202,27 +228,29 @@ SELECT setval(
     false
 );
 
--- 4e. Constraints and indexes, created after the bulk load.
-CREATE UNIQUE INDEX "attendance_days_employee_id_record_date_key"
-    ON "attendance_days" ("employee_id", "record_date");
-CREATE INDEX "attendance_days_upload_id_idx"
-    ON "attendance_days" ("upload_id");
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'attendance_days_upload_id_fkey') THEN
+        ALTER TABLE "attendance_days"
+            ADD CONSTRAINT "attendance_days_upload_id_fkey"
+            FOREIGN KEY ("upload_id") REFERENCES "attendance_uploads" ("id")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
 
-ALTER TABLE "attendance_days"
-    ADD CONSTRAINT "attendance_days_upload_id_fkey"
-    FOREIGN KEY ("upload_id") REFERENCES "attendance_uploads" ("id")
-    ON DELETE CASCADE ON UPDATE CASCADE;
-
-ALTER TABLE "attendance_days"
-    ADD CONSTRAINT "attendance_days_employee_id_fkey"
-    FOREIGN KEY ("employee_id") REFERENCES "employees" ("id")
-    ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'attendance_days_employee_id_fkey') THEN
+        ALTER TABLE "attendance_days"
+            ADD CONSTRAINT "attendance_days_employee_id_fkey"
+            FOREIGN KEY ("employee_id") REFERENCES "employees" ("id")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. salary_structures — the new salary table, with DECIMAL money
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE TABLE "salary_structures" (
+CREATE TABLE IF NOT EXISTS "salary_structures" (
     "id"                  SERIAL        NOT NULL,
     "employee_id"         INTEGER       NOT NULL,
     "effective_month"     TEXT          NOT NULL,
@@ -235,12 +263,16 @@ CREATE TABLE "salary_structures" (
     CONSTRAINT "salary_structures_pkey" PRIMARY KEY ("id")
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS "salary_structures_employee_id_effective_month_key"
+    ON "salary_structures" ("employee_id", "effective_month");
+
 -- salary_configs already has a unique (employee_id, effective_month), so there
 -- is nothing to deduplicate. The float is rounded to 2dp on the way in — that is
 -- the correction, not a loss.
 INSERT INTO "salary_structures" ("id", "employee_id", "effective_month", "basic_salary")
 SELECT "id", "employee_id", "effective_month", ROUND("basic_salary"::numeric, 2)
-FROM "salary_configs";
+FROM "salary_configs"
+ON CONFLICT DO NOTHING;
 
 SELECT setval(
     pg_get_serial_sequence('salary_structures', 'id'),
@@ -248,19 +280,20 @@ SELECT setval(
     false
 );
 
-CREATE UNIQUE INDEX "salary_structures_employee_id_effective_month_key"
-    ON "salary_structures" ("employee_id", "effective_month");
-
-ALTER TABLE "salary_structures"
-    ADD CONSTRAINT "salary_structures_employee_id_fkey"
-    FOREIGN KEY ("employee_id") REFERENCES "employees" ("id")
-    ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'salary_structures_employee_id_fkey') THEN
+        ALTER TABLE "salary_structures"
+            ADD CONSTRAINT "salary_structures_employee_id_fkey"
+            FOREIGN KEY ("employee_id") REFERENCES "employees" ("id")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. Payroll runs (new table)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE TABLE "payroll_runs" (
+CREATE TABLE IF NOT EXISTS "payroll_runs" (
     "id"                 TEXT          NOT NULL,
     "period_month"       TEXT          NOT NULL,
     "status"             TEXT          NOT NULL DEFAULT 'draft',
@@ -282,12 +315,12 @@ CREATE TABLE "payroll_runs" (
     CONSTRAINT "payroll_runs_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "payroll_runs_period_month_key" ON "payroll_runs" ("period_month");
-CREATE UNIQUE INDEX "payroll_runs_idempotency_key_key" ON "payroll_runs" ("idempotency_key");
-CREATE INDEX "payroll_runs_status_idx" ON "payroll_runs" ("status");
+CREATE UNIQUE INDEX IF NOT EXISTS "payroll_runs_period_month_key" ON "payroll_runs" ("period_month");
+CREATE UNIQUE INDEX IF NOT EXISTS "payroll_runs_idempotency_key_key" ON "payroll_runs" ("idempotency_key");
+CREATE INDEX IF NOT EXISTS "payroll_runs_status_idx" ON "payroll_runs" ("status");
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 7. Clean up the helper
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DROP FUNCTION "hrpulse_safe_date"(TEXT);
+DROP FUNCTION IF EXISTS "hrpulse_safe_date"(TEXT);
