@@ -1,5 +1,7 @@
 import { getSettings, supabase } from '../db/supabase';
 import { upsertHrNotification } from './hrNotificationService';
+import { isLateArrival as isLateByPolicy, LATE_GRACE_MINUTES } from './latePolicy';
+import { isItDepartment, isSunday, qualifyingOvertimeHours } from './payrollService';
 
 type AttendanceStatus =
   | 'present'
@@ -26,6 +28,7 @@ type AlertEmployee = {
   id: number;
   name?: string | null;
   email?: string | null;
+  department?: string | null;
   shift_start_time?: string | null;
   shift_end_time?: string | null;
   overtime_eligible?: boolean | null;
@@ -105,13 +108,7 @@ function todayKeyDate() {
 }
 
 function isLateArrival(record: AttendanceRecord, employee: AlertEmployee, graceMinutes: number) {
-  const status = normalizeAttendanceStatus(record.status);
-  if (status === 'late') return true;
-  if (['absent', 'holiday', 'weekly_off', 'leave'].includes(status)) return false;
-  const punchIn = timeToMinutes(record.time_in);
-  const shiftStart = timeToMinutes(employee.shift_start_time);
-  if (punchIn == null || shiftStart == null) return false;
-  return punchIn > shiftStart + Math.max(0, graceMinutes);
+  return isLateByPolicy(record.status, record.time_in, employee.shift_start_time, graceMinutes);
 }
 
 function isEarlyDeparture(record: AttendanceRecord, employee: AlertEmployee, graceMinutes: number) {
@@ -150,6 +147,7 @@ function summarizeAttendance(
   employee: AlertEmployee,
   workingDaysSetting: number,
   standardHours: number,
+  overtimeThresholdHours: number,
   lateGraceMinutes: number,
   earlyGraceMinutes: number,
 ) {
@@ -228,7 +226,8 @@ function summarizeAttendance(
       summary.insufficientHours++;
       if (date) summary.dates.insufficientHours.push(date);
     }
-    if (employee.overtime_eligible === true && hasIn && hasOut && hours >= standardHours + 1) {
+    const overtimeStatus = isItDepartment(employee.department) && isSunday(date) ? 'Weekly Off' : String(record.status || '');
+    if (qualifyingOvertimeHours(employee.overtime_eligible === true, overtimeStatus, record.time_in, record.time_out, employee.shift_end_time, overtimeThresholdHours) > 0) {
       summary.overtimeDays++;
       if (date) summary.dates.overtime.push(date);
     }
@@ -294,7 +293,8 @@ export async function ensureAttendanceAlertNotifications(
   const settings: Record<string, string> = await getSettings().catch(() => ({} as Record<string, string>));
   const workingDays = Number(settings['working_days'] || 26);
   const standardHours = Number(settings['standard_working_hours'] || 8);
-  const lateGraceMinutes = Number(settings['late_grace_minutes'] || settings['ess_late_grace_minutes'] || 0);
+  const overtimeThresholdHours = Number(settings['ot_threshold_hours'] || 2);
+  const lateGraceMinutes = Number(settings['late_grace_minutes'] || settings['ess_late_grace_minutes'] || LATE_GRACE_MINUTES);
   const earlyGraceMinutes = Number(settings['early_grace_minutes'] || settings['ess_early_grace_minutes'] || 0);
   const lowAttendanceThreshold = Number(settings['ess_low_attendance_threshold'] || settings['low_attendance_threshold'] || 75);
   const lowAttendanceDaysThreshold = Number(settings['ess_low_attendance_days_threshold'] || settings['low_attendance_days_threshold'] || 5);
@@ -305,7 +305,8 @@ export async function ensureAttendanceAlertNotifications(
     employee,
     Number.isFinite(workingDays) && workingDays > 0 ? workingDays : 26,
     Number.isFinite(standardHours) && standardHours > 0 ? standardHours : 8,
-    Number.isFinite(lateGraceMinutes) ? lateGraceMinutes : 0,
+    Number.isFinite(overtimeThresholdHours) && overtimeThresholdHours >= 0 ? overtimeThresholdHours : 2,
+    Number.isFinite(lateGraceMinutes) ? lateGraceMinutes : LATE_GRACE_MINUTES,
     Number.isFinite(earlyGraceMinutes) ? earlyGraceMinutes : 0,
   );
   const notifications: AttendanceNotification[] = [];
@@ -323,14 +324,14 @@ export async function ensureAttendanceAlertNotifications(
     const hasOut = !!record.time_out;
     const hours = workingHours(record);
 
-    if (isLateArrival(record, employee, Number.isFinite(lateGraceMinutes) ? lateGraceMinutes : 0)) {
+    if (isLateArrival(record, employee, Number.isFinite(lateGraceMinutes) ? lateGraceMinutes : LATE_GRACE_MINUTES)) {
       addDailyNotification(
         notifications,
         employee,
         record,
         'late_arrival_alert',
         'Late arrival alert',
-        `you were late on ${displayDate}. Punch-in: ${record.time_in || '-'}, shift start: ${employee.shift_start_time || '-'}.`,
+        `you were late on ${displayDate}. Punch-in: ${record.time_in || '-'}, shift start: ${employee.shift_start_time || '09:00'}, grace: ${lateGraceMinutes} minutes.`,
         'warning',
         40,
         { lateGraceMinutes },
@@ -395,14 +396,23 @@ export async function ensureAttendanceAlertNotifications(
       );
     }
 
-    if (employee.overtime_eligible === true && hasIn && hasOut && hours >= standardHours + 1) {
+    const overtimeStatus = isItDepartment(employee.department) && isSunday(date) ? 'Weekly Off' : String(record.status || '');
+    const overtimeHours = qualifyingOvertimeHours(
+      employee.overtime_eligible === true,
+      overtimeStatus,
+      record.time_in,
+      record.time_out,
+      employee.shift_end_time,
+      Number.isFinite(overtimeThresholdHours) ? overtimeThresholdHours : 2,
+    );
+    if (overtimeHours > 0) {
       addDailyNotification(
         notifications,
         employee,
         record,
         'overtime_alert',
         'Overtime alert',
-        `your attendance shows overtime on ${displayDate}. Worked: ${hours} hours. HR will review this according to payroll policy.`,
+        `your attendance shows qualifying overtime on ${displayDate}. You stayed ${Math.round(overtimeHours * 10) / 10} hours beyond shift end and earned a half-day salary allowance.`,
         'warning',
         80,
         { workingHours: hours, standardHours },
@@ -437,7 +447,7 @@ export async function ensureAttendanceAlertNotifications(
   }
 
   const lateStreakDetails = consecutiveDetails(sortedRecords, record =>
-    isLateArrival(record, employee, Number.isFinite(lateGraceMinutes) ? lateGraceMinutes : 0)
+    isLateArrival(record, employee, Number.isFinite(lateGraceMinutes) ? lateGraceMinutes : LATE_GRACE_MINUTES)
   );
 
   if (summary.missingPunches > 2) {
@@ -555,7 +565,7 @@ export async function ensureAttendanceAlertNotificationsForUpload(uploadId: numb
     : `${year}-${String(mon + 1).padStart(2, '0')}-01`;
 
   let [{ data: employees, error: employeesError }, { data: records, error: recordsError }] = await Promise.all([
-    supabase.from('employees').select('id, name, email, shift_start_time, shift_end_time, overtime_eligible').in('id', employeeIds),
+    supabase.from('employees').select('id, name, email, department, shift_start_time, shift_end_time, overtime_eligible').in('id', employeeIds),
     supabase
       .from('attendance_records')
       .select('employee_id, record_date, status, time_in, time_out')
@@ -565,7 +575,7 @@ export async function ensureAttendanceAlertNotificationsForUpload(uploadId: numb
       .order('record_date', { ascending: true }),
   ]);
   if (employeesError && /overtime_eligible|does not exist|schema cache/i.test(employeesError.message)) {
-    const retry = await supabase.from('employees').select('id, name, email, shift_start_time, shift_end_time').in('id', employeeIds);
+    const retry = await supabase.from('employees').select('id, name, email, department, shift_start_time, shift_end_time').in('id', employeeIds);
     employees = retry.data as any;
     employeesError = retry.error;
   }

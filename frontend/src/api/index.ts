@@ -1,20 +1,34 @@
 import axios from 'axios';
-import { supabase } from '../lib/supabase';
 
-export const api = axios.create({ baseURL: '/api' });
-api.interceptors.request.use(async config => {
-  const { data } = await supabase.auth.getSession();
-  if (data.session?.access_token) {
-    config.headers.Authorization = `Bearer ${data.session.access_token}`;
-  }
-  return config;
-});
+const configuredApiUrl = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+export const api = axios.create({ baseURL: configuredApiUrl ? `${configuredApiUrl}/api` : '/api' });
+
+export interface EmployeeNameCollisionGroup {
+  key: string;
+  displayName: string;
+  acknowledged: boolean;
+  employees: Array<{
+    id: number;
+    employeeNumber: string;
+    name: string;
+    acknowledgedAt: string | null;
+    acknowledgedBy: string | null;
+  }>;
+}
 
 // Attendance
 export const uploadAttendance = (file: File) => {
   const fd = new FormData();
   fd.append('file', file);
-  return api.post<{ uploadId: number; periodMonth: string; rowCount: number; warnings: string[] }>('/attendance/upload', fd);
+  return api.post<{
+    uploadId: number;
+    periodMonth: string;
+    rowCount: number;
+    employeeCreatedCount: number;
+    employeeMatchedCount: number;
+    warnings: string[];
+    nameCollisionGroups: EmployeeNameCollisionGroup[];
+  }>('/attendance/upload', fd);
 };
 export const inspectAttendance = (file: File) => {
   const fd = new FormData();
@@ -107,6 +121,12 @@ export interface EmployeeMaster {
 }
 export const getEmployees = () => api.get('/employees');
 export const getEmployee = (id: number) => api.get(`/employees/${id}`);
+export const getEmployeeNameCollisions = () => api.get<EmployeeNameCollisionGroup[]>('/employees/name-collisions');
+export const acknowledgeEmployeeNameCollision = (group: EmployeeNameCollisionGroup) =>
+  api.post<EmployeeNameCollisionGroup>('/employees/name-collisions/acknowledge', {
+    key: group.key,
+    employeeIds: group.employees.map(employee => employee.id),
+  });
 export const getEmployeeDocuments = (id: number) => api.get(`/employees/${id}/documents`);
 export const createEmployee = (data: EmployeeMaster) => api.post('/employees', data);
 export const updateEmployee = (id: number, data: Partial<EmployeeMaster> & { email?: string }) => api.patch(`/employees/${id}`, data);

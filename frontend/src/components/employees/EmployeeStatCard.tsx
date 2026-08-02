@@ -1,37 +1,38 @@
-import clsx from 'clsx';
-
-type Tone = 'indigo' | 'emerald' | 'slate' | 'sky' | 'amber';
-
-const TONE_BG: Record<Tone, string> = {
-  indigo: 'bg-indigo-500',
-  emerald: 'bg-emerald-500',
-  slate: 'bg-slate-400',
-  sky: 'bg-sky-500',
-  amber: 'bg-amber-500',
-};
+import type { LucideIcon } from 'lucide-react';
 
 interface Props {
-  icon: string;
+  icon: LucideIcon;
   label: string;
   value: string | number;
-  sub?: string;
-  tone?: Tone;
+  detail: string;
+  detailTone?: 'neutral' | 'positive' | 'warning';
 }
 
-// Summary card used at the top of the Employee Master page.
-export default function EmployeeStatCard({ icon, label, value, sub, tone = 'indigo' }: Props) {
+export default function EmployeeStatCard({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  detailTone = 'neutral',
+}: Props) {
+  const detailClass = detailTone === 'positive'
+    ? 'text-emerald-600'
+    : detailTone === 'warning'
+      ? 'text-amber-600'
+      : 'text-slate-500';
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/70 p-4 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-center gap-3">
-        <div className={clsx('w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm', TONE_BG[tone])}>
-          <span className="material-icons text-white text-xl">{icon}</span>
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition hover:border-slate-300 hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[13px] font-medium text-slate-500">{label}</p>
+          <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] text-slate-950">{value}</p>
         </div>
-        <div className="min-w-0">
-          <p className="text-2xl font-bold text-slate-800 leading-none">{value}</p>
-          <p className="text-xs text-slate-500 mt-1.5 truncate">{label}</p>
-          {sub && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{sub}</p>}
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600">
+          <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
         </div>
       </div>
-    </div>
+      <p className={`mt-4 text-xs font-medium ${detailClass}`}>{detail}</p>
+    </article>
   );
 }

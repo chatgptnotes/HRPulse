@@ -2,10 +2,13 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { z } from 'zod';
 import { supabase } from '../db/supabase';
 import { createEmployeeDocumentSignedUrl, listEmployeeDocuments } from '../services/employeeDocumentService';
 import { AuthenticatedRequest, requireRoles } from '../middleware/auth';
 import { enqueueForActiveConnectors } from '../services/connectorService';
+import { buildEmployeeNameCollisionGroups, normalizedEmployeeName } from '../services/employeeExcelImportService';
+import { LATE_GRACE_MINUTES } from '../services/latePolicy';
 
 const router = Router();
 
@@ -153,6 +156,62 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
+router.get('/name-collisions', async (_req: Request, res: Response) => {
+  try {
+    const data = await selectAll();
+    res.json(buildEmployeeNameCollisionGroups(data || []));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const acknowledgeNameCollisionSchema = z.object({
+  key: z.string().trim().min(1),
+  employeeIds: z.array(z.number().int().positive()).min(2),
+});
+
+router.post('/name-collisions/acknowledge', requireRoles('super_admin', 'hr_admin'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const parsed = acknowledgeNameCollisionSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'A valid same-name employee group is required' });
+      return;
+    }
+
+    const employees = await selectAll();
+    const group = buildEmployeeNameCollisionGroups(employees || [])
+      .find(item => item.key === normalizedEmployeeName(parsed.data.key));
+    const suppliedIds = [...new Set(parsed.data.employeeIds)].sort((a, b) => a - b);
+    const currentIds = (group?.employees || []).map(employee => employee.id).sort((a, b) => a - b);
+    if (!group || suppliedIds.length !== currentIds.length || suppliedIds.some((id, index) => id !== currentIds[index])) {
+      res.status(409).json({ error: 'This same-name group changed. Refresh Dispatcher and review it again.' });
+      return;
+    }
+
+    const acknowledgedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from('employees')
+      .update({
+        same_name_collision_confirmed_at: acknowledgedAt,
+        same_name_collision_confirmed_by: req.hrActor?.email || 'HR Admin',
+      })
+      .in('id', currentIds);
+    if (error) throw new Error(error.message);
+
+    res.json({
+      ...group,
+      acknowledged: true,
+      employees: group.employees.map(employee => ({
+        ...employee,
+        acknowledgedAt,
+        acknowledgedBy: req.hrActor?.email || 'HR Admin',
+      })),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:id', async (req: Request, res: Response) => {
   const { data, error } = await supabase.from('employees').select('*').eq('id', parseInt(req.params.id)).single();
   if (error) { res.status(404).json({ error: 'Not found' }); return; }
@@ -246,8 +305,19 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
       || null;
     payload.organization_id = organizationId;
 
-    const { data, error } = await supabase.from('employees').insert(payload).select().single();
-    if (error) { res.status(500).json({ error: error.message }); return; }
+    let result = await supabase.from('employees').insert(payload).select().single();
+    if (result.error?.code === '23514' && /employees_active_schedule_check/i.test(result.error.message || '')) {
+      result = await supabase.from('employees').insert({
+        ...payload,
+        is_active: true,
+        shift_name: String(req.body.shift || 'General Shift').trim() || 'General Shift',
+        shift_start_time: normalizeTimeValue(req.body.shiftStartTime) || '09:00',
+        shift_end_time: normalizeTimeValue(req.body.shiftEndTime) || '18:00',
+        late_grace_minutes: LATE_GRACE_MINUTES,
+      }).select().single();
+    }
+    if (result.error) { res.status(500).json({ error: result.error.message }); return; }
+    const data = result.data;
     try { await queueEmployeeSync(data, 'employee.created'); } catch (syncError) { console.error('Employee sync queue failed:', syncError); }
     res.status(201).json(mapEmployee(data));
   } catch (err: any) {
@@ -265,7 +335,13 @@ router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
     }
     const update = buildMasterPayload(req.body);
     if (req.body.email !== undefined) update.email = (req.body.email || '').trim() || null;
-    const current = await supabase.from('employees').select('record_version').eq('id', parseInt(req.params.id)).maybeSingle();
+    const current = await supabase.from('employees').select('*').eq('id', parseInt(req.params.id)).maybeSingle();
+    const identityChanged = normalizedEmployeeName(current.data?.name) !== normalizedEmployeeName(update.name)
+      || String(current.data?.employee_number || '').trim().toUpperCase() !== String(update.employee_number || '').trim().toUpperCase();
+    if (identityChanged && current.data && Object.prototype.hasOwnProperty.call(current.data, 'same_name_collision_confirmed_at')) {
+      update.same_name_collision_confirmed_at = null;
+      update.same_name_collision_confirmed_by = null;
+    }
     update.record_version = Number(current.data?.record_version || 1) + 1;
     update.updated_at = new Date().toISOString();
 

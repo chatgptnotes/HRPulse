@@ -1,9 +1,9 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install && npm run build --workspace=@hrpulse/frontend && npm run build --workspace=backend && npm run prisma:generate --workspace=backend"
+buildCommand = "npm install && npm run build --workspace=@hrpulse/frontend && npm run build --workspace=backend"
 
 [deploy]
-startCommand = "npm run prisma:migrate --workspace=backend && NODE_ENV=production node backend/dist/backend/src/index.js"
+startCommand = "NODE_ENV=production node backend/dist/backend/src/index.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 healthcheckPath = "/health"

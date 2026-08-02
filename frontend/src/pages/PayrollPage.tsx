@@ -240,7 +240,7 @@ export default function PayrollPage() {
 
   const { data: history = [] } = useQuery<HistoryRow[]>({ queryKey: ['payroll-history'], queryFn: () => api.getPayrollHistory().then(r => r.data) });
   const { data: filters } = useQuery({ queryKey: ['payroll-filters'], queryFn: () => api.getPayrollFilters().then(r => r.data) });
-  const { data: run, refetch: refetchRun, isFetching } = useQuery({
+  const { data: run, refetch: refetchRun, isFetching, isError: runIsError, error: runError } = useQuery({
     queryKey: ['payroll-run', uploadId],
     queryFn: () => api.getPayrollRun(uploadId!).then(r => r.data),
     enabled: !!uploadId,
@@ -262,6 +262,9 @@ export default function PayrollPage() {
 
   const selectedUpload = useMemo(() => history.find(h => h.id === uploadId), [history, uploadId]);
   const rows: PayrollRow[] = (run?.payroll?.rows as PayrollRow[]) || [];
+  const runErrorMessage = String(
+    (runError as any)?.response?.data?.error || (runError as any)?.message || 'Payroll calculation could not be loaded.',
+  ).replace(/^Error:\s*/i, '');
   const summary: Summary = run?.payroll?.summary || {
     totalEmployees: rows.length,
     presentEmployees: rows.filter(r => r.presentDays > 0).length,
@@ -531,10 +534,11 @@ export default function PayrollPage() {
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             <div className="mb-1 flex items-center gap-2 font-bold">
               <Icon name="warning" className="text-base" />
-              File validation notes
+              File validation notes ({uploadWarnings.length})
             </div>
-            {uploadWarnings.slice(0, 5).map((w, i) => <p key={i} className="text-xs">{w}</p>)}
-            {uploadWarnings.length > 5 && <p className="mt-1 text-xs font-semibold">+{uploadWarnings.length - 5} more notes</p>}
+            <div className="mt-2 max-h-72 space-y-1 overflow-y-auto pr-1">
+              {uploadWarnings.map((w, i) => <p key={i} className="text-xs">{w}</p>)}
+            </div>
           </div>
         )}
 
@@ -685,7 +689,12 @@ export default function PayrollPage() {
               <h2 className="text-sm font-bold text-slate-900">Payroll Filters</h2>
               <p className="text-xs text-slate-400">Refine attendance and salary rows without changing the processed run.</p>
             </div>
-            <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">{filtered.length} matching employees</span>
+            <span className={clsx(
+              'rounded-full px-3 py-1 text-xs font-bold',
+              runIsError ? 'bg-rose-50 text-rose-700' : 'bg-indigo-50 text-indigo-700',
+            )}>
+              {runIsError ? 'Payroll unavailable' : `${filtered.length} matching employees`}
+            </span>
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
             <Field label="Month">
@@ -773,7 +782,29 @@ export default function PayrollPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {!uploadId && <tr><td colSpan={activeColumns.length} className="px-4 py-14 text-center text-slate-400">Upload an attendance file to see the salary sheet.</td></tr>}
-                {uploadId && sorted.length === 0 && <tr><td colSpan={activeColumns.length} className="px-4 py-14 text-center text-slate-400">No employees match the current filters.</td></tr>}
+                {uploadId && isFetching && !run && !runIsError && (
+                  <tr><td colSpan={activeColumns.length} className="px-4 py-14 text-center text-slate-400">Calculating payroll…</td></tr>
+                )}
+                {uploadId && runIsError && !isFetching && (
+                  <tr>
+                    <td colSpan={activeColumns.length} className="px-4 py-12 text-center">
+                      <p className="font-bold text-rose-700">Payroll could not be loaded</p>
+                      <p className="mx-auto mt-2 max-w-3xl text-sm text-rose-600">{runErrorMessage}</p>
+                      <button onClick={() => refetchRun()} className="mt-4 rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">Retry</button>
+                    </td>
+                  </tr>
+                )}
+                {uploadId && !isFetching && !runIsError && rows.length === 0 && (
+                  <tr><td colSpan={activeColumns.length} className="px-4 py-14 text-center text-slate-400">This upload has no payroll attendance rows.</td></tr>
+                )}
+                {uploadId && !runIsError && rows.length > 0 && sorted.length === 0 && (
+                  <tr>
+                    <td colSpan={activeColumns.length} className="px-4 py-14 text-center text-slate-400">
+                      <p>No employees match the current filters.</p>
+                      <button onClick={resetFilters} className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-indigo-600 hover:bg-indigo-50">Reset filters</button>
+                    </td>
+                  </tr>
+                )}
                 {paged.map(row => (
                   <tr key={row.employeeId} className="group transition hover:bg-indigo-50/40">
                     {activeColumns.map(c => <Td key={c.key} align={c.align}>{renderCell(row, c.key)}</Td>)}

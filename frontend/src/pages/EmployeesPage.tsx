@@ -1,7 +1,32 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as XLSX from 'xlsx';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import {
+  Building2,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  Clock3,
+  Columns3,
+  Download,
+  Filter,
+  Import,
+  Search,
+  SlidersHorizontal,
+  UserCheck,
+  UserPlus,
+  UserRoundCheck,
+  UserRoundX,
+  Users,
+  X,
+} from 'lucide-react';
 import {
   getEmployees,
+  getSettings,
   createEmployee,
   updateEmployee,
   deleteEmployee,
@@ -18,7 +43,7 @@ import EmployeeActionMenu, { EmployeeAction } from '../components/employees/Empl
 import EmployeeFormModal from '../components/employees/EmployeeFormModal';
 import EmployeeProfileDrawer from '../components/employees/EmployeeProfileDrawer';
 import { exportEmployeesCsv } from '../components/employees/employeeCsv';
-import { Employee, DrawerTab, fmtINR } from '../components/employees/types';
+import { Employee, DrawerTab, effectivePaidLeavePolicy, fmtINR } from '../components/employees/types';
 
 type SortKey = 'name' | 'employeeNumber' | 'department' | 'designation' | 'shift' | 'monthlySalary' | 'status';
 type SortDir = 'asc' | 'desc';
@@ -41,6 +66,7 @@ const COLUMNS: ColumnDef[] = [
 ];
 
 const PAGE_SIZES = [10, 25, 50, 100];
+const CHART_COLORS = ['#4F46E5', '#0EA5E9', '#14B8A6', '#F59E0B', '#8B5CF6', '#94A3B8'];
 const NOTIFICATION_TYPES = [
   { value: 'personal', label: 'Personal' },
   { value: 'attendance', label: 'Attendance' },
@@ -65,8 +91,34 @@ function suggestNextId(employees: { employeeNumber: string }[]): string {
   return `EMP${String(max + 1).padStart(3, '0')}`;
 }
 
+function employeePayload(employee: Employee, overrides: Partial<EmployeeMaster> = {}): EmployeeMaster {
+  return {
+    employeeNumber: employee.employeeNumber,
+    name: employee.name,
+    email: employee.email,
+    mobile: employee.mobile,
+    department: employee.department,
+    designation: employee.designation,
+    shift: employee.shift,
+    shiftStartTime: employee.shiftStartTime,
+    shiftEndTime: employee.shiftEndTime,
+    monthlySalary: employee.monthlySalary,
+    status: employee.status === 'Inactive' ? 'Inactive' : 'Active',
+    paidLeavesEligible: employee.paidLeavesEligible,
+    overtimeEligible: employee.overtimeEligible,
+    ...overrides,
+  };
+}
+
+function importValue(row: Record<string, unknown>, names: string[]) {
+  const key = Object.keys(row).find(candidate => names.includes(candidate.trim().toLowerCase()));
+  return key ? String(row[key] ?? '').trim() : '';
+}
+
 export default function EmployeesPage() {
   const qc = useQueryClient();
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const importRef = useRef<HTMLInputElement | null>(null);
 
   // filters
   const [search, setSearch] = useState('');
@@ -75,6 +127,9 @@ export default function EmployeesPage() {
   const [shiftFilter, setShiftFilter] = useState('');
   const [onlyPaidLeave, setOnlyPaidLeave] = useState(false);
   const [onlyOvertime, setOnlyOvertime] = useState(false);
+  const [salaryMin, setSalaryMin] = useState('');
+  const [salaryMax, setSalaryMax] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // sort + paginate
   const [sortKey, setSortKey] = useState<SortKey>('name');
@@ -85,6 +140,9 @@ export default function EmployeesPage() {
   // column visibility
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set(['designation']));
   const [showColMenu, setShowColMenu] = useState(false);
+  const [showBulkMenu, setShowBulkMenu] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   // overlays
   const [formOpen, setFormOpen] = useState(false);
@@ -105,6 +163,12 @@ export default function EmployeesPage() {
     queryKey: ['employees'],
     queryFn: () => getEmployees().then(r => r.data),
   });
+  const { data: payrollSettings = {} } = useQuery<Record<string, string>>({
+    queryKey: ['settings'],
+    queryFn: () => getSettings().then(r => r.data as Record<string, string>),
+    staleTime: 60_000,
+  });
+  const itPaidLeaveLimit = Math.max(0, Number(payrollSettings.paid_leave_days || 2));
 
   const createMutation = useMutation({
     mutationFn: (data: EmployeeMaster) => createEmployee(data),
@@ -174,10 +238,12 @@ export default function EmployeesPage() {
     if (deptFilter && e.department !== deptFilter) return false;
     if (statusFilter && e.status !== statusFilter) return false;
     if (shiftFilter && e.shift !== shiftFilter) return false;
-    if (onlyPaidLeave && e.paidLeavesEligible === false) return false;
+    if (onlyPaidLeave && !effectivePaidLeavePolicy(e, itPaidLeaveLimit).eligible) return false;
     if (onlyOvertime && e.overtimeEligible !== true) return false;
+    if (salaryMin && e.monthlySalary < Number(salaryMin)) return false;
+    if (salaryMax && e.monthlySalary > Number(salaryMax)) return false;
     return true;
-  }), [employees, search, deptFilter, statusFilter, shiftFilter, onlyPaidLeave, onlyOvertime]);
+  }), [employees, search, deptFilter, statusFilter, shiftFilter, onlyPaidLeave, onlyOvertime, salaryMin, salaryMax, itPaidLeaveLimit]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -196,13 +262,51 @@ export default function EmployeesPage() {
   const pageRows = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   // reset to first page whenever filters/sort change
-  useEffect(() => { setPage(1); }, [search, deptFilter, statusFilter, shiftFilter, onlyPaidLeave, onlyOvertime, pageSize]);
+  useEffect(() => { setPage(1); }, [search, deptFilter, statusFilter, shiftFilter, onlyPaidLeave, onlyOvertime, salaryMin, salaryMax, pageSize]);
+
+  useEffect(() => {
+    const focusEmployeeSearch = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', focusEmployeeSearch);
+    return () => window.removeEventListener('keydown', focusEmployeeSearch);
+  }, []);
 
   const activeCount = employees.filter(e => e.status !== 'Inactive').length;
-  const deptCount = departments.length;
+  const employeeDepartments = [...new Set(employees.map(e => e.department).filter(Boolean))];
+  const deptCount = employeeDepartments.length;
+  const addedThisMonth = employees.filter(employee => {
+    const created = new Date(employee.createdAt);
+    const now = new Date();
+    return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+  }).length;
+  const departmentData = useMemo(() => {
+    const totals = new Map<string, number>();
+    employees.forEach(employee => {
+      const department = employee.department || 'Unassigned';
+      totals.set(department, (totals.get(department) || 0) + 1);
+    });
+    return [...totals.entries()]
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  }, [employees]);
 
-  const hasActiveFilters = !!(search || deptFilter || statusFilter || shiftFilter || onlyPaidLeave || onlyOvertime);
-  const resetFilters = () => { setSearch(''); setDeptFilter(''); setStatusFilter(''); setShiftFilter(''); setOnlyPaidLeave(false); setOnlyOvertime(false); };
+  const hasActiveFilters = !!(search || deptFilter || statusFilter || shiftFilter || onlyPaidLeave || onlyOvertime || salaryMin || salaryMax);
+  const advancedFilterCount = [onlyPaidLeave, onlyOvertime, salaryMin, salaryMax].filter(Boolean).length;
+  const resetFilters = () => {
+    setSearch('');
+    setDeptFilter('');
+    setStatusFilter('');
+    setShiftFilter('');
+    setOnlyPaidLeave(false);
+    setOnlyOvertime(false);
+    setSalaryMin('');
+    setSalaryMax('');
+  };
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
@@ -240,227 +344,341 @@ export default function EmployeesPage() {
     notifyMutation.mutate({ employee: notifyEmp, data: notifyForm });
   }
 
+  async function handleImport(file: File | undefined) {
+    if (!file) return;
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+      const records = rows.map(row => ({
+        employeeNumber: importValue(row, ['employee id', 'employee number', 'emp id']),
+        name: importValue(row, ['employee', 'employee name', 'name']),
+        email: importValue(row, ['email', 'email address']),
+        mobile: importValue(row, ['mobile', 'phone', 'mobile number']),
+        department: importValue(row, ['department']),
+        designation: importValue(row, ['designation', 'job title']),
+        shift: importValue(row, ['shift']),
+        shiftStartTime: importValue(row, ['shift start time', 'shift start', 'start time']),
+        shiftEndTime: importValue(row, ['shift end time', 'shift end', 'end time']),
+        monthlySalary: Number(importValue(row, ['monthly salary', 'salary'])) || 0,
+        status: 'Active' as const,
+        paidLeavesEligible: false,
+        overtimeEligible: false,
+      })).filter(record => record.name);
+
+      if (!records.length) throw new Error('No employee rows with a Name column were found');
+      if (!window.confirm(`Import ${records.length} employee${records.length === 1 ? '' : 's'} into HRPulse?`)) return;
+      const results = await Promise.allSettled(records.map(record => createEmployee(record)));
+      const imported = results.filter(result => result.status === 'fulfilled').length;
+      const failed = results.length - imported;
+      await qc.invalidateQueries({ queryKey: ['employees'] });
+      setToast({
+        message: failed ? `${imported} imported, ${failed} failed validation` : `${imported} employees imported successfully`,
+        error: failed > 0,
+      });
+      window.setTimeout(() => setToast(null), 4500);
+    } catch (error) {
+      setToast({ message: error instanceof Error ? error.message : 'Employee import failed', error: true });
+      window.setTimeout(() => setToast(null), 4500);
+    } finally {
+      if (importRef.current) importRef.current.value = '';
+    }
+  }
+
+  async function updateSelectedStatus(status: 'Active' | 'Inactive') {
+    const targets = employees.filter(employee => selectedIds.has(employee.id));
+    if (!targets.length || bulkBusy) return;
+    setBulkBusy(true);
+    setShowBulkMenu(false);
+    try {
+      const results = await Promise.allSettled(targets.map(employee => updateEmployee(employee.id, employeePayload(employee, { status }))));
+      const changed = results.filter(result => result.status === 'fulfilled').length;
+      await qc.invalidateQueries({ queryKey: ['employees'] });
+      setSelectedIds(new Set());
+      setToast({ message: `${changed} employee${changed === 1 ? '' : 's'} marked ${status.toLowerCase()}` });
+      window.setTimeout(() => setToast(null), 3000);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   const toggleCol = (key: string) =>
     setHiddenCols(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
   const colVisible = (c: ColumnDef) => c.key === 'name' || !hiddenCols.has(c.key);
+  const allPageRowsSelected = pageRows.length > 0 && pageRows.every(employee => selectedIds.has(employee.id));
+  const togglePageRows = () => {
+    setSelectedIds(previous => {
+      const next = new Set(previous);
+      if (allPageRowsSelected) pageRows.forEach(employee => next.delete(employee.id));
+      else pageRows.forEach(employee => next.add(employee.id));
+      return next;
+    });
+  };
 
   return (
-    <div className="p-6 max-w-[1400px]">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Employee Master</h1>
-          <p className="text-slate-500 text-sm mt-1">Maintain employee records. Attendance import links to these entries.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => exportEmployeesCsv(filtered)}
-            disabled={filtered.length === 0}
-            className="flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-            title="Export the filtered list to CSV"
-          >
-            <span className="material-icons text-lg">download</span>
-            Export
-          </button>
-          <button
-            onClick={() => setOnlyPaidLeave(v => !v)}
-            className={clsx(
-              'flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl border transition-all',
-              onlyPaidLeave ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            )}
-            title="Show only employees eligible for paid leaves"
-          >
-            <span className="material-icons text-lg">event_available</span>
-            Paid Leaves
-          </button>
-          <button
-            onClick={() => setOnlyOvertime(v => !v)}
-            className={clsx(
-              'flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl border transition-all',
-              onlyOvertime ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            )}
-            title="Show only employees eligible for overtime"
-          >
-            <span className="material-icons text-lg">timer</span>
-            Overtime
-          </button>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm transition-all hover:shadow-md"
-            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}
-          >
-            <span className="material-icons text-lg">person_add</span>
-            Add Employee
-          </button>
-        </div>
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <EmployeeStatCard icon="groups" label="Total Employees" value={employees.length} tone="indigo" />
-        <EmployeeStatCard icon="check_circle" label="Active Employees" value={activeCount} sub={`${employees.length ? Math.round(activeCount / employees.length * 100) : 0}% of total`} tone="emerald" />
-        <EmployeeStatCard icon="pause_circle" label="Inactive Employees" value={employees.length - activeCount} tone="slate" />
-        <EmployeeStatCard icon="apartment" label="Departments" value={deptCount} tone="sky" />
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-2xl border border-slate-200/70 p-3 mb-4 shadow-sm flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[220px]">
-          <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none">search</span>
-          <input
-            placeholder="Search name, ID, mobile, designation, email..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 bg-slate-50"
-          />
-        </div>
-        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-          <option value="">All departments</option>
-          {departments.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
-        <select value={shiftFilter} onChange={e => setShiftFilter(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-          <option value="">All shifts</option>
-          {shifts.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-          <option value="">All status</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-        </select>
-        {hasActiveFilters && (
-          <button onClick={resetFilters} className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-700 px-2 py-2">
-            <span className="material-icons text-base">restart_alt</span>Reset
-          </button>
-        )}
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm overflow-visible">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-          <p className="text-sm text-slate-500">
-            {filtered.length === employees.length
-              ? `${employees.length} employee${employees.length === 1 ? '' : 's'}`
-              : `${filtered.length} of ${employees.length} employees`}
-          </p>
-          <div className="relative">
-            <button
-              onClick={() => setShowColMenu(v => !v)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg"
-            >
-              <span className="material-icons text-base">view_column</span>Columns
-            </button>
-            {showColMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowColMenu(false)} />
-                <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 z-50 animate-scale-in origin-top-right">
-                  <p className="px-3 py-1 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Toggle columns</p>
-                  {COLUMNS.filter(c => c.hideable).map(c => (
-                    <label key={c.key} className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
-                      <input type="checkbox" checked={!hiddenCols.has(c.key)} onChange={() => toggleCol(c.key)} className="accent-indigo-600" />
-                      {c.label}
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
+      <div className="mx-auto max-w-[1580px] px-4 py-7 md:px-8">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-400">
+              <span>People</span><ChevronRight size={13} /><span className="text-slate-600">Employee Master</span>
+            </div>
+            <h1 className="text-[28px] font-semibold tracking-[-0.035em] text-slate-950">Employee Master</h1>
+            <p className="mt-1.5 text-sm text-slate-500">Maintain employee records and keep payroll-ready workforce data organized.</p>
           </div>
+          <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-500">
+            Last refreshed just now
+          </p>
         </div>
+
+        <section className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <EmployeeStatCard icon={Users} label="Total employees" value={employees.length} detail={`+${addedThisMonth} added this month`} detailTone="positive" />
+            <EmployeeStatCard icon={UserRoundCheck} label="Active employees" value={activeCount} detail={`${employees.length ? Math.round(activeCount / employees.length * 100) : 0}% of total workforce`} detailTone="positive" />
+            <EmployeeStatCard icon={UserRoundX} label="Inactive employees" value={employees.length - activeCount} detail={`${employees.length ? Math.round((employees.length - activeCount) / employees.length * 100) : 0}% of total workforce`} />
+            <EmployeeStatCard icon={Building2} label="Departments" value={deptCount} detail={`${employeeDepartments.length} represented in Employee Master`} />
+          </div>
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">Department distribution</h2>
+                <p className="mt-1 text-xs text-slate-500">Current workforce composition</p>
+              </div>
+              <span className="rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Live</span>
+            </div>
+            <div className="mt-2 grid grid-cols-[150px_1fr] items-center gap-2">
+              <div className="h-[150px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={departmentData} dataKey="value" nameKey="name" innerRadius={44} outerRadius={64} paddingAngle={2} stroke="none">
+                      {departmentData.map((entry, index) => <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 12, borderColor: '#E5E7EB', fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2.5">
+                {departmentData.slice(0, 5).map((entry, index) => (
+                  <div key={entry.name} className="flex items-center gap-2 text-xs">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
+                    <span className="min-w-0 flex-1 truncate text-slate-600">{entry.name}</span>
+                    <span className="font-semibold text-slate-900">{entry.value}</span>
+                  </div>
+                ))}
+                {!departmentData.length && <p className="text-xs text-slate-400">No department data</p>}
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section className="relative mb-4 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative min-w-[280px] flex-[2_1_420px]">
+              <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                ref={searchRef}
+                placeholder="Search by employee name, ID, mobile, designation or email"
+                value={search}
+                onChange={event => setSearch(event.target.value)}
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-9 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-50"
+              />
+              {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><X size={16} /></button>}
+            </div>
+            {[{
+              value: deptFilter, set: setDeptFilter, label: 'All departments', options: departments,
+            }, {
+              value: shiftFilter, set: setShiftFilter, label: 'All shifts', options: shifts,
+            }, {
+              value: statusFilter, set: setStatusFilter, label: 'All statuses', options: ['Active', 'Inactive'],
+            }].map(filterItem => (
+              <div key={filterItem.label} className="relative">
+                <select value={filterItem.value} onChange={event => filterItem.set(event.target.value)} className="h-11 min-w-[145px] appearance-none rounded-xl border border-slate-200 bg-white px-3 pr-9 text-xs font-medium text-slate-600 outline-none hover:border-slate-300 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50">
+                  <option value="">{filterItem.label}</option>
+                  {filterItem.options.map(option => <option key={option} value={option}>{option}</option>)}
+                </select>
+                <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              </div>
+            ))}
+            <button onClick={() => setShowAdvancedFilters(value => !value)} className={clsx(
+              'relative flex h-11 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition',
+              showAdvancedFilters || advancedFilterCount ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
+            )}>
+              <SlidersHorizontal size={16} />Filters
+              {advancedFilterCount > 0 && <span className="rounded-full bg-indigo-600 px-1.5 py-0.5 text-[9px] text-white">{advancedFilterCount}</span>}
+            </button>
+            {hasActiveFilters && <button onClick={resetFilters} className="h-11 px-2 text-xs font-semibold text-slate-500 hover:text-slate-900">Clear all</button>}
+          </div>
+          {showAdvancedFilters && (
+            <div className="absolute right-3 top-[62px] z-30 w-[360px] rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,0.14)]">
+              <div className="flex items-center justify-between">
+                <div><p className="text-sm font-semibold text-slate-900">Advanced filters</p><p className="mt-0.5 text-xs text-slate-500">Refine using available employee data</p></div>
+                <button onClick={() => setShowAdvancedFilters(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X size={16} /></button>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <label className="text-xs font-medium text-slate-600">Minimum salary<input type="number" value={salaryMin} onChange={event => setSalaryMin(event.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 outline-none focus:border-indigo-300" placeholder="₹ 0" /></label>
+                <label className="text-xs font-medium text-slate-600">Maximum salary<input type="number" value={salaryMax} onChange={event => setSalaryMax(event.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 outline-none focus:border-indigo-300" placeholder="No limit" /></label>
+              </div>
+              <div className="mt-4 space-y-2">
+                <label className="flex cursor-pointer items-center justify-between rounded-lg border border-slate-200 p-3 text-xs font-medium text-slate-700"><span className="flex items-center gap-2"><CalendarDays size={15} className="text-slate-400" />Paid-leave eligible</span><input type="checkbox" checked={onlyPaidLeave} onChange={() => setOnlyPaidLeave(value => !value)} className="h-4 w-4 accent-indigo-600" /></label>
+                <label className="flex cursor-pointer items-center justify-between rounded-lg border border-slate-200 p-3 text-xs font-medium text-slate-700"><span className="flex items-center gap-2"><Clock3 size={15} className="text-slate-400" />Overtime eligible</span><input type="checkbox" checked={onlyOvertime} onChange={() => setOnlyOvertime(value => !value)} className="h-4 w-4 accent-indigo-600" /></label>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3.5">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Employee directory</p>
+              <p className="mt-0.5 text-xs text-slate-500">{filtered.length === employees.length ? `${employees.length} total employees` : `${filtered.length} of ${employees.length} employees`}{selectedIds.size ? ` · ${selectedIds.size} selected` : ''}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => exportEmployeesCsv(selectedIds.size ? employees.filter(employee => selectedIds.has(employee.id)) : filtered, itPaidLeaveLimit)} disabled={!filtered.length} className="enterprise-action-button"><Download size={15} />Export</button>
+              <input ref={importRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={event => void handleImport(event.target.files?.[0])} />
+              <button onClick={() => importRef.current?.click()} className="enterprise-action-button"><Import size={15} />Import</button>
+              <div className="relative">
+                <button disabled={!selectedIds.size || bulkBusy} onClick={() => setShowBulkMenu(value => !value)} className="enterprise-action-button disabled:cursor-not-allowed disabled:opacity-45"><Check size={15} />Bulk actions<ChevronDown size={13} /></button>
+                {showBulkMenu && (
+                  <div className="absolute right-0 z-30 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_14px_36px_rgba(15,23,42,0.14)]">
+                    <button onClick={() => void updateSelectedStatus('Active')} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50"><UserCheck size={15} className="text-emerald-600" />Mark active</button>
+                    <button onClick={() => void updateSelectedStatus('Inactive')} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50"><UserRoundX size={15} className="text-slate-500" />Mark inactive</button>
+                  </div>
+                )}
+              </div>
+              <div className="relative">
+                <button onClick={() => setShowColMenu(value => !value)} className="enterprise-action-button"><Columns3 size={15} />Columns</button>
+                {showColMenu && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setShowColMenu(false)} />
+                    <div className="absolute right-0 z-30 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-[0_14px_36px_rgba(15,23,42,0.14)]">
+                      <p className="px-2 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Visible columns</p>
+                      {COLUMNS.filter(column => column.hideable).map(column => (
+                        <label key={column.key} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-xs text-slate-700 hover:bg-slate-50"><input type="checkbox" checked={!hiddenCols.has(column.key)} onChange={() => toggleCol(column.key)} className="accent-indigo-600" />{column.label}</label>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <button onClick={openCreate} className="flex h-9 items-center gap-2 rounded-lg bg-indigo-600 px-3.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700"><UserPlus size={15} />Add employee</button>
+            </div>
+          </div>
 
         {/* Table body */}
-        <div className="overflow-auto max-h-[60vh]">
-          <table className="w-full min-w-[820px]">
-            <thead className="bg-slate-50 sticky top-0 z-10">
-              <tr className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
+        <div className="max-h-[62vh] overflow-auto">
+          <table className="w-full min-w-[1160px] border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
+              <tr className="text-[10px] uppercase tracking-[0.08em] text-slate-500">
+                <th className="w-12 border-b border-slate-200 px-4 py-3.5 text-left">
+                  <input type="checkbox" checked={allPageRowsSelected} onChange={togglePageRows} className="h-4 w-4 rounded border-slate-300 accent-indigo-600" aria-label="Select page" />
+                </th>
                 {COLUMNS.filter(colVisible).map(c => (
                   <th
                     key={c.key}
                     onClick={() => c.sortable && toggleSort(c.key as SortKey)}
                     className={clsx(
-                      'px-4 py-3 font-semibold select-none',
+                      'border-b border-slate-200 px-4 py-3.5 font-semibold select-none',
                       c.align === 'right' ? 'text-right' : c.align === 'center' ? 'text-center' : 'text-left',
                       c.sortable && 'cursor-pointer hover:text-slate-700',
                     )}
                   >
-                    <span className="inline-flex items-center gap-1">
+                    <span className="inline-flex items-center gap-1.5">
                       {c.label}
                       {c.sortable && (
-                        <span className="material-icons text-sm">
-                          {sortKey === c.key ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
-                        </span>
+                        sortKey === c.key
+                          ? <ChevronDown size={13} className={sortDir === 'asc' ? 'rotate-180 text-indigo-600' : 'text-indigo-600'} />
+                          : <ChevronsUpDown size={12} className="text-slate-300" />
                       )}
                     </span>
                   </th>
                 ))}
-                <th className="px-3 py-3" />
+                <th className="w-14 border-b border-slate-200 px-3 py-3.5" />
               </tr>
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={COLUMNS.filter(colVisible).length + 1} className="px-4 py-12 text-center text-slate-400">
+                <tr><td colSpan={COLUMNS.filter(colVisible).length + 2} className="px-4 py-16 text-center text-slate-400">
                   <span className="material-icons animate-spin text-3xl block mb-2 text-indigo-400">sync</span>Loading employees...
                 </td></tr>
               )}
               {!isLoading && pageRows.length === 0 && (
-                <tr><td colSpan={COLUMNS.filter(colVisible).length + 1} className="px-4 py-12 text-center text-slate-400">
+                <tr><td colSpan={COLUMNS.filter(colVisible).length + 2} className="px-4 py-16 text-center text-slate-400">
                   <span className="material-icons text-4xl block mb-2 opacity-30">people</span>
                   {employees.length === 0 ? 'No employees yet. Click “Add Employee” to create your first record.' : 'No employees match the filters.'}
                 </td></tr>
               )}
-              {pageRows.map(emp => {
+              {pageRows.map((emp, rowIndex) => {
                 const inactive = emp.status === 'Inactive';
+                const selected = selectedIds.has(emp.id);
+                const paidLeavePolicy = effectivePaidLeavePolicy(emp, itPaidLeaveLimit);
                 return (
                   <tr
                     key={emp.id}
                     onClick={() => openDrawer(emp, 'overview')}
-                    className="border-t border-slate-100 hover:bg-indigo-50/30 transition-colors cursor-pointer"
+                    className={clsx(
+                      'group cursor-pointer transition-colors hover:bg-indigo-50/50',
+                      rowIndex % 2 === 1 && 'bg-slate-50/35',
+                      selected && 'bg-indigo-50/70 hover:bg-indigo-50/80',
+                    )}
                   >
+                    <td className="border-b border-slate-100 px-4 py-3.5" onClick={event => event.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => setSelectedIds(previous => {
+                          const next = new Set(previous);
+                          next.has(emp.id) ? next.delete(emp.id) : next.add(emp.id);
+                          return next;
+                        })}
+                        className="h-4 w-4 rounded border-slate-300 accent-indigo-600"
+                        aria-label={`Select ${emp.name}`}
+                      />
+                    </td>
                     {/* Employee (always visible) */}
-                    <td className="px-4 py-3">
+                    <td className="border-b border-slate-100 px-4 py-3.5">
                       <div className="flex items-center gap-3">
-                        <EmployeeAvatar name={emp.name} photoUrl={emp.photoUrl} size={38} />
+                        <EmployeeAvatar name={emp.name} photoUrl={emp.photoUrl} size={40} />
                         <div className="min-w-0">
-                          <p className={clsx('font-semibold text-sm truncate', inactive ? 'text-slate-400' : 'text-slate-800')}>{emp.name}</p>
-                          {emp.email && <p className="text-xs text-slate-400 truncate">{emp.email}</p>}
+                          <p className={clsx('truncate text-[13px] font-semibold', inactive ? 'text-slate-400' : 'text-slate-900')}>{emp.name}</p>
+                          <p className="mt-0.5 truncate text-[11px] text-slate-500">{[emp.designation, emp.email].filter(Boolean).join(' · ') || 'No contact details'}</p>
                         </div>
                       </div>
                     </td>
-                    {colVisible({ key: 'employeeNumber' } as ColumnDef) && <td className="px-3 py-3 text-sm font-mono text-slate-500">{emp.employeeNumber || '—'}</td>}
-                    {colVisible({ key: 'mobile' } as ColumnDef) && <td className="px-3 py-3 text-sm text-slate-600">{emp.mobile || '—'}</td>}
+                    {colVisible({ key: 'employeeNumber' } as ColumnDef) && <td className="border-b border-slate-100 px-4 py-3.5 font-mono text-xs font-medium text-slate-500">{emp.employeeNumber || '—'}</td>}
+                    {colVisible({ key: 'mobile' } as ColumnDef) && <td className="border-b border-slate-100 px-4 py-3.5 text-xs text-slate-600">{emp.mobile || '—'}</td>}
                     {colVisible({ key: 'department' } as ColumnDef) && (
-                      <td className="px-3 py-3 text-sm">
-                        {emp.department ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs">{emp.department}</span> : '—'}
+                      <td className="border-b border-slate-100 px-4 py-3.5 text-xs">
+                        {emp.department ? <span className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600">{emp.department}</span> : '—'}
                       </td>
                     )}
-                    {colVisible({ key: 'designation' } as ColumnDef) && <td className="px-3 py-3 text-sm text-slate-600">{emp.designation || '—'}</td>}
-                    {colVisible({ key: 'shift' } as ColumnDef) && <td className="px-3 py-3 text-sm text-slate-600">{emp.shift || '—'}</td>}
+                    {colVisible({ key: 'designation' } as ColumnDef) && <td className="border-b border-slate-100 px-4 py-3.5 text-xs text-slate-600">{emp.designation || '—'}</td>}
+                    {colVisible({ key: 'shift' } as ColumnDef) && <td className="border-b border-slate-100 px-4 py-3.5 text-xs font-medium text-slate-600">{emp.shift || '—'}</td>}
                     {colVisible({ key: 'timing' } as ColumnDef) && (
-                      <td className="px-3 py-3 text-sm text-slate-600">
+                      <td className="border-b border-slate-100 px-4 py-3.5 text-xs text-slate-600">
                         {emp.shiftStartTime || emp.shiftEndTime ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">
-                            <span className="material-icons text-sm">schedule</span>
+                          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+                            <Clock3 size={13} />
                             {emp.shiftStartTime || '--:--'} - {emp.shiftEndTime || '--:--'}
                           </span>
                         ) : '—'}
                       </td>
                     )}
                     {colVisible({ key: 'monthlySalary' } as ColumnDef) && (
-                      <td className="px-3 py-3 text-sm text-right font-semibold text-slate-800">{emp.monthlySalary ? `₹ ${fmtINR(emp.monthlySalary)}` : '—'}</td>
+                      <td className="border-b border-slate-100 px-4 py-3.5 text-right text-xs font-semibold text-slate-900">{emp.monthlySalary ? `₹ ${fmtINR(emp.monthlySalary)}` : '—'}</td>
                     )}
                     {colVisible({ key: 'paidLeavesEligible' } as ColumnDef) && (
-                      <td className="px-3 py-3 text-center">
-                        <span className={clsx('inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full',
-                          emp.paidLeavesEligible === false ? 'bg-slate-100 text-slate-400' : 'bg-emerald-50 text-emerald-700')}>
-                          <span className={clsx('w-1.5 h-1.5 rounded-full', emp.paidLeavesEligible === false ? 'bg-slate-400' : 'bg-emerald-500')} />
-                          {emp.paidLeavesEligible === false ? 'No' : 'Yes'}
+                      <td className="border-b border-slate-100 px-4 py-3.5 text-center">
+                        <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium',
+                          !paidLeavePolicy.eligible ? 'bg-slate-100 text-slate-400' : 'bg-emerald-50 text-emerald-700')}>
+                          <span className={clsx('w-1.5 h-1.5 rounded-full', !paidLeavePolicy.eligible ? 'bg-slate-400' : 'bg-emerald-500')} />
+                          {paidLeavePolicy.eligible ? `${paidLeavePolicy.limit} days` : 'No'}
                         </span>
                       </td>
                     )}
                     {colVisible({ key: 'overtimeEligible' } as ColumnDef) && (
-                      <td className="px-3 py-3 text-center">
-                        <span className={clsx('inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full',
+                      <td className="border-b border-slate-100 px-4 py-3.5 text-center">
+                        <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium',
                           emp.overtimeEligible ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-400')}>
                           <span className={clsx('w-1.5 h-1.5 rounded-full', emp.overtimeEligible ? 'bg-indigo-500' : 'bg-slate-400')} />
                           {emp.overtimeEligible ? 'Yes' : 'No'}
@@ -468,15 +686,15 @@ export default function EmployeesPage() {
                       </td>
                     )}
                     {colVisible({ key: 'status' } as ColumnDef) && (
-                      <td className="px-3 py-3">
-                        <span className={clsx('inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full',
+                      <td className="border-b border-slate-100 px-4 py-3.5">
+                        <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold',
                           inactive ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700')}>
                           <span className={clsx('w-1.5 h-1.5 rounded-full', inactive ? 'bg-slate-400' : 'bg-emerald-500')} />
                           {inactive ? 'Inactive' : 'Active'}
                         </span>
                       </td>
                     )}
-                    <td className="px-3 py-3 text-right" onClick={e => e.stopPropagation()}>
+                    <td className="border-b border-slate-100 px-3 py-3.5 text-right" onClick={e => e.stopPropagation()}>
                       <EmployeeActionMenu onAction={a => handleAction(emp, a)} />
                     </td>
                   </tr>
@@ -487,19 +705,19 @@ export default function EmployeesPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 flex-wrap gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3.5">
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <span>Rows per page</span>
-            <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className="border border-slate-200 rounded-md px-2 py-1 text-xs bg-white">
+            <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium outline-none focus:border-indigo-300">
               {PAGE_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            <span className="ml-2">
+            <span className="ml-2 font-medium text-slate-600">
               {sorted.length === 0 ? '0–0 of 0' : `${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, sorted.length)} of ${sorted.length}`}
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage <= 1} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 disabled:opacity-40">
-              <span className="material-icons text-lg">chevron_left</span>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage <= 1} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-40">
+              <ChevronLeft size={15} />
             </button>
             {Array.from({ length: pageCount }, (_, i) => i + 1)
               .filter(p => p === 1 || p === pageCount || Math.abs(p - safePage) <= 1)
@@ -508,18 +726,20 @@ export default function EmployeesPage() {
                   {idx > 0 && arr[idx - 1] !== p - 1 && <span className="px-1 text-slate-300">…</span>}
                   <button
                     onClick={() => setPage(p)}
-                    className={clsx('min-w-[32px] h-8 px-2 rounded-lg text-xs font-semibold',
-                      p === safePage ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100')}
+                    className={clsx('h-8 min-w-[32px] rounded-lg border px-2 text-xs font-semibold',
+                      p === safePage ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 text-slate-500 hover:bg-slate-50')}
                   >
                     {p}
                   </button>
                 </span>
               ))}
-            <button onClick={() => setPage(p => Math.min(pageCount, p + 1))} disabled={safePage >= pageCount} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 disabled:opacity-40">
-              <span className="material-icons text-lg">chevron_right</span>
+            <button onClick={() => setPage(p => Math.min(pageCount, p + 1))} disabled={safePage >= pageCount} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-40">
+              <ChevronRight size={15} />
             </button>
           </div>
         </div>
+        </section>
+
       </div>
 
       {/* Add / Edit modal */}

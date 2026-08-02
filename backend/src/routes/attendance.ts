@@ -3,9 +3,10 @@ import { supabase, getSettings } from '../db/supabase';
 import { upload } from '../middleware/upload';
 import { parseAttendanceExcel, inspectAttendanceExcel } from '../services/excelParser';
 import { calculateLOP } from '../services/lopService';
-import { matchEmployees } from '../services/employeeMatch';
 import { ensureAttendanceAlertNotificationsForUpload } from '../services/attendanceAlertService';
 import { writeAttendanceRecordBatch } from '../services/attendanceRecordWriter';
+import { syncEmployeesFromExcel } from '../services/employeeExcelImportService';
+import { classifyLateAttendanceStatus, isLateArrival, LATE_GRACE_MINUTES } from '../services/latePolicy';
 
 const router = Router();
 
@@ -32,32 +33,6 @@ function groupRecordsByMonth<T extends { recordDate?: string }>(records: T[], fa
     grouped.set(month, monthRecords);
   }
   return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
-}
-
-function timeToMinutes(value?: string | null): number | null {
-  if (!value) return null;
-  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?$/i);
-  if (!match) return null;
-  let hour = Number(match[1]);
-  const minute = Number(match[2]);
-  const ampm = match[3]?.toLowerCase();
-  if (Number.isNaN(hour) || Number.isNaN(minute) || hour > 24 || minute > 59) return null;
-  if (ampm === 'pm' && hour < 12) hour += 12;
-  if (ampm === 'am' && hour === 12) hour = 0;
-  return hour * 60 + minute;
-}
-
-function isNonWorkingStatus(status: string) {
-  return /^(absent|weekend|weekly off|holiday)$/i.test(String(status || '').trim());
-}
-
-function classifyLateStatus(status: string, timeIn?: string | null, shiftStart?: string | null) {
-  if (isNonWorkingStatus(status)) return status;
-  const inMinutes = timeToMinutes(timeIn);
-  if (inMinutes == null) return status;
-  const shiftStartMinutes = timeToMinutes(shiftStart) ?? 9 * 60;
-  const graceMinutes = 30;
-  return inMinutes > shiftStartMinutes + graceMinutes ? 'Late Coming' : status;
 }
 
 async function fetchAllRecords(uploadId: number, columns = '*'): Promise<any[]> {
@@ -100,6 +75,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     if (records.length === 0) { res.status(400).json({ error: 'No valid records found', warnings }); return; }
     const months = recordMonths(records);
     const uploadMonth = months[months.length - 1] || periodMonth;
+    const employeeSync = await syncEmployeesFromExcel(records);
+    warnings.push(...employeeSync.warnings);
 
     const { data: uploadRow, error: upErr } = await supabase
       .from('attendance_uploads')
@@ -108,47 +85,53 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .single();
     if (upErr) { res.status(500).json({ error: upErr.message }); return; }
 
-    // ── Link records to existing Employee Master rows (no employee creation) ──
-    const { find, warnings: matchWarnings, skipped } = await matchEmployees(records);
-    warnings.push(...matchWarnings);
-
+    // Link every attendance row to the Employee Master rows synchronized above.
     const recRows: any[] = [];
     for (const r of records) {
-      const emp = find(r);
+      const emp = employeeSync.find(r);
       if (!emp) continue;
       recRows.push({
         upload_id: uploadRow.id,
         employee_id: emp.id,
         record_date: r.recordDate,
-        status: classifyLateStatus(r.status, r.timeIn || null, emp.shift_start_time || null),
+        status: classifyLateAttendanceStatus(r.status, r.timeIn || null, emp.shift_start_time || null),
         time_in: r.timeIn || null,
         time_out: r.timeOut || null,
       });
     }
 
+    const recordBatches: any[][] = [];
+    for (let i = 0; i < recRows.length; i += 500) recordBatches.push(recRows.slice(i, i + 500));
     let inserted = 0;
-    for (let i = 0; i < recRows.length; i += 500) {
-      const batch = recRows.slice(i, i + 500);
-      try {
-        const result = await writeAttendanceRecordBatch(batch);
-        inserted += result.count;
-      } catch (error) {
-        warnings.push(`Record insert batch failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
+    for (let i = 0; i < recordBatches.length; i += 4) {
+      const results = await Promise.all(recordBatches.slice(i, i + 4).map(async batch => {
+        try { return await writeAttendanceRecordBatch(batch); }
+        catch (error) {
+          warnings.push(`Record insert batch failed: ${error instanceof Error ? error.message : String(error)}`);
+          return { count: 0 };
+        }
+      }));
+      inserted += results.reduce((sum, result) => sum + result.count, 0);
     }
-    if (skipped) warnings.push(`${skipped} records skipped (employee not in Employee Master)`);
-
     // Correct the upload row_count to the real inserted count.
     await supabase.from('attendance_uploads').update({ row_count: inserted }).eq('id', uploadRow.id);
 
-    let attendanceAlerts = { employeesChecked: 0, notificationsCreated: 0 };
-    try {
-      attendanceAlerts = await ensureAttendanceAlertNotificationsForUpload(uploadRow.id, uploadMonth);
-    } catch (alertError) {
-      warnings.push(`Attendance alerts could not be generated: ${alertError instanceof Error ? alertError.message : String(alertError)}`);
-    }
+    // Alerts are supplementary and can be slow for large workbooks. Generate
+    // them after returning the completed attendance import to the browser.
+    void ensureAttendanceAlertNotificationsForUpload(uploadRow.id, uploadMonth).catch(alertError => {
+      console.error(`Attendance alerts could not be generated for upload ${uploadRow.id}:`, alertError);
+    });
 
-    res.json({ uploadId: uploadRow.id, periodMonth: uploadMonth, rowCount: inserted, warnings, attendanceAlerts });
+    res.json({
+      uploadId: uploadRow.id,
+      periodMonth: uploadMonth,
+      rowCount: inserted,
+      employeeCreatedCount: employeeSync.createdCount,
+      employeeMatchedCount: employeeSync.matchedExistingCount,
+      warnings,
+      nameCollisionGroups: employeeSync.nameCollisionGroups,
+      attendanceAlerts: { queued: true },
+    });
   } catch (err) {
     console.error('Upload error:', err);
     res.status(500).json({ error: String(err) });
@@ -198,8 +181,8 @@ router.get('/summary/:uploadId', async (req: Request, res: Response) => {
       if (r.employee_id !== emp.id) continue;
       if (r.status === 'Absent') absent++;
       else if (r.status === 'Missed Swipe') missed++;
-      else if (r.status === 'Late Coming') late++;
       else if (r.status === 'Early Leaving') early++;
+      if (isLateArrival(r.status, r.time_in, emp.shift_start_time, LATE_GRACE_MINUTES)) late++;
     }
     const flaggedTotal = absent + missed + late + early;
     const salary = latestSalary[emp.id];

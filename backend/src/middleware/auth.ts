@@ -39,64 +39,51 @@ export function sha256(value: string) {
 }
 
 export async function adminAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  if (process.env.NODE_ENV !== 'production' && process.env.HRPULSE_DEV_AUTH_BYPASS === 'true') {
-    req.hrActor = {
-      authUserId: '00000000-0000-0000-0000-000000000000',
-      email: process.env.HRPULSE_BOOTSTRAP_ADMIN_EMAIL || 'local-admin@hrpulse.local',
-      role: 'super_admin',
-      organizationId: null,
-    };
-    next();
-    return;
-  }
+  try {
+    if (process.env.NODE_ENV !== 'production' && process.env.HRPULSE_DEV_AUTH_BYPASS === 'true') {
+      req.hrActor = {
+        authUserId: '00000000-0000-0000-0000-000000000000',
+        email: process.env.HRPULSE_BOOTSTRAP_ADMIN_EMAIL || 'local-admin@hrpulse.local',
+        role: 'super_admin',
+        organizationId: null,
+      };
+      next();
+      return;
+    }
 
-  const token = bearerToken(req);
-  if (!token) {
-    res.status(401).json({ error: { code: 'authentication_required', message: 'Sign in to HRPulse' } });
-    return;
-  }
+    const token = bearerToken(req);
+    if (!token) {
+      res.status(401).json({ error: { code: 'authentication_required', message: 'Sign in to HRPulse' } });
+      return;
+    }
 
-  const authResult = await supabase.auth.getUser(token);
-  const user = authResult.data?.user;
-  if (authResult.error || !user) {
-    res.status(401).json({ error: { code: 'invalid_session', message: 'HRPulse session is invalid or expired' } });
-    return;
-  }
+    const authResult = await supabase.auth.getUser(token);
+    const user = authResult.data?.user;
+    if (authResult.error || !user) {
+      res.status(401).json({ error: { code: 'invalid_session', message: 'HRPulse session is invalid or expired' } });
+      return;
+    }
 
-  let roleResult = await supabase
-    .from('hr_user_roles')
-    .select('role, organization_id, is_active')
-    .eq('auth_user_id', user.id)
-    .maybeSingle();
+    let roleResult = await supabase
+      .from('hr_user_roles')
+      .select('role, organization_id, is_active')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
 
-  const bootstrapEmail = String(process.env.HRPULSE_BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
-  const isBootstrapUser = Boolean(
-    bootstrapEmail && String(user.email || '').toLowerCase() === bootstrapEmail,
-  );
-  const roleSchemaMissing = Boolean(
-    roleResult.error
-    && /PGRST205|hr_user_roles.*schema cache|Could not find.*hr_user_roles|relation.*hr_user_roles.*does not exist/i
-      .test(`${roleResult.error.code || ''} ${roleResult.error.message || ''}`),
-  );
+    const bootstrapEmail = String(process.env.HRPULSE_BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
+    const isBootstrapUser = Boolean(
+      bootstrapEmail && String(user.email || '').toLowerCase() === bootstrapEmail,
+    );
+    const roleSchemaMissing = Boolean(
+      roleResult.error
+      && /PGRST205|hr_user_roles.*schema cache|Could not find.*hr_user_roles|relation.*hr_user_roles.*does not exist/i
+        .test(`${roleResult.error.code || ''} ${roleResult.error.message || ''}`),
+    );
 
-  // Keep Supabase authentication usable during first-time setup even when the
-  // additive role migration has not been applied yet. This is deliberately
-  // limited to the single authenticated email configured by the operator.
-  if (isBootstrapUser && roleSchemaMissing) {
-    req.hrActor = {
-      authUserId: user.id,
-      email: String(user.email || ''),
-      role: 'super_admin',
-      organizationId: null,
-    };
-    next();
-    return;
-  }
-
-  if (!roleResult.data && isBootstrapUser) {
-    const org = await supabase.from('organizations').select('id').eq('code', 'hope').maybeSingle();
-    if (org.error && /PGRST205|organizations.*schema cache|Could not find.*organizations|relation.*organizations.*does not exist/i
-      .test(`${org.error.code || ''} ${org.error.message || ''}`)) {
+    // Keep Supabase authentication usable during first-time setup even when the
+    // additive role migration has not been applied yet. This is deliberately
+    // limited to the single authenticated email configured by the operator.
+    if (isBootstrapUser && roleSchemaMissing) {
       req.hrActor = {
         authUserId: user.id,
         email: String(user.email || ''),
@@ -106,31 +93,55 @@ export async function adminAuth(req: AuthenticatedRequest, res: Response, next: 
       next();
       return;
     }
-    roleResult = await supabase
-      .from('hr_user_roles')
-      .upsert({
-        auth_user_id: user.id,
-        organization_id: org.data?.id || null,
-        role: 'super_admin',
-        is_active: true,
-      })
-      .select('role, organization_id, is_active')
-      .single();
-  }
 
-  const assignment = roleResult.data;
-  if (roleResult.error || !assignment || assignment.is_active !== true) {
-    res.status(403).json({ error: { code: 'hr_role_required', message: 'This account has no active HRPulse role' } });
-    return;
-  }
+    if (!roleResult.data && isBootstrapUser) {
+      const org = await supabase.from('organizations').select('id').eq('code', 'hope').maybeSingle();
+      if (org.error && /PGRST205|organizations.*schema cache|Could not find.*organizations|relation.*organizations.*does not exist/i
+        .test(`${org.error.code || ''} ${org.error.message || ''}`)) {
+        req.hrActor = {
+          authUserId: user.id,
+          email: String(user.email || ''),
+          role: 'super_admin',
+          organizationId: null,
+        };
+        next();
+        return;
+      }
+      roleResult = await supabase
+        .from('hr_user_roles')
+        .upsert({
+          auth_user_id: user.id,
+          organization_id: org.data?.id || null,
+          role: 'super_admin',
+          is_active: true,
+        })
+        .select('role, organization_id, is_active')
+        .single();
+    }
 
-  req.hrActor = {
-    authUserId: user.id,
-    email: String(user.email || ''),
-    role: assignment.role as HrRole,
-    organizationId: assignment.organization_id || null,
-  };
-  next();
+    const assignment = roleResult.data;
+    if (roleResult.error || !assignment || assignment.is_active !== true) {
+      res.status(403).json({ error: { code: 'hr_role_required', message: 'This account has no active HRPulse role' } });
+      return;
+    }
+
+    req.hrActor = {
+      authUserId: user.id,
+      email: String(user.email || ''),
+      role: assignment.role as HrRole,
+      organizationId: assignment.organization_id || null,
+    };
+    next();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[auth] Account verification failed:', message);
+    res.status(503).json({
+      error: {
+        code: 'auth_verification_failed',
+        message: 'HRPulse could not verify this account right now. Please retry shortly.',
+      },
+    });
+  }
 }
 
 export function requireRoles(...roles: HrRole[]) {
@@ -141,6 +152,19 @@ export function requireRoles(...roles: HrRole[]) {
     }
     next();
   };
+}
+
+// HRPulse administration currently runs without an interactive login. Keep a
+// stable internal actor so existing role checks and audit fields continue to
+// work, while connector and ESS routes retain their separate authentication.
+export function openAdminAccess(req: AuthenticatedRequest, _res: Response, next: NextFunction) {
+  req.hrActor = {
+    authUserId: '00000000-0000-0000-0000-000000000000',
+    email: 'open-access@hrpulse.local',
+    role: 'super_admin',
+    organizationId: null,
+  };
+  next();
 }
 
 export function adminWriteGuard(req: AuthenticatedRequest, res: Response, next: NextFunction) {

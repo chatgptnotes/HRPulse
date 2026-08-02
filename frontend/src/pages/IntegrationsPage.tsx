@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import * as api from '../api';
-import { useAuth } from '../contexts/AuthContext';
 
 type Connector = {
   id: string;
@@ -27,10 +26,9 @@ const statusTone: Record<string, string> = {
 
 export default function IntegrationsPage() {
   const qc = useQueryClient();
-  const auth = useAuth();
   const [direction, setDirection] = useState<'inbound' | 'outbound'>('outbound');
   const [notice, setNotice] = useState('');
-  const canManage = auth.actor?.role === 'super_admin';
+  const canManage = true;
   const overview = useQuery({
     queryKey: ['integration-overview'],
     queryFn: () => api.getIntegrationOverview().then(response => response.data as { connectors: Connector[] }),

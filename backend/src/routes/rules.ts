@@ -3,6 +3,8 @@ import { supabase, getSettings } from '../db/supabase';
 import { evaluateRulesForUpload } from '../services/ruleEngine';
 import { calculateLOP } from '../services/lopService';
 import { openRouterErrorResponse, openRouterModel, sendOpenRouterChat } from '../services/openRouterService';
+import { isLateArrival, LATE_GRACE_MINUTES } from '../services/latePolicy';
+import { isItDepartment, isSunday, qualifyingOvertimeHours } from '../services/payrollService';
 
 const router = Router();
 
@@ -240,6 +242,8 @@ router.post('/evaluate/:uploadId', async (req: Request, res: Response) => {
   const workingDays = parseFloat(settings['working_days'] || '26');
   const missedSwipeWeight = parseFloat(settings['missed_swipe_weight'] || '0.5');
   const halfDayHours = parseFloat(settings['half_day_hours'] || '4');
+  const lateGraceMinutes = parseFloat(settings['late_grace_minutes'] || String(LATE_GRACE_MINUTES));
+  const overtimeThresholdHours = parseFloat(settings['ot_threshold_hours'] || '2');
 
   const [y, m] = periodMonth.split('-').map(Number);
   const prevDate = new Date(y, m - 2, 1);
@@ -266,15 +270,21 @@ router.post('/evaluate/:uploadId', async (req: Request, res: Response) => {
       if (r.employee_id !== emp.id) continue;
       const inMin = timeToMinutes(r.time_in);
       const outMin = timeToMinutes(r.time_out);
-      const shiftEndMin = timeToMinutes(emp.shift_end_time) ?? 1080;
       const workingHours = inMin != null && outMin != null && outMin >= inMin ? (outMin - inMin) / 60 : 0;
-      const overtimeMinutes = emp.overtime_eligible === true && shiftEndMin != null && outMin != null ? outMin - shiftEndMin : 0;
-      const dayOvertime = overtimeMinutes > 120 ? overtimeMinutes / 60 : 0;
+      const overtimeStatus = isItDepartment(emp.department) && isSunday(r.record_date) ? 'Weekly Off' : r.status;
+      const dayOvertime = qualifyingOvertimeHours(
+        emp.overtime_eligible === true,
+        overtimeStatus,
+        r.time_in,
+        r.time_out,
+        emp.shift_end_time,
+        Number.isFinite(overtimeThresholdHours) ? overtimeThresholdHours : 2,
+      );
       if (r.status === 'Absent') absentDays++;
       else if (r.status === 'Missed Swipe') missedSwipeDays++;
       else if (r.status === 'Half Day' || r.status === 'Half' || (workingHours > 0 && workingHours < halfDayHours)) halfDays++;
-      else if (r.status === 'Late Coming') lateComingDays++;
       else if (r.status === 'Early Leaving') earlyLeavingDays++;
+      if (isLateArrival(r.status, r.time_in, emp.shift_start_time, Number.isFinite(lateGraceMinutes) ? lateGraceMinutes : LATE_GRACE_MINUTES)) lateComingDays++;
       if (dayOvertime > 0) {
         overtimeDays++;
         overtimeHours += dayOvertime;

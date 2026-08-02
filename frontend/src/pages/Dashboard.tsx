@@ -120,6 +120,8 @@ export default function Dashboard() {
   const [periodMonth, setPeriodMonth] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([]);
+  const [showAllWarnings, setShowAllWarnings] = useState(false);
+  const [acknowledgingCollision, setAcknowledgingCollision] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState<{ completed: number; total: number; current: string } | null>(null);
   const [applyingRules, setApplyingRules] = useState(false);
@@ -146,6 +148,10 @@ export default function Dashboard() {
 
   const { data: uploads = [] } = useQuery({ queryKey: ['uploads'], queryFn: () => api.getUploads().then(r => r.data) });
   const { data: employees = [] } = useQuery({ queryKey: ['employees'], queryFn: () => api.getEmployees().then(r => r.data as any[]) });
+  const { data: nameCollisionGroups = [] } = useQuery({
+    queryKey: ['employee-name-collisions'],
+    queryFn: () => api.getEmployeeNameCollisions().then(r => r.data),
+  });
   const { data: summary = [], refetch: refetchSummary } = useQuery({
     queryKey: ['summary', uploadId],
     queryFn: () => api.getAttendanceSummary(uploadId!).then(r => r.data as Summary[]),
@@ -176,6 +182,11 @@ export default function Dashboard() {
   const employeeMap = useMemo(() => new Map((employees as any[]).map(emp => [emp.id, emp])), [employees]);
   const sheetMap = useMemo(() => new Map((sheet as SheetEmployee[]).map(emp => [emp.employeeId, emp])), [sheet]);
   const getDraftForEmployee = (empId: number) => (drafts as any[]).find((d: any) => d.employeeId === empId);
+  const unresolvedNameCollisions = useMemo(
+    () => nameCollisionGroups.filter(group => !group.acknowledged),
+    [nameCollisionGroups],
+  );
+  const processingBlocked = unresolvedNameCollisions.length > 0;
 
   const onDrop = useCallback(async (files: File[]) => {
     if (!files[0]) return;
@@ -187,7 +198,9 @@ export default function Dashboard() {
       setPeriodMonth(data.periodMonth);
       setUploadWarnings(data.warnings || []);
       qc.invalidateQueries({ queryKey: ['uploads'] });
-      showToast(`Uploaded ${data.rowCount} records for ${data.periodMonth}`);
+      qc.invalidateQueries({ queryKey: ['employees'] });
+      qc.invalidateQueries({ queryKey: ['employee-name-collisions'] });
+      showToast(`Uploaded ${data.rowCount} records and added ${data.employeeCreatedCount || 0} employees`);
     } catch (err: any) {
       showToast(err?.response?.data?.error || 'Upload failed', 'err');
       setInspectFile(files[0]);
@@ -204,6 +217,10 @@ export default function Dashboard() {
 
   const handleGenerate = async () => {
     if (!uploadId) return;
+    if (processingBlocked) {
+      showToast('Confirm all same-name employees before processing attendance', 'err');
+      return;
+    }
     setGenerating(true);
     setGenProgress({ completed: 0, total: 0, current: 'Starting...' });
     try {
@@ -239,6 +256,10 @@ export default function Dashboard() {
 
   const handleApplyRules = async () => {
     if (!uploadId) return;
+    if (processingBlocked) {
+      showToast('Confirm all same-name employees before applying HR rules', 'err');
+      return;
+    }
     setApplyingRules(true);
     setRuleResult(null);
     try {
@@ -268,6 +289,10 @@ export default function Dashboard() {
 
   const handleDispatch = async () => {
     if (!uploadId) return;
+    if (processingBlocked) {
+      showToast('Confirm all same-name employees before dispatching emails', 'err');
+      return;
+    }
     const pendingDrafts = (drafts as any[]).filter(d => d.status === 'pending' && (selected.size === 0 || selected.has(d.id)));
     if (pendingDrafts.length === 0) {
       showToast('No pending drafts to dispatch', 'err');
@@ -366,6 +391,23 @@ export default function Dashboard() {
   const pendingEmails = (drafts as any[]).filter(d => d.status === 'pending').length;
   const sentEmails = (drafts as any[]).filter(d => d.status === 'sent').length;
   const duplicateEstimate = Math.max(0, uploadWarnings.filter(w => /duplicate/i.test(w)).length);
+  const verificationNeedsReview = uploadWarnings.length > 0 || processingBlocked;
+
+  const acknowledgeNameCollision = async (group: api.EmployeeNameCollisionGroup) => {
+    setAcknowledgingCollision(group.key);
+    try {
+      await api.acknowledgeEmployeeNameCollision(group);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['employee-name-collisions'] }),
+        qc.invalidateQueries({ queryKey: ['employees'] }),
+      ]);
+      showToast(`${group.displayName} confirmed as separate employees`);
+    } catch (err: any) {
+      showToast(err?.response?.data?.error || 'Could not save the confirmation', 'err');
+    } finally {
+      setAcknowledgingCollision(null);
+    }
+  };
 
   const exportCsv = () => {
     const headers = ['Employee ID', 'Employee Name', 'Email', 'Department', 'Shift', 'In Time', 'Out Time', 'Status', 'Absent', 'Missing Punch', 'Late', 'Draft Status'];
@@ -433,19 +475,48 @@ export default function Dashboard() {
               <p className="text-sm font-bold text-slate-800">{uploading ? 'Processing file...' : selectedUpload?.filename || 'Upload attendance file'}</p>
               <p className="mt-1 text-xs text-slate-400">{uploadId ? `${periodMonth} - ${selectedUpload?.rowCount || 0} records` : 'Drop Excel file here'}</p>
             </div>
-            <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-xs">
-              <span className="font-semibold text-emerald-700">Verification</span>
-              <span className="font-bold text-emerald-700">{uploadWarnings.length ? 'Review Needed' : uploadId ? 'Verified' : 'Waiting'}</span>
+            <div className={clsx('mt-3 flex items-center justify-between rounded-xl px-3 py-2 text-xs', verificationNeedsReview ? 'bg-amber-50' : 'bg-emerald-50')}>
+              <span className={clsx('font-semibold', verificationNeedsReview ? 'text-amber-700' : 'text-emerald-700')}>Verification</span>
+              <span className={clsx('font-bold', verificationNeedsReview ? 'text-amber-700' : 'text-emerald-700')}>
+                {verificationNeedsReview ? 'Review Needed' : uploadId ? 'Verified' : 'Waiting'}
+              </span>
             </div>
             {uploadWarnings.length > 0 && (
               <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">
-                {uploadWarnings.slice(0, 2).map((w, i) => <p key={i}>{w}</p>)}
-                {uploadWarnings.length > 2 && <p className="font-bold">+{uploadWarnings.length - 2} more notes</p>}
+                <div className="space-y-1">
+                  {uploadWarnings.slice(0, showAllWarnings ? uploadWarnings.length : 2).map((warning, index) => <p key={index}>{warning}</p>)}
+                </div>
+                {uploadWarnings.length > 2 && (
+                  <button type="button" onClick={() => setShowAllWarnings(value => !value)} className="mt-2 font-bold text-amber-800 underline underline-offset-2">
+                    {showAllWarnings ? 'Show fewer notes' : `View all ${uploadWarnings.length} notes`}
+                  </button>
+                )}
+              </div>
+            )}
+            {unresolvedNameCollisions.length > 0 && (
+              <div className="mt-2 space-y-2 rounded-xl border border-violet-200 bg-violet-50 p-2 text-xs text-violet-900">
+                <p className="font-bold">Confirm employees with the same name</p>
+                {unresolvedNameCollisions.map(group => (
+                  <div key={group.key} className="rounded-lg border border-violet-200 bg-white p-2">
+                    <p className="font-bold capitalize">{group.displayName}</p>
+                    <p className="mt-1 text-violet-700">Employee numbers: {group.employees.map(employee => employee.employeeNumber).join(', ')}</p>
+                    <button
+                      type="button"
+                      onClick={() => acknowledgeNameCollision(group)}
+                      disabled={acknowledgingCollision === group.key}
+                      className="mt-2 w-full rounded-lg bg-violet-600 px-2 py-1.5 font-bold text-white hover:bg-violet-700 disabled:opacity-50"
+                    >
+                      {acknowledgingCollision === group.key ? 'Saving…' : 'Confirm Different Employees'}
+                    </button>
+                  </div>
+                ))}
+                <p className="text-violet-700">Processing stays locked until every group is confirmed.</p>
               </div>
             )}
             <button
               onClick={handleGenerate}
-              disabled={!uploadId || generating}
+              disabled={!uploadId || generating || processingBlocked}
+              title={processingBlocked ? 'Confirm all same-name employee groups first' : undefined}
               className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-sm font-bold text-white shadow-lg shadow-indigo-100 transition hover:from-indigo-700 hover:to-purple-700 disabled:opacity-40"
             >
               <Icon name={generating ? 'sync' : 'auto_awesome'} className={clsx('text-base', generating && 'animate-spin')} />
@@ -457,17 +528,17 @@ export default function Dashboard() {
             <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">Workflow</p>
             <div className="space-y-3">
               <WorkflowStep label="Upload File" done={!!uploadId} active={!uploadId} />
-              <WorkflowStep label="Verify Data" done={!!uploadId && uploadWarnings.length === 0} active={!!uploadId && uploadWarnings.length > 0} />
-              <WorkflowStep label="Apply HR Rules" done={!!ruleResult || pendingEmails > 0 || sentEmails > 0} active={!!uploadId && !ruleResult} />
-              <WorkflowStep label="Calculate Attendance" done={summary.length > 0} active={!!uploadId && summary.length === 0} />
-              <WorkflowStep label="Ready to Dispatch" done={pendingEmails > 0 || sentEmails > 0} active={summary.length > 0 && pendingEmails === 0} />
+              <WorkflowStep label="Verify Data" done={!!uploadId && !verificationNeedsReview} active={!!uploadId && verificationNeedsReview} />
+              <WorkflowStep label="Apply HR Rules" done={!!ruleResult || pendingEmails > 0 || sentEmails > 0} active={!!uploadId && !ruleResult && !processingBlocked} />
+              <WorkflowStep label="Calculate Attendance" done={summary.length > 0} active={!!uploadId && summary.length === 0 && !processingBlocked} />
+              <WorkflowStep label="Ready to Dispatch" done={pendingEmails > 0 || sentEmails > 0} active={summary.length > 0 && pendingEmails === 0 && !processingBlocked} />
             </div>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
             <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">Quick Actions</p>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={handleApplyRules} disabled={!uploadId || applyingRules} className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 ring-1 ring-amber-100 transition hover:bg-amber-100 disabled:opacity-40">
+              <button onClick={handleApplyRules} disabled={!uploadId || applyingRules || processingBlocked} className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 ring-1 ring-amber-100 transition hover:bg-amber-100 disabled:opacity-40">
                 <Icon name={applyingRules ? 'sync' : 'gavel'} className={clsx('mb-1 block text-base', applyingRules && 'animate-spin')} /> Apply HR Rules
               </button>
               <button onClick={handleCheckNoPunch} disabled={!uploadId || checkingNoPunch} className="rounded-xl bg-orange-50 px-3 py-2 text-xs font-bold text-orange-800 ring-1 ring-orange-100 transition hover:bg-orange-100 disabled:opacity-40">
@@ -476,7 +547,7 @@ export default function Dashboard() {
               <button onClick={exportCsv} disabled={!filtered.length} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-100 transition hover:bg-slate-100 disabled:opacity-40">
                 <Icon name="download" className="mb-1 block text-base" /> Export Excel
               </button>
-              <button onClick={handleDispatch} disabled={sending || pendingEmails === 0} className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 ring-1 ring-emerald-100 transition hover:bg-emerald-100 disabled:opacity-40">
+              <button onClick={handleDispatch} disabled={sending || pendingEmails === 0 || processingBlocked} className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 ring-1 ring-emerald-100 transition hover:bg-emerald-100 disabled:opacity-40">
                 <Icon name={sending ? 'sync' : 'send'} className={clsx('mb-1 block text-base', sending && 'animate-spin')} /> Dispatch Emails
               </button>
             </div>

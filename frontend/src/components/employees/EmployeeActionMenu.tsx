@@ -1,19 +1,31 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
+import {
+  Bell,
+  CalendarCheck,
+  CircleDollarSign,
+  Ellipsis,
+  FileStack,
+  Pencil,
+  Trash2,
+  UserRound,
+  WalletCards,
+  type LucideIcon,
+} from 'lucide-react';
 
 export type EmployeeAction =
   | 'view' | 'edit' | 'notify' | 'attendance' | 'salary' | 'leave' | 'documents' | 'delete';
 
-const ITEMS: { key: EmployeeAction; label: string; icon: string; danger?: boolean }[] = [
-  { key: 'view', label: 'View Profile', icon: 'account_circle' },
-  { key: 'edit', label: 'Edit Employee', icon: 'edit' },
-  { key: 'notify', label: 'Notify Employee', icon: 'notifications' },
-  { key: 'attendance', label: 'Attendance', icon: 'event_available' },
-  { key: 'salary', label: 'Salary Details', icon: 'payments' },
-  { key: 'leave', label: 'Leave History', icon: 'event_busy' },
-  { key: 'documents', label: 'Documents', icon: 'folder' },
-  { key: 'delete', label: 'Delete', icon: 'delete_outline', danger: true },
+const ITEMS: { key: EmployeeAction; label: string; icon: LucideIcon; danger?: boolean; divider?: boolean }[] = [
+  { key: 'view', label: 'View profile', icon: UserRound },
+  { key: 'edit', label: 'Edit employee', icon: Pencil },
+  { key: 'notify', label: 'Notify employee', icon: Bell },
+  { key: 'attendance', label: 'Attendance', icon: CalendarCheck, divider: true },
+  { key: 'salary', label: 'Salary details', icon: CircleDollarSign },
+  { key: 'leave', label: 'Leave history', icon: WalletCards },
+  { key: 'documents', label: 'Documents', icon: FileStack },
+  { key: 'delete', label: 'Delete employee', icon: Trash2, danger: true, divider: true },
 ];
 
 interface Props {
@@ -82,10 +94,10 @@ export default function EmployeeActionMenu({ onAction }: Props) {
       <button
         ref={buttonRef}
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
-        className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+        className="rounded-lg border border-transparent p-2 text-slate-400 transition-colors hover:border-slate-200 hover:bg-white hover:text-slate-700"
         title="Actions"
       >
-        <span className="material-icons text-lg">more_vert</span>
+        <Ellipsis size={18} />
       </button>
       {open && createPortal(
         <>
@@ -93,7 +105,7 @@ export default function EmployeeActionMenu({ onAction }: Props) {
           <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
           <div
             ref={menuRef}
-            className="fixed w-52 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 z-50 animate-scale-in"
+            className="fixed z-50 w-56 rounded-xl border border-slate-200 bg-white py-1.5 shadow-[0_18px_48px_rgba(15,23,42,0.16)] animate-scale-in"
             style={{
               top: position?.top ?? 0,
               left: position?.left ?? 0,
@@ -101,19 +113,23 @@ export default function EmployeeActionMenu({ onAction }: Props) {
               visibility: position ? 'visible' : 'hidden',
             }}
           >
-            {ITEMS.map(it => (
-              <button
-                key={it.key}
-                onClick={(e) => { e.stopPropagation(); setOpen(false); onAction(it.key); }}
-                className={clsx(
-                  'w-full flex items-center gap-2.5 px-3.5 py-2 text-sm transition-colors text-left',
-                  it.danger ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50',
-                )}
-              >
-                <span className={clsx('material-icons text-base', it.danger ? 'text-red-400' : 'text-slate-400')}>{it.icon}</span>
-                {it.label}
-              </button>
-            ))}
+            {ITEMS.map(it => {
+              const Icon = it.icon;
+              return (
+                <div key={it.key} className={it.divider ? 'border-t border-slate-100 pt-1 mt-1' : ''}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpen(false); onAction(it.key); }}
+                    className={clsx(
+                      'flex w-full items-center gap-3 px-3.5 py-2 text-left text-[13px] font-medium transition-colors',
+                      it.danger ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50',
+                    )}
+                  >
+                    <Icon size={16} strokeWidth={1.8} className={it.danger ? 'text-red-500' : 'text-slate-400'} />
+                    {it.label}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </>,
         document.body,

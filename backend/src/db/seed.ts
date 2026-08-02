@@ -14,9 +14,9 @@ const DEFAULT_SETTINGS: [string, string][] = [
   ['missed_swipe_weight', '0.5'],
   ['standard_working_hours', '9'],
   ['half_day_hours', '4'],
-  ['late_grace_minutes', '15'],
+  ['late_grace_minutes', '30'],
   ['shift_start', '09:00'],
-  ['ot_threshold_hours', '9'],
+  ['ot_threshold_hours', '2'],
   ['ot_multiplier', '1.5'],
   ['late_penalty_days', '0'],
 ];
@@ -115,12 +115,12 @@ Unresolved requests beyond 5 working days escalate to HR Head.`,
 ### Standard Working Hours
 - Official start time: 9:00 AM
 - Official end time: 6:00 PM
-- Grace period: 15 minutes
+- Grace period: 30 minutes after the employee's assigned shift start
 
 ### Late Coming
-- More than 15 minutes after start = Late Coming
-- 3 late comings in a month = 0.5 day LOP
-- 6 late comings in a month = 1 day LOP
+- More than 30 minutes after shift start = Late Coming
+- Every 3 late comings in a month = 1 full duty day deduction
+- 3-5 late days = 1 day, 6-8 = 2 days, and 9-11 = 3 days
 
 ### Early Leaving
 - Leaving before official end time without approval
@@ -204,29 +204,29 @@ const DEFAULT_RULES = [
 
   // ── LATE COMING RULES ──
   {
-    name: 'Late Coming — Reminder (1–3 Times)',
-    description: 'Grace period is 15 minutes. 1–3 late arrivals per month trigger a courtesy reminder.',
+    name: 'Late Coming — Reminder (1–2 Times)',
+    description: 'The grace period is 30 minutes after the assigned shift start. One or two late arrivals trigger a courtesy reminder.',
     rule_type: 'late_coming',
-    conditions: { lateComingDays: { gte: 1, lte: 3 } },
-    actions: { templateType: 'initial', severity: 'notice', gracePeriodMinutes: 15 },
+    conditions: { lateComingDays: { gte: 1, lte: 2 } },
+    actions: { templateType: 'initial', severity: 'notice', gracePeriodMinutes: 30 },
     priority: 5,
     is_active: true,
   },
   {
-    name: 'Late Coming — Half-Day LOP Warning (4–6 Times)',
-    description: '4–6 late arrivals per month = 0.5 day Loss of Pay deduction per Dubai Government payroll policy.',
+    name: 'Late Coming — One-Day Deduction (3–5 Times)',
+    description: 'Three to five late arrivals in a month deduct one full duty day.',
     rule_type: 'late_coming',
-    conditions: { lateComingDays: { gte: 4, lte: 6 } },
-    actions: { templateType: 'reminder', severity: 'warning', lopDays: 0.5, notifyManager: true },
+    conditions: { lateComingDays: { gte: 3, lte: 5 } },
+    actions: { templateType: 'reminder', severity: 'warning', notifyManager: true },
     priority: 6,
     is_active: true,
   },
   {
-    name: 'Late Coming — Full-Day LOP + Formal Notice (7+ Times)',
-    description: '7 or more late arrivals per month = 1 full-day LOP deduction and formal written warning. Disciplinary risk.',
+    name: 'Late Coming — Repeated Duty Deduction (6+ Times)',
+    description: 'Six or more late arrivals deduct one duty day for every completed group of three late days and trigger a formal warning.',
     rule_type: 'late_coming',
-    conditions: { lateComingDays: { gte: 7 } },
-    actions: { templateType: 'escalation', severity: 'critical', lopDays: 1, notifyHRDirector: true, disciplinaryRisk: true },
+    conditions: { lateComingDays: { gte: 6 } },
+    actions: { templateType: 'escalation', severity: 'critical', notifyHRDirector: true, disciplinaryRisk: true },
     priority: 7,
     is_active: true,
   },

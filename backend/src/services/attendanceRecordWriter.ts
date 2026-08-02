@@ -20,12 +20,57 @@ function isMissingConflictConstraint(error: unknown) {
   return /no unique or exclusion constraint matching the ON CONFLICT specification/i.test(message);
 }
 
+function isMissingEnhancementColumn(error: unknown) {
+  const message = error instanceof Error ? error.message : String((error as any)?.message || error || '');
+  return /connector_id|source_type|source_record_id|source_version|source_updated_at|is_reversed/i.test(message)
+    && /attendance_records|schema cache|column|does not exist|could not find/i.test(message);
+}
+
+function legacyRows(rows: AttendanceRecordWriteRow[]) {
+  return rows.map(row => ({
+    upload_id: row.upload_id,
+    employee_id: row.employee_id,
+    record_date: row.record_date,
+    status: row.status,
+    time_in: row.time_in,
+    time_out: row.time_out,
+  }));
+}
+
 function uniqueRows(rows: AttendanceRecordWriteRow[]) {
   const byEmployeeDate = new Map<string, AttendanceRecordWriteRow>();
   for (const row of rows) {
     byEmployeeDate.set(`${row.employee_id}:${row.record_date}`, row);
   }
   return [...byEmployeeDate.values()];
+}
+
+let legacyAttendanceSchema: boolean | null = null;
+
+async function usesLegacyAttendanceSchema() {
+  if (legacyAttendanceSchema != null) return legacyAttendanceSchema;
+  const probe = await supabase.from('attendance_records')
+    .select('id, connector_id, source_type, source_record_id, source_version, source_updated_at, is_reversed')
+    .limit(1);
+  if (!probe.error) {
+    legacyAttendanceSchema = false;
+    return false;
+  }
+  if (isMissingEnhancementColumn(probe.error)) {
+    legacyAttendanceSchema = true;
+    return true;
+  }
+  throw new Error(probe.error.message);
+}
+
+async function writeLegacyBatch(rows: AttendanceRecordWriteRow[]) {
+  const compatibleBatch = legacyRows(rows);
+  const result = await supabase.from('attendance_records')
+    .upsert(compatibleBatch, { onConflict: 'employee_id,record_date' });
+  if (!result.error) return { count: compatibleBatch.length, usedCompatibilityMode: true };
+  if (!isMissingConflictConstraint(result.error)) throw new Error(result.error.message);
+  await replaceRowsByEmployeeDate(compatibleBatch);
+  return { count: compatibleBatch.length, usedCompatibilityMode: true };
 }
 
 async function replaceRowsByEmployeeDate(rows: AttendanceRecordWriteRow[]) {
@@ -62,6 +107,7 @@ export async function writeAttendanceRecordBatch(rows: AttendanceRecordWriteRow[
     is_reversed: row.is_reversed === true,
   }));
   if (!batch.length) return { count: 0, usedCompatibilityMode: false };
+  if (await usesLegacyAttendanceSchema()) return writeLegacyBatch(batch);
 
   const employeeIds = [...new Set(batch.map(row => row.employee_id))];
   const dates = [...new Set(batch.map(row => row.record_date))];
@@ -99,6 +145,10 @@ export async function writeAttendanceRecordBatch(rows: AttendanceRecordWriteRow[
     .upsert(batch, { onConflict: 'employee_id,record_date' });
 
   if (!error) return { count: batch.length, usedCompatibilityMode: false };
+  if (isMissingEnhancementColumn(error)) {
+    legacyAttendanceSchema = true;
+    return writeLegacyBatch(batch);
+  }
   if (!isMissingConflictConstraint(error)) throw new Error(error.message);
 
   await replaceRowsByEmployeeDate(batch);

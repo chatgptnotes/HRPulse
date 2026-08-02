@@ -15,8 +15,6 @@ import SopsPage from './pages/SopsPage';
 import AiInsightsPage from './pages/AiInsightsPage';
 import LeaveRequestsPage from './pages/LeaveRequestsPage';
 import IntegrationsPage from './pages/IntegrationsPage';
-import LoginPage from './pages/LoginPage';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
 
@@ -45,28 +43,15 @@ function AppShell() {
   );
 }
 
-function ProtectedApp() {
-  const auth = useAuth();
-  if (auth.loading) {
-    return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm font-semibold text-white">Loading secure HRPulse session…</div>;
-  }
-  if (!auth.session || !auth.actor) return <LoginPage />;
-  return (
-    <Routes>
-      <Route path="/landing" element={<LandingPage />} />
-      <Route path="/*" element={<AppShell />} />
-    </Routes>
-  );
-}
-
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <ProtectedApp />
-        </BrowserRouter>
-      </AuthProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Routes>
+          <Route path="/landing" element={<LandingPage />} />
+          <Route path="/*" element={<AppShell />} />
+        </Routes>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }

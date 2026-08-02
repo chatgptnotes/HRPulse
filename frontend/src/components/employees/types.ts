@@ -19,6 +19,25 @@ export interface Employee {
   createdAt: string;
 }
 
+export function isItEmployee(employee: Pick<Employee, 'department'>): boolean {
+  return String(employee.department || '').trim().toLowerCase() === 'it';
+}
+
+export function effectivePaidLeavePolicy(
+  employee: Pick<Employee, 'department' | 'paidLeavesEligible'>,
+  configuredItPaidLeaveDays = 2,
+) {
+  if (!isItEmployee(employee)) {
+    return { eligible: true, limit: 4, sundayIsWeeklyOff: false };
+  }
+  const eligible = employee.paidLeavesEligible === true;
+  return {
+    eligible,
+    limit: eligible ? Math.max(0, Number(configuredItPaidLeaveDays) || 0) : 0,
+    sundayIsWeeklyOff: true,
+  };
+}
+
 export type DrawerTab = 'overview' | 'salary' | 'attendance' | 'leave' | 'documents';
 
 // Deterministic gradient pick so the same person always gets the same colour.

@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { Employee } from './types';
+import { Employee, effectivePaidLeavePolicy } from './types';
 
 const DATE_LABEL = new Date().toISOString().slice(0, 10);
 
@@ -9,7 +9,7 @@ function timingLabel(e: Employee): string {
 }
 
 // Exports the given employees to a formatted Excel workbook and triggers a download.
-export function exportEmployeesCsv(employees: Employee[]): void {
+export function exportEmployeesCsv(employees: Employee[], configuredItPaidLeaveDays = 2): void {
   const rows = employees.map((e, index) => ({
     'S.No': index + 1,
     'Employee ID': e.employeeNumber || '',
@@ -24,7 +24,9 @@ export function exportEmployeesCsv(employees: Employee[]): void {
     Timing: timingLabel(e),
     'Monthly Salary': Number(e.monthlySalary) || 0,
     Status: e.status || '',
-    'Paid Leaves Eligible': e.paidLeavesEligible === false ? 'No' : 'Yes',
+    'Paid Leave Policy': effectivePaidLeavePolicy(e, configuredItPaidLeaveDays).eligible
+      ? `${effectivePaidLeavePolicy(e, configuredItPaidLeaveDays).limit} days / month`
+      : 'Not eligible',
     'Overtime Eligible': e.overtimeEligible ? 'Yes' : 'No',
   }));
 

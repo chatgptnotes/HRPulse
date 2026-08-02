@@ -75,6 +75,7 @@ export interface MatchedRuleEffect {
   effectType?: 'deduction' | 'allowance' | 'neutral';
   source?: 'salary_rule' | 'payroll_policy';
   policyDeductionAmount?: number;
+  policyAllowanceAmount?: number;
   dates?: string[];
 }
 
@@ -85,17 +86,45 @@ export interface SalaryRuleResult {
   matchedRules: MatchedRuleEffect[];
 }
 
+// The payroll engine already applies these two policies directly. Keeping an
+// identical custom salary effect would charge/pay the employee twice. The rule
+// may remain active for alerts and emails; only its duplicate money effect is
+// excluded from payroll.
+export function duplicatesBuiltInPayrollPolicy(rule: SalaryRule): boolean {
+  const hasOnlyDayDeduction = rule.deductDays === 1
+    && rule.deductAmount === 0
+    && rule.deductPercent === 0
+    && rule.allowanceAmount === 0
+    && rule.allowancePercent === 0
+    && !rule.overtimeHalfDayAllowance;
+  const duplicatesLatePolicy = hasOnlyDayDeduction
+    && rule.repeat
+    && Number(rule.conditions.lateComingDays?.gte) === 3;
+
+  const hasOnlyOvertimeAllowance = rule.deductDays === 0
+    && rule.deductAmount === 0
+    && rule.deductPercent === 0
+    && rule.allowanceAmount === 0
+    && rule.allowancePercent === 0
+    && rule.overtimeHalfDayAllowance;
+  const duplicatesOvertimePolicy = hasOnlyOvertimeAllowance
+    && rule.repeat
+    && Number(rule.conditions.overtimeDays?.gte) === 1;
+
+  return duplicatesLatePolicy || duplicatesOvertimePolicy;
+}
+
 // Build the attendance summary a rule is evaluated against, from raw day records.
 export function buildSummary(
-  days: Array<{ status: string; overtimeHours?: number }>,
+  days: Array<{ status: string; overtimeHours?: number; isLate?: boolean }>,
 ): AttendanceSummary {
   let absentDays = 0, lateComingDays = 0, missedSwipeDays = 0, earlyLeavingDays = 0, halfDays = 0, overtimeDays = 0, overtimeHours = 0;
   for (const d of days) {
     if (d.status === 'Absent') absentDays++;
-    else if (d.status === 'Late Coming') lateComingDays++;
     else if (d.status === 'Missed Swipe') missedSwipeDays++;
     else if (d.status === 'Early Leaving') earlyLeavingDays++;
     else if (d.status === 'Half Day' || d.status === 'Half') halfDays++;
+    if (d.isLate ?? d.status === 'Late Coming') lateComingDays++;
     const dayOvertime = Math.max(0, Number(d.overtimeHours) || 0);
     if (dayOvertime > 0) {
       overtimeDays++;
@@ -322,5 +351,57 @@ export function evaluateSalaryRules(
     deductionAmount: Math.round(deductionAmount),
     allowanceAmount: Math.round(allowanceAmount),
     matchedRules,
+  };
+}
+
+/**
+ * Evaluate salary rules for payroll without charging a built-in policy twice.
+ * Duplicate rules are returned as visible policy references with their included
+ * amount, while only distinct custom effects change salary totals.
+ */
+export function evaluatePayrollSalaryRules(
+  summary: AttendanceSummary,
+  department: string | null,
+  shift: string | null,
+  rules: SalaryRule[],
+  monthlySalary: number,
+  dailySalary: number,
+): SalaryRuleResult {
+  const supplemental = evaluateSalaryRules(
+    summary,
+    department,
+    shift,
+    rules.filter(rule => !duplicatesBuiltInPayrollPolicy(rule)),
+    monthlySalary,
+    dailySalary,
+  );
+  const included = evaluateSalaryRules(
+    summary,
+    department,
+    shift,
+    rules.filter(duplicatesBuiltInPayrollPolicy),
+    monthlySalary,
+    dailySalary,
+  );
+  const includedRules = included.matchedRules.map(rule => {
+    const isAllowance = rule.allowanceAmount > 0;
+    return {
+      ...rule,
+      label: `${rule.label} — already included in the ${isAllowance ? 'overtime pay' : 'late deduction'} shown above`,
+      reason: `This rule matched, but its money effect is already included in the built-in ${isAllowance ? 'overtime' : 'late-coming'} calculation. No extra amount is applied.`,
+      policyDeductionAmount: isAllowance ? 0 : rule.deductionAmount,
+      policyAllowanceAmount: isAllowance ? rule.allowanceAmount : 0,
+      deductionAmount: 0,
+      allowanceAmount: 0,
+      amount: 0,
+      source: 'payroll_policy' as const,
+      effectType: 'neutral' as const,
+    };
+  });
+  return {
+    deductDays: supplemental.deductDays,
+    deductionAmount: supplemental.deductionAmount,
+    allowanceAmount: supplemental.allowanceAmount,
+    matchedRules: [...supplemental.matchedRules, ...includedRules],
   };
 }

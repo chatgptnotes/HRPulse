@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS employees (
   designation     text,
   shift_start_time text,
   shift_end_time   text,
+  same_name_collision_confirmed_at timestamptz,
+  same_name_collision_confirmed_by text,
   joining_date    timestamptz,
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now()

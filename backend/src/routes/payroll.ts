@@ -11,13 +11,19 @@ import {
   PayrollResult,
   PayrollRow,
   PayrollSettings,
+  allocatePaidLeaveFractions,
+  qualifyingOvertimeHours,
+  isItDepartment,
+  isSunday,
 } from '../services/payrollService';
 import { matchEmployees } from '../services/employeeMatch';
-import { loadSalaryRules, buildSummary, evaluateSalaryRules, MatchedRuleEffect, SalaryRule } from '../services/salaryRules';
+import { loadSalaryRules, buildSummary, evaluatePayrollSalaryRules, MatchedRuleEffect, SalaryRule } from '../services/salaryRules';
 import { ensureAttendanceAlertNotificationsForUpload } from '../services/attendanceAlertService';
 import { writeAttendanceRecordBatch } from '../services/attendanceRecordWriter';
 import { AuthenticatedRequest, requireRoles } from '../middleware/auth';
 import { enqueueConnectorEvent } from '../services/connectorService';
+import { loadApprovedLeaveDays, overlayApprovedLeave } from '../services/paidLeaveService';
+import { isLateArrival } from '../services/latePolicy';
 
 const router = Router();
 
@@ -28,7 +34,7 @@ let employeeExtraColsKnown = false;
 let hasExtraCols = false;
 
 const EMP_BASE_COLS = 'id, employee_number, name, email, department, designation';
-const EMP_FULL_COLS_WITHOUT_OVERTIME = EMP_BASE_COLS + ', shift, shift_end_time, monthly_salary, paid_leaves_eligible';
+const EMP_FULL_COLS_WITHOUT_OVERTIME = EMP_BASE_COLS + ', shift, shift_start_time, shift_end_time, monthly_salary, paid_leaves_eligible';
 const EMP_FULL_COLS = EMP_FULL_COLS_WITHOUT_OVERTIME + ', overtime_eligible';
 
 function recordMonths(records: Array<{ recordDate?: string }>) {
@@ -115,20 +121,27 @@ function timeToMinutes(value: unknown): number | null {
   return null;
 }
 
-function buildRuleDays(days: any[], settings: PayrollSettings, shiftEndTime?: string | null, overtimeEligible = false) {
-  const shiftEndMin = timeToMinutes(shiftEndTime) ?? 1080;
+function buildRuleDays(days: any[], settings: PayrollSettings, department?: string | null, shiftStartTime?: string | null, shiftEndTime?: string | null, overtimeEligible = false) {
   return days.map((day) => {
     const inMin = timeToMinutes(day.timeIn);
     const outMin = timeToMinutes(day.timeOut);
     const workingHours = inMin != null && outMin != null && outMin >= inMin ? (outMin - inMin) / 60 : 0;
     const rawStatus = String(day.status || '');
-    const status = workingHours > 0 && workingHours < settings.halfDayHours && !/absent|missed|missing|week|holiday|leave/i.test(rawStatus)
+    const paidLeaveFraction = Math.max(0, Number(day.approvedPaidLeaveFraction) || 0);
+    const unpaidLeaveFraction = Math.max(0, Number(day.approvedUnpaidLeaveFraction) || 0);
+    let status = workingHours > 0 && workingHours < settings.halfDayHours && !/absent|missed|missing|week|holiday|leave/i.test(rawStatus)
       ? 'Half Day'
       : rawStatus;
-    const overtimeMinutes = overtimeEligible && shiftEndMin != null && outMin != null ? outMin - shiftEndMin : 0;
+    if (paidLeaveFraction >= 1) status = 'Paid Leave';
+    else if (paidLeaveFraction > 0 && workingHours > 0) status = 'Present';
+    else if (paidLeaveFraction > 0 || (unpaidLeaveFraction > 0 && unpaidLeaveFraction < 1)) status = 'Half Day';
+    else if (unpaidLeaveFraction >= 1) status = 'Absent';
+    if (isItDepartment(department) && isSunday(day.recordDate)) status = 'Weekly Off';
+    else if (!isItDepartment(department) && /^(weekend|weak end|weekly off)$/i.test(status)) status = 'Absent';
     return {
       status,
-      overtimeHours: overtimeMinutes > 120 ? overtimeMinutes / 60 : 0,
+      isLate: isLateArrival(status, day.timeIn, shiftStartTime || settings.shiftStart, settings.lateGraceMinutes),
+      overtimeHours: qualifyingOvertimeHours(overtimeEligible, status, day.timeIn, day.timeOut, shiftEndTime, settings.otThresholdHours),
     };
   });
 }
@@ -253,6 +266,7 @@ function applyRulesToRow(
   days: any[],
   department: string | null,
   shift: string | null,
+  shiftStartTime: string | null,
   shiftEndTime: string | null,
   overtimeEligible: boolean,
   monthlySalary: number,
@@ -260,7 +274,7 @@ function applyRulesToRow(
   settings: PayrollSettings,
 ): MatchedRuleEffect[] {
   if (!rules.length || row.dailySalary <= 0) return [];
-  const res = evaluateSalaryRules(buildSummary(buildRuleDays(days, settings, shiftEndTime, overtimeEligible)), department, shift, rules, monthlySalary, row.dailySalary);
+  const res = evaluatePayrollSalaryRules(buildSummary(buildRuleDays(days, settings, department, shiftStartTime, shiftEndTime, overtimeEligible)), department, shift, rules, monthlySalary, row.dailySalary);
   row.ruleDeductionDays = res.deductDays;
   row.ruleDeductionAmount = res.deductionAmount;
   row.ruleAllowanceAmount = res.allowanceAmount;
@@ -275,6 +289,12 @@ function applyRulesToRow(
 async function computeForUpload(uploadId: number): Promise<PayrollResult | null> {
   const settingsRaw = await getSettings();
   const settings = parseSettings(settingsRaw);
+  const { data: uploadRow, error: uploadError } = await supabase
+    .from('attendance_uploads')
+    .select('period_month')
+    .eq('id', uploadId)
+    .single();
+  if (uploadError) throw new Error(uploadError.message);
 
   // Page through all records (PostgREST caps a single SELECT at 1000 rows).
   const recs: any[] = [];
@@ -294,8 +314,10 @@ async function computeForUpload(uploadId: number): Promise<PayrollResult | null>
 
   const employeeIds = [...new Set(recs.map((r) => r.employee_id))];
   if (employeeIds.length === 0) return { rows: [], summary: summarize([]) };
+  const periodMonth = String((uploadRow as any)?.period_month || recs[0]?.record_date || '').slice(0, 7);
 
   const employees = await selectEmployeesByIds(employeeIds);
+  const approvedLeaveByEmployee = await loadApprovedLeaveDays(employeeIds, periodMonth);
   // Salary comes from the Employee Master (employees.monthly_salary). We still
   // read salary_configs as a transitional fallback for records imported before
   // the master was populated.
@@ -330,46 +352,20 @@ async function computeForUpload(uploadId: number): Promise<PayrollResult | null>
 
   const rows: PayrollRow[] = employees.map((emp: any) => {
     const monthly = Number(emp.monthly_salary) || latestSalary[emp.id]?.amount || 0;
-    const paidLeaveDays = emp.paid_leaves_eligible === true ? settings.paidLeaveDays : 0;
-    const filledDays = fillNotAttemptedMonth(byEmployee[emp.id] || []);
-    const row = computeEmployeePayroll(emp, filledDays, monthly, paidLeaveDays, settings);
-    applyRulesToRow(row, filledDays, emp.department || null, emp.shift || null, emp.shift_end_time || null, emp.overtime_eligible === true, monthly, salaryRules, settings);
+    const paidLeaveDays = settings.paidLeaveDays;
+    const filledDays = overlayApprovedLeave(
+      fillNotAttemptedMonth(byEmployee[emp.id] || [], periodMonth),
+      approvedLeaveByEmployee[emp.id] || [],
+      emp.department,
+    );
+    const allocatedDays = allocatePaidLeaveFractions(emp, filledDays, paidLeaveDays, settings);
+    const row = computeEmployeePayroll(emp, allocatedDays, monthly, paidLeaveDays, settings);
+    applyRulesToRow(row, allocatedDays, emp.department || null, emp.shift || null, emp.shift_start_time || null, emp.shift_end_time || null, emp.overtime_eligible === true, monthly, salaryRules, settings);
     return row;
   });
 
   rows.sort((a, b) => b.netSalary - a.netSalary);
   return { rows, summary: summarize(rows) };
-}
-
-type PayrollInputDay = {
-  recordDate: string;
-  status: string;
-  timeIn: string | null;
-  timeOut: string | null;
-  approvedLeaveFraction?: number;
-  approvedLeavePaid?: boolean;
-};
-
-function overlayApprovedLeave(
-  days: PayrollInputDay[],
-  leaveDays: Array<{ date: string; fraction: number; paid: boolean }>,
-  department?: string | null,
-) {
-  if (!leaveDays.length) return days;
-  const byDate = new Map<string, PayrollInputDay>(days.map(day => [day.recordDate, day]));
-  for (const leave of leaveDays) {
-    const current = byDate.get(leave.date) || { recordDate: leave.date, status: 'Not Attempted', timeIn: null, timeOut: null };
-    const isHoliday = String(current.status || '').toLowerCase() === 'holiday';
-    const date = new Date(`${leave.date}T00:00:00Z`);
-    const isItWeeklyOff = String(department || '').trim().toLowerCase() === 'it' && date.getUTCDay() === 0;
-    if (isHoliday || isItWeeklyOff) continue;
-    byDate.set(leave.date, {
-      ...current,
-      approvedLeaveFraction: leave.fraction,
-      approvedLeavePaid: leave.paid,
-    });
-  }
-  return [...byDate.values()].sort((a, b) => a.recordDate.localeCompare(b.recordDate));
 }
 
 export async function computeForMonth(periodMonth: string): Promise<PayrollResult | null> {
@@ -380,7 +376,6 @@ export async function computeForMonth(periodMonth: string): Promise<PayrollResul
   const next = mon === 12
     ? `${year + 1}-01-01`
     : `${year}-${String(mon + 1).padStart(2, '0')}-01`;
-  const monthEnd = `${periodMonth}-${String(new Date(Date.UTC(year, mon, 0)).getUTCDate()).padStart(2, '0')}`;
 
   const recs: any[] = [];
   let offset = 0;
@@ -427,55 +422,20 @@ export async function computeForMonth(periodMonth: string): Promise<PayrollResul
     });
   }
 
-  const approvedLeaveByEmployee: Record<number, Array<{ date: string; fraction: number; paid: boolean }>> = {};
-  const leaveResult = await supabase
-    .from('leave_requests')
-    .select('employee_id, start_date, end_date, start_day_part, end_day_part, leave_request_days(leave_date, day_fraction, is_paid)')
-    .eq('status', 'approved')
-    .lte('start_date', monthEnd)
-    .gte('end_date', `${periodMonth}-01`);
-  if (!leaveResult.error) {
-    for (const leave of leaveResult.data || []) {
-      const explicit = Array.isArray(leave.leave_request_days) ? leave.leave_request_days : [];
-      if (explicit.length) {
-        for (const day of explicit) {
-          if (!String(day.leave_date).startsWith(periodMonth)) continue;
-          if (!approvedLeaveByEmployee[leave.employee_id]) approvedLeaveByEmployee[leave.employee_id] = [];
-          approvedLeaveByEmployee[leave.employee_id].push({
-            date: day.leave_date,
-            fraction: Number(day.day_fraction) || 1,
-            paid: day.is_paid !== false,
-          });
-        }
-        continue;
-      }
-      const cursor = new Date(`${leave.start_date}T00:00:00Z`);
-      const end = new Date(`${leave.end_date}T00:00:00Z`);
-      while (cursor <= end) {
-        const date = cursor.toISOString().slice(0, 10);
-        if (date.startsWith(periodMonth)) {
-          let fraction = 1;
-          if (date === leave.start_date && leave.start_day_part && leave.start_day_part !== 'full') fraction = 0.5;
-          if (date === leave.end_date && leave.end_day_part && leave.end_day_part !== 'full') fraction = 0.5;
-          if (!approvedLeaveByEmployee[leave.employee_id]) approvedLeaveByEmployee[leave.employee_id] = [];
-          approvedLeaveByEmployee[leave.employee_id].push({ date, fraction, paid: true });
-        }
-        cursor.setUTCDate(cursor.getUTCDate() + 1);
-      }
-    }
-  }
+  const approvedLeaveByEmployee = await loadApprovedLeaveDays(employeeIds, periodMonth);
 
   const salaryRules = await loadSalaryRules();
   const rows: PayrollRow[] = employees.map((emp: any) => {
     const monthly = Number(emp.monthly_salary) || latestSalary[emp.id]?.amount || 0;
-    const paidLeaveDays = emp.paid_leaves_eligible === true ? settings.paidLeaveDays : 0;
+    const paidLeaveDays = settings.paidLeaveDays;
     const filledDays = overlayApprovedLeave(
       fillNotAttemptedMonth(byEmployee[emp.id] || [], periodMonth),
       approvedLeaveByEmployee[emp.id] || [],
       emp.department,
     );
-    const row = computeEmployeePayroll(emp, filledDays, monthly, paidLeaveDays, settings);
-    applyRulesToRow(row, filledDays, emp.department || null, emp.shift || null, emp.shift_end_time || null, emp.overtime_eligible === true, monthly, salaryRules, settings);
+    const allocatedDays = allocatePaidLeaveFractions(emp, filledDays, paidLeaveDays, settings);
+    const row = computeEmployeePayroll(emp, allocatedDays, monthly, paidLeaveDays, settings);
+    applyRulesToRow(row, allocatedDays, emp.department || null, emp.shift || null, emp.shift_start_time || null, emp.shift_end_time || null, emp.overtime_eligible === true, monthly, salaryRules, settings);
     return row;
   });
 
@@ -552,6 +512,9 @@ router.post('/process', upload.single('file'), async (req: Request, res: Respons
         try {
           const result = await writeAttendanceRecordBatch(batch);
           recordCount += result.count;
+          if (result.usedCompatibilityMode && !warnings.some(w => w.includes('compatibility mode'))) {
+            warnings.push('Attendance saved in compatibility mode because optional connector columns are not installed yet.');
+          }
         } catch (error) {
           warnings.push(`Record insert batch for ${month} failed: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -659,18 +622,25 @@ router.get('/employee/:uploadId/:employeeId', async (req: Request, res: Response
     const sorted = ((salaries || []) as any[]).slice().sort((a: any, b: any) => (b.effective_month || '').localeCompare(a.effective_month || ''));
     const fallbackMonthly = sorted.length > 0 ? sorted[0].basic_salary : 0;
     const monthly = Number((emp as any).monthly_salary) || fallbackMonthly || 0;
-    const paidLeaveDays = (emp as any).paid_leaves_eligible === true ? settings.paidLeaveDays : 0;
+    const paidLeaveDays = settings.paidLeaveDays;
 
     const rawDays = ((records || []) as any[]).map((r) => ({
       recordDate: r.record_date, status: r.status, timeIn: r.time_in || null, timeOut: r.time_out || null,
     }));
-    const days = fillNotAttemptedMonth(rawDays, (uploadRow as any)?.period_month || undefined);
+    const periodMonth = String((uploadRow as any)?.period_month || rawDays[0]?.recordDate || '').slice(0, 7);
+    const approvedLeaveByEmployee = await loadApprovedLeaveDays([employeeId], periodMonth);
+    const days = overlayApprovedLeave(
+      fillNotAttemptedMonth(rawDays, periodMonth || undefined),
+      approvedLeaveByEmployee[employeeId] || [],
+      (emp as any).department,
+    );
 
-    const row = computeEmployeePayroll(emp as any, days, monthly, paidLeaveDays, settings);
+    const allocatedDays = allocatePaidLeaveFractions(emp as any, days, paidLeaveDays, settings);
+    const row = computeEmployeePayroll(emp as any, allocatedDays, monthly, paidLeaveDays, settings);
     // Apply salary rules (department-scoped) so the breakdown matches the table.
     const salaryRules = await loadSalaryRules();
-    const matched = applyRulesToRow(row, days, (emp as any).department || null, (emp as any).shift || null, (emp as any).shift_end_time || null, (emp as any).overtime_eligible === true, monthly, salaryRules, settings);
-    const detail = buildEmployeeDetail(row, emp as any, days, settings, matched);
+    const matched = applyRulesToRow(row, allocatedDays, (emp as any).department || null, (emp as any).shift || null, (emp as any).shift_start_time || null, (emp as any).shift_end_time || null, (emp as any).overtime_eligible === true, monthly, salaryRules, settings);
+    const detail = buildEmployeeDetail(row, emp as any, allocatedDays, settings, matched);
     res.json({ ...detail, periodMonth: (uploadRow as any)?.period_month || null });
   } catch (err) {
     res.status(500).json({ error: String(err) });

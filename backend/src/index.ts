@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import { seedDatabase } from './db/seed';
 import attendanceRoutes from './routes/attendance';
 import emailRoutes from './routes/emails';
 import employeeRoutes from './routes/employees';
@@ -19,8 +18,7 @@ import notificationRoutes from './routes/notifications';
 import { checkOpenRouterHealth, openRouterErrorResponse } from './services/openRouterService';
 import integrationRoutes from './routes/integrations';
 import integrationAdminRoutes from './routes/integrationAdmin';
-import authRoutes from './routes/auth';
-import { adminAuth, adminWriteGuard, AuthenticatedRequest } from './middleware/auth';
+import { openAdminAccess, AuthenticatedRequest } from './middleware/auth';
 
 const backendEnvPath = path.basename(process.cwd()).toLowerCase() === 'backend'
   ? path.resolve(process.cwd(), '.env')
@@ -52,9 +50,6 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true }));
 
-// Seed DB on startup
-seedDatabase().catch(console.error);
-
 // Legacy photos remain static. Employee documents are no longer exposed here;
 // private storage/download routes enforce authorization and scan state.
 app.use('/uploads/photos', express.static(path.join(process.cwd(), 'uploads', 'photos')));
@@ -63,10 +58,9 @@ app.use('/uploads/photos', express.static(path.join(process.cwd(), 'uploads', 'p
 app.use('/api/integrations/v1', integrationRoutes);
 app.use('/api/ess', essRoutes);
 
-// All HR administration APIs below require a Supabase session and HR role.
-app.use('/api', adminAuth);
-app.use('/api', adminWriteGuard);
-app.use('/api/auth', authRoutes);
+// HR administration is open-access. Connector and ESS APIs above retain their
+// own machine/employee authentication.
+app.use('/api', openAdminAccess);
 app.use('/api/integration-admin', integrationAdminRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/emails', emailRoutes);
@@ -81,7 +75,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString(), db: 'supabase' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString(), db: 'supabase-dispatcher' }));
 
 app.get('/health/openrouter', async (_req, res) => {
   try {
@@ -92,15 +86,18 @@ app.get('/health/openrouter', async (_req, res) => {
   }
 });
 
-// Serve frontend in production (cwd = repo root on Railway)
-if (process.env.NODE_ENV === 'production') {
+// Serve frontend only from the long-running combined deployment. Vercel hosts
+// this Express app as an API function and the Vite frontend as a separate app.
+if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
   const frontendPath = path.join(process.cwd(), 'frontend/dist');
   app.use(express.static(frontendPath));
   app.get('*', (_req, res) => res.sendFile(path.join(frontendPath, 'index.html')));
 }
 
-app.listen(PORT, () => {
-  console.log(`HRPulse backend running on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`HRPulse backend running on http://localhost:${PORT}`);
+  });
+}
 
 export default app;

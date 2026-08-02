@@ -80,9 +80,9 @@ export default function EmployeeFormModal({ editing, suggestedId, isPending, onC
         }
       : { ...EMPTY_FORM, employeeNumber: suggestedId },
   );
-
+  const isItDepartment = String(form.department || '').trim().toLowerCase() === 'it';
   function handleSubmit() {
-    if (!form.name?.trim()) return;
+    if (!form.name?.trim() || !form.employeeNumber?.trim()) return;
     onSubmit(form);
   }
 
@@ -103,7 +103,7 @@ export default function EmployeeFormModal({ editing, suggestedId, isPending, onC
             <input value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               placeholder="Full name" className={inputCls} />
           </Field>
-          <Field label="Employee ID">
+          <Field label="Employee ID" required>
             <input value={form.employeeNumber || ''} onChange={e => setForm(f => ({ ...f, employeeNumber: e.target.value }))}
               placeholder="e.g. EMP001" className={inputCls} />
           </Field>
@@ -152,24 +152,30 @@ export default function EmployeeFormModal({ editing, suggestedId, isPending, onC
               <option value="Inactive">Inactive</option>
             </select>
           </Field>
-          <Field label="Eligible for 2 Paid Leaves" full>
-            <div className="flex gap-2">
-              {(['Yes', 'No'] as const).map(opt => {
-                const val = opt === 'Yes';
-                const active = (form.paidLeavesEligible !== false) === val;
-                return (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, paidLeavesEligible: val }))}
-                    className={clsx('flex-1 border rounded-lg py-2 text-sm font-medium transition-colors',
-                      active ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50')}
-                  >
-                    {opt}
-                  </button>
-                );
-              })}
-            </div>
+          <Field label="Eligible for Paid Leaves" full>
+            {isItDepartment ? (
+              <div className="flex gap-2">
+                {(['Yes', 'No'] as const).map(opt => {
+                  const val = opt === 'Yes';
+                  const active = (form.paidLeavesEligible !== false) === val;
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, paidLeavesEligible: val }))}
+                      className={clsx('flex-1 border rounded-lg py-2 text-sm font-medium transition-colors',
+                        active ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50')}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                Automatically eligible for 4 paid leaves per month. Sundays are excluded.
+              </div>
+            )}
           </Field>
           <Field label="Eligible for Overtime" full>
             <div className="flex gap-2">
@@ -198,7 +204,7 @@ export default function EmployeeFormModal({ editing, suggestedId, isPending, onC
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!form.name?.trim() || isPending}
+            disabled={!form.name?.trim() || !form.employeeNumber?.trim() || isPending}
             className="flex-1 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-60 transition-all"
             style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}
           >

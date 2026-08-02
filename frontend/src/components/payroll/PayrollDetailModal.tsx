@@ -17,6 +17,7 @@ const CLASS_LABEL: Record<string, string> = {
   present: 'Present',
   half: 'Half Day',
   absent: 'Absent',
+  paid_leave: 'Paid Leave',
   weekly_off: 'Weekly Off',
   holiday: 'Holiday',
   missing_punch: 'Missing Punch',
@@ -29,6 +30,7 @@ const CLASS_COLOR: Record<string, string> = {
   present: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
   half: 'bg-amber-50 text-amber-700 ring-amber-100',
   absent: 'bg-rose-50 text-rose-700 ring-rose-100',
+  paid_leave: 'bg-indigo-50 text-indigo-700 ring-indigo-100',
   weekly_off: 'bg-slate-100 text-slate-600 ring-slate-200',
   holiday: 'bg-slate-100 text-slate-600 ring-slate-200',
   missing_punch: 'bg-orange-50 text-orange-700 ring-orange-100',
@@ -148,6 +150,7 @@ function DeductionDateDetails({
   reason,
   totalAmount,
   tone = 'slate',
+  fractions,
 }: {
   label: string;
   dates?: string[];
@@ -155,6 +158,7 @@ function DeductionDateDetails({
   reason: string;
   totalAmount?: number;
   tone?: 'slate' | 'red' | 'blue' | 'amber';
+  fractions?: Record<string, number>;
 }) {
   const list = Array.isArray(dates) ? dates.filter(Boolean) : [];
   if (list.length === 0) {
@@ -165,7 +169,7 @@ function DeductionDateDetails({
       </div>
     );
   }
-  const total = totalAmount ?? Math.round(list.length * amountPerDate);
+  const total = totalAmount ?? Math.round(list.reduce((sum, date) => sum + amountPerDate * (fractions?.[date] ?? 1), 0));
   const isDeductionTone = tone === 'red' || tone === 'amber';
   return (
     <div className="border-b border-slate-100 py-2 last:border-0">
@@ -176,7 +180,10 @@ function DeductionDateDetails({
         </span>
       </div>
       <div className="space-y-1.5">
-        {list.map(date => (
+        {list.map(date => {
+          const fraction = fractions?.[date] ?? 1;
+          const dateAmount = Math.round(amountPerDate * fraction);
+          return (
           <div
             key={date}
             className={clsx(
@@ -188,12 +195,13 @@ function DeductionDateDetails({
             )}
           >
             <span className="font-bold">{formatDateChip(date)}</span>
-            <span className="text-slate-600">{reason}</span>
-            <span className={clsx('font-bold', amountPerDate > 0 && isDeductionTone ? 'text-rose-600' : 'text-emerald-700')}>
-              INR {fmtINR(amountPerDate)}
+            <span className="text-slate-600">{reason}{fraction !== 1 ? ` (${fraction} day)` : ''}</span>
+            <span className={clsx('font-bold', dateAmount > 0 && isDeductionTone ? 'text-rose-600' : 'text-emerald-700')}>
+              INR {fmtINR(dateAmount)}
             </span>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -222,7 +230,7 @@ function LateDeductionDetails({ dates, dailySalary, deductionDays, totalAmount }
                 <div>
                   <p className="font-bold text-amber-800">Deduction group {index + 1}</p>
                   <p className="mt-1 text-slate-600">{group.map(formatDateChip).join(', ')}</p>
-                  <p className="mt-1 text-slate-500">Every 3 late arrivals = 1 salary day deduction</p>
+                  <p className="mt-1 text-slate-500">Late after assigned shift start + 30 minutes. Every 3 late arrivals = 1 salary day deduction.</p>
                 </div>
                 <span className="font-bold text-rose-600">INR {fmtINR(dailySalary)}</span>
               </div>
@@ -246,23 +254,29 @@ function RuleMoneyDetails({ rule }: { rule: any }) {
   const deducted = ruleDeductionAmount(rule);
   const policyDeducted = rulePolicyDeductionAmount(rule);
   const allowance = ruleAllowanceAmount(rule);
-  const amount = deducted || policyDeducted || allowance || 0;
+  const policyAllowance = Number(rule?.policyAllowanceAmount) || 0;
+  const includedPolicyAmount = policyDeducted || policyAllowance;
+  const amount = deducted || allowance || includedPolicyAmount || 0;
   const amountPerDate = Number(rule?.amountPerDate) || Math.round(amount / Math.max(1, dates.length || Number(rule?.repeatCount) || 1));
-  const isAllowance = allowance > 0;
+  const isAllowance = allowance > 0 || policyAllowance > 0;
+  const isIncludedPolicy = includedPolicyAmount > 0 && deducted === 0 && allowance === 0;
   const threshold = Math.max(0, Number(rule?.threshold) || 0);
   const repeatCount = Math.max(0, Number(rule?.repeatCount) || 0);
-  const shouldGroupDeduction = !isAllowance && deducted > 0 && threshold > 1 && repeatCount > 0;
+  const shouldGroupDeduction = !isAllowance && (deducted > 0 || policyDeducted > 0) && threshold > 1 && repeatCount > 0;
   const groupedDates = shouldGroupDeduction
     ? Array.from({ length: repeatCount }, (_, index) => dates.slice(index * threshold, index * threshold + threshold).filter(Boolean))
     : [];
   const warningDates = shouldGroupDeduction ? dates.slice(repeatCount * threshold) : [];
-  const totalLabel = isAllowance ? `+ INR ${fmtINR(allowance)}` : amount > 0 ? `- INR ${fmtINR(amount)}` : 'INR 0';
+  const totalLabel = isIncludedPolicy
+    ? `Included INR ${fmtINR(includedPolicyAmount)}`
+    : isAllowance ? `+ INR ${fmtINR(allowance)}` : amount > 0 ? `- INR ${fmtINR(amount)}` : 'INR 0';
 
   return (
     <div className={clsx(
       'rounded-xl border px-3 py-2 text-xs',
-      isAllowance && 'border-emerald-100 bg-emerald-50 text-emerald-800',
-      !isAllowance && amount > 0 && 'border-rose-100 bg-rose-50 text-rose-800',
+      isAllowance && !isIncludedPolicy && 'border-emerald-100 bg-emerald-50 text-emerald-800',
+      isIncludedPolicy && 'border-amber-200 bg-amber-50 text-amber-900',
+      !isAllowance && !isIncludedPolicy && amount > 0 && 'border-rose-100 bg-rose-50 text-rose-800',
       !isAllowance && amount === 0 && 'border-slate-200 bg-slate-50 text-slate-700',
     )}>
       <div className="flex items-start justify-between gap-3">
@@ -270,7 +284,7 @@ function RuleMoneyDetails({ rule }: { rule: any }) {
           <p className="font-bold">{rule.name}</p>
           <p className="mt-1 text-slate-600">{rule.reason || rule.label || 'Salary rule matched this employee.'}</p>
         </div>
-        <span className={clsx('shrink-0 font-bold', isAllowance ? 'text-emerald-700' : amount > 0 ? 'text-rose-600' : 'text-slate-500')}>
+        <span className={clsx('shrink-0 font-bold', isIncludedPolicy ? 'text-amber-700' : isAllowance ? 'text-emerald-700' : amount > 0 ? 'text-rose-600' : 'text-slate-500')}>
           {totalLabel}
         </span>
       </div>
@@ -286,7 +300,9 @@ function RuleMoneyDetails({ rule }: { rule: any }) {
                   <p className="mt-1 text-slate-600">{group.map(formatDateChip).join(', ')}</p>
                   <p className="mt-1 text-slate-500">{threshold} matching dates = one salary effect</p>
                 </div>
-                <span className="font-bold text-rose-600">- INR {fmtINR(Math.round(deducted / Math.max(1, repeatCount)))}</span>
+                <span className={clsx('font-bold', isIncludedPolicy ? 'text-amber-700' : 'text-rose-600')}>
+                  {isIncludedPolicy ? 'Included ' : '- '}INR {fmtINR(Math.round(amount / Math.max(1, repeatCount)))}
+                </span>
               </div>
             </div>
           ))}
@@ -302,8 +318,8 @@ function RuleMoneyDetails({ rule }: { rule: any }) {
             <div key={date} className="grid grid-cols-[72px_1fr_auto] items-center gap-2 rounded-lg bg-white/80 px-2 py-1.5">
               <span className="font-bold">{formatDateChip(date)}</span>
               <span className="text-slate-600">{rule.reason || 'Rule matched on this date'}</span>
-              <span className={clsx('font-bold', isAllowance ? 'text-emerald-700' : amountPerDate > 0 ? 'text-rose-600' : 'text-slate-500')}>
-                {isAllowance ? '+' : amountPerDate > 0 ? '-' : ''} INR {fmtINR(amountPerDate)}
+              <span className={clsx('font-bold', isIncludedPolicy ? 'text-amber-700' : isAllowance ? 'text-emerald-700' : amountPerDate > 0 ? 'text-rose-600' : 'text-slate-500')}>
+                {isIncludedPolicy ? 'Included' : isAllowance ? '+' : amountPerDate > 0 ? '-' : ''} INR {fmtINR(amountPerDate)}
               </span>
             </div>
           ))}
@@ -317,7 +333,27 @@ function RuleMoneyDetails({ rule }: { rule: any }) {
 
 function NetSalaryDateDetails({ detail, days }: { detail: any; days: any[] }) {
   const dailySalary = Math.round(Number(detail?.dailySalary) || 0);
-  const paidLeaveDates = Array.isArray(detail?.paidLeaveDates) ? detail.paidLeaveDates : [];
+  const paidLeaveDetailRows = Array.isArray(detail?.paidLeaveDetails) ? detail.paidLeaveDetails : [];
+  const paidLeaveDates = Array.from(new Set([
+    ...(Array.isArray(detail?.paidLeaveDates) ? detail.paidLeaveDates : []),
+    ...paidLeaveDetailRows
+      .filter((item: any) => Number(item?.fraction) > 0)
+      .map((item: any) => String(item.date).slice(0, 10)),
+    ...days
+      .filter(day => Number(day?.paidLeaveFraction) > 0)
+      .map(day => String(day.date).slice(0, 10)),
+  ])).sort();
+  const paidLeaveFractions = Object.fromEntries(
+    [
+      ...days.map(day => [String(day?.date || '').slice(0, 10), Number(day?.paidLeaveFraction) || 0]),
+      ...paidLeaveDetailRows.map((item: any) => [String(item.date).slice(0, 10), Number(item.fraction) || 0]),
+    ].filter(([date, fraction]) => Boolean(date) && Number(fraction) > 0),
+  );
+  const paidLeaveDaysFromDates = paidLeaveDates.reduce(
+    (sum, date) => sum + (paidLeaveFractions[date] ?? 1),
+    0,
+  );
+  const paidLeaveDays = Number(detail?.paidLeave) || paidLeaveDaysFromDates;
   const paidAttendanceDates = days
     .filter(day => {
       const classification = displayClassification(day);
@@ -330,7 +366,7 @@ function NetSalaryDateDetails({ detail, days }: { detail: any; days: any[] }) {
   const holidayDates = days
     .filter(day => displayClassification(day) === 'holiday')
     .map(day => String(day.date).slice(0, 10));
-  const paidDateCount = paidAttendanceDates.length + paidLeaveDates.length + weeklyOffDates.length + holidayDates.length;
+  const paidDateCount = paidAttendanceDates.length + paidLeaveDays + weeklyOffDates.length + holidayDates.length;
   const paidDayAmount = paidDateCount * dailySalary;
 
   return (
@@ -350,12 +386,13 @@ function NetSalaryDateDetails({ detail, days }: { detail: any; days: any[] }) {
         tone="blue"
       />
       <DeductionDateDetails
-        label={`Paid leave dates (${paidLeaveDates.length} days)`}
+        label={`Paid leave dates (${paidLeaveDays} days used)`}
         dates={paidLeaveDates}
         amountPerDate={dailySalary}
-        reason="Paid leave allowance, no deduction"
-        totalAmount={paidLeaveDates.length * dailySalary}
+        reason="Monthly paid leave allowance"
+        totalAmount={paidLeaveDays * dailySalary}
         tone="blue"
+        fractions={paidLeaveFractions}
       />
       <DeductionDateDetails
         label={`Paid weekly off dates (${weeklyOffDates.length} days)`}
@@ -571,6 +608,7 @@ function monthDays(periodMonth?: string, days: any[] = []) {
 }
 
 function displayClassification(day: any) {
+  if (day?.classification === 'paid_leave') return 'paid_leave';
   return String(day?.rawStatus || '').toLowerCase() === 'not attempted' ? 'not_uploaded' : day?.classification;
 }
 
@@ -657,6 +695,8 @@ export default function PayrollDetailModal({ uploadId, employeeId, employeeName,
     { label: 'Professional Tax', value: d?.professionalTax || 0 },
   ];
   const reasons = deductionReasons(d);
+  const visibleRuleDeductions = (Array.isArray(d?.matchedRules) ? d.matchedRules : [])
+    .filter((rule: any) => ruleDeductionAmount(rule) > 0 || rulePolicyDeductionAmount(rule) > 0);
   const fullMonthDays = monthDays(d?.periodMonth, Array.isArray(d?.days) ? d.days : []);
 
   return (
@@ -743,6 +783,9 @@ export default function PayrollDetailModal({ uploadId, employeeId, employeeName,
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   <Stat label="Present" value={d.presentDays} tone="text-emerald-700" />
                   <Stat label="Paid Leaves" value={d.paidLeave || 0} tone="text-indigo-700" />
+                  <Stat label="Paid Leave Limit" value={d.paidLeaveLimit ?? 0} tone="text-indigo-700" />
+                  <Stat label="Paid Leave Remaining" value={d.paidLeaveRemaining ?? 0} tone="text-indigo-700" />
+                  <Stat label="Approved but Unpaid" value={d.unpaidApprovedLeave || 0} tone="text-rose-700" />
                   <Stat label="Half Days" value={d.halfDays} tone="text-amber-700" />
                   <Stat label="Absences" value={d.totalAbsentDays ?? d.absentDays} tone="text-rose-700" />
                   <Stat label="Unpaid Absences" value={d.absentDays} tone="text-rose-700" />
@@ -811,23 +854,23 @@ export default function PayrollDetailModal({ uploadId, employeeId, employeeName,
                       totalAmount={reasons.lateDeduction}
                     />
                   )}
-                  <Row
-                    label={reasons.ruleDeductionLabel}
-                    value={`INR ${fmtINR(reasons.ruleDeduction)}`}
-                    tone={reasons.ruleDeduction ? 'red' : 'default'}
-                    onClick={() => setShowRuleDetails(open => !open)}
-                    actionLabel={showRuleDetails ? 'Hide details' : 'View details'}
-                  />
-                  {showRuleDetails && (
-                    <div className="border-b border-slate-100 py-2 last:border-0">
-                      {Array.isArray(d.matchedRules) && d.matchedRules.length > 0 ? (
-                        <div className="space-y-1.5">
-                          {d.matchedRules.map((rule: any) => <RuleMoneyDetails key={rule.id || rule.name} rule={rule} />)}
+                  {(reasons.ruleDeduction > 0 || visibleRuleDeductions.length > 0) && (
+                    <>
+                      <Row
+                        label={reasons.ruleDeduction > 0 ? reasons.ruleDeductionLabel : 'Applied rule details (included above)'}
+                        value={reasons.ruleDeduction > 0 ? `INR ${fmtINR(reasons.ruleDeduction)}` : 'No extra deduction'}
+                        tone={reasons.ruleDeduction > 0 ? 'red' : 'default'}
+                        onClick={() => setShowRuleDetails(open => !open)}
+                        actionLabel={showRuleDetails ? 'Hide details' : 'View details'}
+                      />
+                      {showRuleDetails && (
+                        <div className="border-b border-slate-100 py-2 last:border-0">
+                          <div className="space-y-1.5">
+                            {visibleRuleDeductions.map((rule: any) => <RuleMoneyDetails key={rule.id || rule.name} rule={rule} />)}
+                          </div>
                         </div>
-                      ) : (
-                        <p className="text-xs font-semibold text-slate-500">No salary rule matched this employee.</p>
                       )}
-                    </div>
+                    </>
                   )}
                   <Row
                     label={reasons.halfDayLabel}

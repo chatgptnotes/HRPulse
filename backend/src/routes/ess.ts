@@ -6,16 +6,25 @@ import {
   computeEmployeePayroll,
   parseSettings,
   PayrollRow,
+  PayrollSettings,
+  allocatePaidLeaveFractions,
+  isPayrollDay,
+  paidLeavePolicyForEmployee,
+  qualifyingOvertimeHours,
+  isItDepartment,
+  isSunday,
 } from '../services/payrollService';
 import {
   buildSummary,
-  evaluateSalaryRules,
+  evaluatePayrollSalaryRules,
   loadSalaryRules,
   MatchedRuleEffect,
   SalaryRule,
 } from '../services/salaryRules';
 import { insertHrNotification, upsertHrNotification } from '../services/hrNotificationService';
 import { createEmployeeDocumentSignedUrl, employeeDocumentUpload, listEmployeeDocuments, saveEmployeeDocument } from '../services/employeeDocumentService';
+import { loadApprovedLeaveDays, overlayApprovedLeave } from '../services/paidLeaveService';
+import { isLateArrival } from '../services/latePolicy';
 
 const router = Router();
 
@@ -535,22 +544,29 @@ function timeToMinutes(value: unknown): number | null {
   return null;
 }
 
-function buildRuleDays(days: any[], employee: EssEmployee) {
-  const shiftEndMin = timeToMinutes(employee.shift_end_time) ?? 1080;
+function buildRuleDays(days: any[], employee: EssEmployee, settings: PayrollSettings) {
   const overtimeEligible = employee.overtime_eligible === true;
   return days.map((day) => {
-    const outMin = timeToMinutes(day.timeOut);
-    const overtimeMinutes = overtimeEligible && shiftEndMin != null && outMin != null ? outMin - shiftEndMin : 0;
+    const paidLeaveFraction = Math.max(0, Number(day.approvedPaidLeaveFraction) || 0);
+    const unpaidLeaveFraction = Math.max(0, Number(day.approvedUnpaidLeaveFraction) || 0);
+    let status = day.status;
+    if (paidLeaveFraction >= 1) status = 'Paid Leave';
+    else if (paidLeaveFraction > 0 && timeToMinutes(day.timeIn) != null) status = 'Present';
+    else if (paidLeaveFraction > 0 || (unpaidLeaveFraction > 0 && unpaidLeaveFraction < 1)) status = 'Half Day';
+    else if (unpaidLeaveFraction >= 1) status = 'Absent';
+    if (isItDepartment(employee.department) && isSunday(day.recordDate)) status = 'Weekly Off';
+    else if (!isItDepartment(employee.department) && /^(weekend|weak end|weekly off)$/i.test(status)) status = 'Absent';
     return {
-      status: day.status,
-      overtimeHours: overtimeMinutes > 120 ? overtimeMinutes / 60 : 0,
+      status,
+      isLate: isLateArrival(status, day.timeIn, employee.shift_start_time || settings.shiftStart, settings.lateGraceMinutes),
+      overtimeHours: qualifyingOvertimeHours(overtimeEligible, status, day.timeIn, day.timeOut, employee.shift_end_time, settings.otThresholdHours),
     };
   });
 }
 
-function applyRulesToRow(row: PayrollRow, days: any[], employee: EssEmployee, monthlySalary: number, rules: SalaryRule[]): MatchedRuleEffect[] {
+function applyRulesToRow(row: PayrollRow, days: any[], employee: EssEmployee, monthlySalary: number, rules: SalaryRule[], settings: PayrollSettings): MatchedRuleEffect[] {
   if (!rules.length || row.dailySalary <= 0) return [];
-  const res = evaluateSalaryRules(buildSummary(buildRuleDays(days, employee)), employee.department || null, employee.shift || null, rules, monthlySalary, row.dailySalary);
+  const res = evaluatePayrollSalaryRules(buildSummary(buildRuleDays(days, employee, settings)), employee.department || null, employee.shift || null, rules, monthlySalary, row.dailySalary);
   row.ruleDeductionDays = res.deductDays;
   row.ruleDeductionAmount = res.deductionAmount;
   row.ruleAllowanceAmount = res.allowanceAmount;
@@ -561,17 +577,27 @@ function applyRulesToRow(row: PayrollRow, days: any[], employee: EssEmployee, mo
 }
 
 async function payrollDetail(employee: EssEmployee, uploadId: number) {
-  const [settingsRaw, days, monthlySalary, rules] = await Promise.all([
+  const [settingsRaw, days, monthlySalary, rules, upload] = await Promise.all([
     getSettings(),
     recordsForUpload(employee.id, uploadId),
     salaryForEmployee(employee),
     loadSalaryRules().catch(() => []),
+    supabase.from('attendance_uploads').select('period_month').eq('id', uploadId).single(),
   ]);
   const settings = parseSettings(settingsRaw);
-  const paidLeaveDays = employee.paid_leaves_eligible === true ? settings.paidLeaveDays : 0;
-  const row = computeEmployeePayroll(employee as any, days, monthlySalary, paidLeaveDays, settings);
-  const matched = applyRulesToRow(row, days, employee, monthlySalary, rules);
-  return buildEmployeeDetail(row, employee, days, settings, matched);
+  if (upload.error) throw new Error(upload.error.message);
+  const month = String((upload.data as any)?.period_month || days[0]?.recordDate || '').slice(0, 7);
+  const approvedLeaveByEmployee = await loadApprovedLeaveDays([employee.id], month);
+  const filledDays = overlayApprovedLeave(
+    fillNotAttemptedMonth(days, month),
+    approvedLeaveByEmployee[employee.id] || [],
+    employee.department,
+  );
+  const paidLeaveDays = settings.paidLeaveDays;
+  const allocatedDays = allocatePaidLeaveFractions(employee, filledDays, paidLeaveDays, settings);
+  const row = computeEmployeePayroll(employee as any, allocatedDays, monthlySalary, paidLeaveDays, settings);
+  const matched = applyRulesToRow(row, allocatedDays, employee, monthlySalary, rules, settings);
+  return buildEmployeeDetail(row, employee, allocatedDays, settings, matched);
 }
 
 async function payrollDetailForMonth(employee: EssEmployee, month: string) {
@@ -583,11 +609,17 @@ async function payrollDetailForMonth(employee: EssEmployee, month: string) {
   ]);
   if (!days.length) return null;
   const settings = parseSettings(settingsRaw);
-  const paidLeaveDays = employee.paid_leaves_eligible === true ? settings.paidLeaveDays : 0;
-  const filledDays = fillNotAttemptedMonth(days, month);
-  const row = computeEmployeePayroll(employee as any, filledDays, monthlySalary, paidLeaveDays, settings);
-  const matched = applyRulesToRow(row, filledDays, employee, monthlySalary, rules);
-  return buildEmployeeDetail(row, employee, filledDays, settings, matched);
+  const approvedLeaveByEmployee = await loadApprovedLeaveDays([employee.id], month);
+  const paidLeaveDays = settings.paidLeaveDays;
+  const filledDays = overlayApprovedLeave(
+    fillNotAttemptedMonth(days, month),
+    approvedLeaveByEmployee[employee.id] || [],
+    employee.department,
+  );
+  const allocatedDays = allocatePaidLeaveFractions(employee, filledDays, paidLeaveDays, settings);
+  const row = computeEmployeePayroll(employee as any, allocatedDays, monthlySalary, paidLeaveDays, settings);
+  const matched = applyRulesToRow(row, allocatedDays, employee, monthlySalary, rules, settings);
+  return buildEmployeeDetail(row, employee, allocatedDays, settings, matched);
 }
 
 function mapAttendanceRecord(r: any, halfDayHours = 4) {
@@ -608,6 +640,10 @@ function summarizeAttendance(records: any[], workingDaysSetting: number, halfDay
     absent: 0,
     paidLeaves: 0,
     unpaidLeaves: 0,
+    unpaidApprovedLeaves: 0,
+    paidLeaveEligible: false,
+    paidLeaveLimit: 0,
+    paidLeaveRemaining: 0,
     halfDay: 0,
     lateCount: 0,
     missingPunches: 0,
@@ -701,6 +737,8 @@ router.use(essAuth);
 
 router.get('/profile', async (req: EssRequest, res: Response) => {
   const emp = req.essEmployee!;
+  const settings = parseSettings(await getSettings());
+  const paidLeavePolicy = paidLeavePolicyForEmployee(emp, settings.paidLeaveDays);
   await audit(req, 'profile.read', 'success');
   res.json({
     id: emp.id,
@@ -715,6 +753,9 @@ router.get('/profile', async (req: EssRequest, res: Response) => {
     shiftEndTime: emp.shift_end_time || '',
     joiningDate: emp.joining_date || null,
     photoUrl: emp.photo_url || null,
+    paidLeavesEligible: paidLeavePolicy.eligible,
+    paidLeaveLimit: paidLeavePolicy.limit,
+    sundayIsWeeklyOff: paidLeavePolicy.sundayIsWeeklyOff,
   });
 });
 
@@ -801,14 +842,19 @@ router.get('/attendance/monthly', async (req: EssRequest, res: Response) => {
     const month = String(req.query.month || currentMonth());
     const settings = parseSettings(await getSettings());
     const records = await allAttendanceRecords(req.essEmployee!.id, month);
-    const summary = summarizeAttendance(records, settings.workingDays, settings.halfDayHours);
+    const payrollRecords = records.filter(record => isPayrollDay(record.record_date));
+    const summary = summarizeAttendance(payrollRecords, settings.workingDays, settings.halfDayHours);
     const payrollDetail = await payrollDetailForMonth(req.essEmployee!, month);
     if (payrollDetail) {
       summary.overtimeHours = payrollDetail.overtimeHours;
       summary.paidLeaves = payrollDetail.paidLeave || 0;
       summary.unpaidLeaves = payrollDetail.absentDays || 0;
+      summary.unpaidApprovedLeaves = payrollDetail.unpaidApprovedLeave || 0;
+      summary.paidLeaveEligible = payrollDetail.paidLeaveEligible;
+      summary.paidLeaveLimit = payrollDetail.paidLeaveLimit;
+      summary.paidLeaveRemaining = payrollDetail.paidLeaveRemaining;
     }
-    await ensureAlertNotifications(req.essEmployee!, month, records, summary).catch(() => []);
+    await ensureAlertNotifications(req.essEmployee!, month, payrollRecords, summary).catch(() => []);
     await audit(req, 'attendance.monthly.read', 'success', { month });
     res.json({ month, ...summary });
   } catch (err: any) {
@@ -863,6 +909,11 @@ router.get('/payroll/current', async (req: EssRequest, res: Response) => {
       payableDays: detail.payableDays,
       workingDays: detail.workingDays,
       presentDays: detail.presentDays,
+      paidLeaves: detail.paidLeave,
+      paidLeaveEligible: detail.paidLeaveEligible,
+      paidLeaveLimit: detail.paidLeaveLimit,
+      paidLeaveRemaining: detail.paidLeaveRemaining,
+      unpaidApprovedLeaves: detail.unpaidApprovedLeave,
       absentDays: detail.absentDays,
       absentDeduction: detail.absentDeduction,
       halfDays: detail.halfDays,
@@ -909,6 +960,11 @@ router.get('/payroll/history', async (req: EssRequest, res: Response) => {
         payableDays: detail.payableDays,
         workingDays: detail.workingDays,
         halfDays: detail.halfDays,
+        paidLeaves: detail.paidLeave,
+        paidLeaveEligible: detail.paidLeaveEligible,
+        paidLeaveLimit: detail.paidLeaveLimit,
+        paidLeaveRemaining: detail.paidLeaveRemaining,
+        unpaidApprovedLeaves: detail.unpaidApprovedLeave,
         absentDeduction: detail.absentDeduction,
         halfDayDeduction: detail.halfDayDeduction,
         overtimeHours: detail.overtimeHours,
@@ -945,9 +1001,10 @@ router.get('/payslips/:periodMonth', async (req: EssRequest, res: Response) => {
 
 router.get('/leaves', async (req: EssRequest, res: Response) => {
   try {
-    const [{ data: balances, error: bErr }, { data: requests, error: rErr }] = await Promise.all([
+    const [{ data: balances, error: bErr }, { data: requests, error: rErr }, settingsRaw] = await Promise.all([
       supabase.from('leave_balances').select('*').eq('employee_id', req.essEmployee!.id),
       supabase.from('leave_requests').select('*').eq('employee_id', req.essEmployee!.id).order('created_at', { ascending: false }),
+      getSettings(),
     ]);
     if ((bErr && isMissingRelation(bErr.message)) || (rErr && isMissingRelation(rErr.message))) {
       res.status(503).json({ error: 'Leave management is not configured in HRPulse yet' });
@@ -956,7 +1013,14 @@ router.get('/leaves', async (req: EssRequest, res: Response) => {
     if (bErr) throw new Error(bErr.message);
     if (rErr) throw new Error(rErr.message);
     await audit(req, 'leaves.read', 'success');
+    const payrollSettings = parseSettings(settingsRaw);
+    const paidLeavePolicy = paidLeavePolicyForEmployee(req.essEmployee!, payrollSettings.paidLeaveDays);
     res.json({
+      policy: {
+        paidLeaveEligible: paidLeavePolicy.eligible,
+        monthlyPaidLeaveLimit: paidLeavePolicy.limit,
+        sundayIsWeeklyOff: paidLeavePolicy.sundayIsWeeklyOff,
+      },
       balances: (balances || []).map((b: any) => ({
         leaveType: b.leave_type,
         openingBalance: Number(b.opening_balance) || 0,
@@ -1138,8 +1202,9 @@ router.get('/alerts', async (req: EssRequest, res: Response) => {
     const month = String(req.query.month || currentMonth());
     const settings = parseSettings(await getSettings());
     const records = await allAttendanceRecords(req.essEmployee!.id, month);
-    const summary = summarizeAttendance(records, settings.workingDays, settings.halfDayHours);
-    const alerts = await ensureAlertNotifications(req.essEmployee!, month, records, summary).catch(() => []);
+    const payrollRecords = records.filter(record => isPayrollDay(record.record_date));
+    const summary = summarizeAttendance(payrollRecords, settings.workingDays, settings.halfDayHours);
+    const alerts = await ensureAlertNotifications(req.essEmployee!, month, payrollRecords, summary).catch(() => []);
     await audit(req, 'alerts.read', 'success', { month });
     res.json(alerts);
   } catch (err: any) {

@@ -2,7 +2,6 @@ import { NavLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { getLeaveRequests } from '../../api';
-import { useAuth } from '../../contexts/AuthContext';
 
 const links = [
   { to: '/', label: 'Dispatcher', icon: 'send', end: true },
@@ -28,7 +27,6 @@ interface Props {
 }
 
 export default function Sidebar({ collapsed, onToggle }: Props) {
-  const auth = useAuth();
   const { data: pendingLeaves = [] } = useQuery({
     queryKey: ['leave-requests', 'sidebar-pending'],
     queryFn: () => getLeaveRequests({ status: 'pending' }).then(r => r.data),
@@ -145,15 +143,6 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             )}
           </NavLink>
         ))}
-        {!collapsed && (
-          <div className="px-3 pt-3">
-            <p className="truncate text-xs font-semibold text-slate-300">{auth.actor?.email}</p>
-            <div className="mt-1 flex items-center justify-between gap-2">
-              <span className="truncate text-[10px] uppercase tracking-wide text-slate-500">{auth.actor?.role.replace('_', ' ')}</span>
-              <button onClick={() => auth.signOut()} className="text-[10px] font-bold text-rose-400 hover:text-rose-300">Sign out</button>
-            </div>
-          </div>
-        )}
       </div>
     </aside>
   );

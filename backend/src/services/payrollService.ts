@@ -3,17 +3,25 @@
 // settings, derive per-employee attendance breakdown + salary.
 
 import type { MatchedRuleEffect } from './salaryRules';
+import {
+  attendanceTimeToMinutes as timeToMinutes,
+  isLateArrival,
+  lateDeductionDays as calculateLateDeductionDays,
+  LATE_GRACE_MINUTES,
+} from './latePolicy';
 
 export interface DayBreakdown {
   date: string;
   rawStatus: string;
-  classification: 'present' | 'half' | 'absent' | 'weekly_off' | 'holiday' | 'missing_punch' | 'late' | 'early';
+  classification: 'present' | 'half' | 'absent' | 'paid_leave' | 'weekly_off' | 'holiday' | 'missing_punch' | 'late' | 'early';
   timeIn: string | null;
   timeOut: string | null;
   workingHours: number;
   overtimeHours: number;
   isOvertime: boolean;
   isLate: boolean;
+  paidLeaveFraction: number;
+  unpaidLeaveFraction: number;
 }
 
 export interface PayrollSettings {
@@ -51,6 +59,10 @@ export interface PayrollRow {
   weeklyOffs: number;
   holidays: number;
   paidLeave: number;
+  paidLeaveEligible: boolean;
+  paidLeaveLimit: number;
+  paidLeaveRemaining: number;
+  unpaidApprovedLeave: number;
   totalWorkingHours: number;
   overtimeHours: number;
   overtimePay: number;
@@ -85,6 +97,8 @@ export interface EmployeePayrollDetail extends PayrollRow {
   lateDates: string[];
   overtimeDates: string[];
   paidLeaveDates: string[];
+  paidLeaveDetails: Array<{ date: string; fraction: number; source: 'approved_request' | 'automatic_absence' }>;
+  unpaidLeaveDetails: Array<{ date: string; fraction: number; source: 'approved_request' | 'automatic_absence' }>;
   unpaidAbsenceDates: string[];
   missingPunchDates: string[];
   halfDayDates: string[];
@@ -102,13 +116,22 @@ export const DEFAULT_PAYROLL_SETTINGS: PayrollSettings = {
   missedSwipeWeight: 0.5,
   standardWorkingHours: 9,
   halfDayHours: 4,
-  lateGraceMinutes: 15,
+  lateGraceMinutes: LATE_GRACE_MINUTES,
   shiftStart: '09:00',
-  otThresholdHours: 9,
+  otThresholdHours: 2,
   otMultiplier: 1.5,
   latePenaltyDays: 0,
   paidLeaveDays: 2,
 };
+
+export const NON_IT_PAID_LEAVE_DAYS = 4;
+
+export interface PaidLeavePolicy {
+  eligible: boolean;
+  limit: number;
+  sundayIsWeeklyOff: boolean;
+  source: 'non_it_department' | 'it_employee_eligibility';
+}
 
 export function parseSettings(raw: Record<string, string>): PayrollSettings {
   const num = (k: string, def: number) => {
@@ -125,41 +148,8 @@ export function parseSettings(raw: Record<string, string>): PayrollSettings {
     otThresholdHours: num('ot_threshold_hours', DEFAULT_PAYROLL_SETTINGS.otThresholdHours),
     otMultiplier: num('ot_multiplier', DEFAULT_PAYROLL_SETTINGS.otMultiplier),
     latePenaltyDays: num('late_penalty_days', DEFAULT_PAYROLL_SETTINGS.latePenaltyDays),
-    paidLeaveDays: num('paid_leave_days', DEFAULT_PAYROLL_SETTINGS.paidLeaveDays),
+    paidLeaveDays: Math.max(0, Math.min(31, num('paid_leave_days', DEFAULT_PAYROLL_SETTINGS.paidLeaveDays))),
   };
-}
-
-// Parse "HH:MM" or "HH:MM:SS" (or Excel fractional) to minutes since midnight.
-function timeToMinutes(value: unknown): number | null {
-  if (value == null || value === '') return null;
-  if (typeof value === 'number') {
-    if (value > 0 && value < 1) return Math.round(value * 24 * 60); // Excel fraction of a day
-    if (value >= 1 && value < 100000) {
-      const whole = Math.floor(value);
-      const frac = value - whole;
-      const h = whole < 24 ? whole : Math.floor(whole / 100);
-      const m = whole < 24 ? Math.round(frac * 60) : whole % 100;
-      return h * 60 + m;
-    }
-  }
-  const str = String(value).trim();
-  const m = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i);
-  if (m) {
-    let h = parseInt(m[1], 10);
-    const min = parseInt(m[2], 10);
-    const ampm = m[4]?.toLowerCase();
-    if (ampm === 'pm' && h < 12) h += 12;
-    if (ampm === 'am' && h === 12) h = 0;
-    return h * 60 + min;
-  }
-  // Fallback: pure number like "900" => 9:00, or "930" => 9:30
-  if (/^\d{3,4}$/.test(str)) {
-    const n = parseInt(str, 10);
-    const h = Math.floor(n / 100);
-    const min = n % 100;
-    if (h < 24 && min < 60) return h * 60 + min;
-  }
-  return null;
 }
 
 function minutesToLabel(min: number | null): string | null {
@@ -185,29 +175,75 @@ function classifyStatus(rawStatus: string, workingHours: number, halfDayHours = 
   return 'present';
 }
 
-interface RawDay {
+export function qualifyingOvertimeHours(
+  overtimeEligible: boolean,
+  status: string,
+  timeIn: unknown,
+  timeOut: unknown,
+  shiftEnd: unknown,
+  thresholdHours = DEFAULT_PAYROLL_SETTINGS.otThresholdHours,
+) {
+  if (!overtimeEligible || /absent|weekly[ _]off|weekend|holiday|leave|missing|missed[ _]swipe/i.test(status)) return 0;
+  const inMinutes = timeToMinutes(timeIn);
+  const outMinutes = timeToMinutes(timeOut);
+  const shiftEndMinutes = timeToMinutes(shiftEnd) ?? 18 * 60;
+  if (inMinutes == null || outMinutes == null || outMinutes < inMinutes) return 0;
+  const overtimeMinutes = outMinutes - shiftEndMinutes;
+  return overtimeMinutes > Math.max(0, thresholdHours) * 60 ? overtimeMinutes / 60 : 0;
+}
+
+export interface RawDay {
   recordDate: string;
   status: string;
   timeIn: string | null;
   timeOut: string | null;
   approvedLeaveFraction?: number;
   approvedLeavePaid?: boolean;
+  approvedPaidLeaveFraction?: number;
+  approvedUnpaidLeaveFraction?: number;
+  payrollLeaveFraction?: number;
+  leaveAllocationSource?: 'approved_request' | 'automatic_absence';
 }
 
 // recordDate is "YYYY-MM-DD" — parse as a local calendar date to avoid UTC drift.
-function isSunday(recordDate: string): boolean {
+export function isPayrollDay(recordDate: string): boolean {
+  const match = String(recordDate || '').slice(0, 10).match(/^\d{4}-\d{2}-(\d{2})$/);
+  if (!match) return false;
+  const day = Number(match[1]);
+  return day >= 1 && day <= 30;
+}
+
+export function isSunday(recordDate: string): boolean {
   const parts = recordDate.split('T')[0].split('-').map(Number);
   if (parts.length !== 3 || parts.some(isNaN)) return false;
   const d = new Date(parts[0], parts[1] - 1, parts[2]);
   return d.getDay() === 0;
 }
 
-function isItDepartment(department?: string | null) {
+export function isItDepartment(department?: string | null) {
   return String(department || '').trim().toLowerCase() === 'it';
 }
 
-function paidLeaveAllowance(emp: { department?: string | null }) {
-  return isItDepartment(emp.department) ? 2 : 4;
+export function paidLeavePolicyForEmployee(
+  emp: { department?: string | null; paid_leaves_eligible?: boolean | null },
+  configuredItPaidLeaveDays: number,
+): PaidLeavePolicy {
+  if (!isItDepartment(emp.department)) {
+    return {
+      eligible: true,
+      limit: NON_IT_PAID_LEAVE_DAYS,
+      sundayIsWeeklyOff: false,
+      source: 'non_it_department',
+    };
+  }
+
+  const eligible = emp.paid_leaves_eligible === true;
+  return {
+    eligible,
+    limit: eligible ? Math.max(0, Math.min(31, Number(configuredItPaidLeaveDays) || 0)) : 0,
+    sundayIsWeeklyOff: true,
+    source: 'it_employee_eligibility',
+  };
 }
 
 function applyDepartmentWeeklyOffPolicy(
@@ -220,6 +256,69 @@ function applyDepartmentWeeklyOffPolicy(
   return classification;
 }
 
+function workingHoursForDay(day: RawDay) {
+  const inMin = timeToMinutes(day.timeIn);
+  const outMin = timeToMinutes(day.timeOut);
+  return inMin != null && outMin != null && outMin >= inMin ? (outMin - inMin) / 60 : 0;
+}
+
+/**
+ * Allocate the employee's monthly paid-leave allowance in date order.
+ * Attendance wins over an overlapping leave request. Eligible employees receive
+ * the allowance automatically on their first genuine absences of the month.
+ */
+export function allocatePaidLeaveFractions(
+  emp: { department?: string | null; paid_leaves_eligible?: boolean | null },
+  days: RawDay[],
+  paidLeaveDays: number,
+  settings: PayrollSettings,
+): RawDay[] {
+  const policy = paidLeavePolicyForEmployee(emp, paidLeaveDays);
+  const eligible = policy.eligible;
+  const limit = policy.limit;
+  let remaining = limit;
+  const itDepartment = isItDepartment(emp.department);
+  return days
+    .map(day => ({ ...day }))
+    .filter(day => isPayrollDay(day.recordDate))
+    .sort((a, b) => a.recordDate.localeCompare(b.recordDate))
+    .map(day => {
+      const approvedFraction = Math.max(0, Math.min(1, Number(day.approvedLeaveFraction) || 0));
+      const workingHours = workingHoursForDay(day);
+      const classification = applyDepartmentWeeklyOffPolicy(
+        classifyStatus(day.status, workingHours, settings.halfDayHours),
+        day.recordDate,
+        itDepartment,
+      );
+
+      let leaveFraction = 0;
+      let source: RawDay['leaveAllocationSource'];
+      if (classification === 'absent') {
+        leaveFraction = approvedFraction > 0 ? approvedFraction : 1;
+        source = approvedFraction > 0 ? 'approved_request' : 'automatic_absence';
+      } else if (classification === 'half' && approvedFraction > 0) {
+        // A half day of work may be combined with at most a half day of leave.
+        leaveFraction = Math.min(approvedFraction, 0.5);
+        source = 'approved_request';
+      }
+
+      // A full attended day, holiday, or weekly off never consumes leave.
+      const explicitlyUnpaid = source === 'approved_request' && day.approvedLeavePaid === false;
+      const paidFraction = leaveFraction > 0 && eligible && !explicitlyUnpaid
+        ? Math.min(leaveFraction, remaining)
+        : 0;
+      const unpaidFraction = Math.max(0, leaveFraction - paidFraction);
+      remaining = Math.max(0, remaining - paidFraction);
+      return {
+        ...day,
+        payrollLeaveFraction: leaveFraction,
+        leaveAllocationSource: source,
+        approvedPaidLeaveFraction: paidFraction,
+        approvedUnpaidLeaveFraction: unpaidFraction,
+      };
+    });
+}
+
 export function computeEmployeePayroll(
   emp: {
     id: number;
@@ -230,29 +329,33 @@ export function computeEmployeePayroll(
     department?: string | null;
     designation?: string | null;
     shift?: string | null;
+    shift_start_time?: string | null;
     shift_end_time?: string | null;
     overtime_eligible?: boolean | null;
+    paid_leaves_eligible?: boolean | null;
   },
   days: RawDay[],
   monthlySalary: number,
-  _paidLeaveDays: number,
+  paidLeaveDays: number,
   settings: PayrollSettings,
 ): PayrollRow {
+  const paidLeavePolicy = paidLeavePolicyForEmployee(emp, paidLeaveDays);
+  const normalizedPaidLeaveLimit = paidLeavePolicy.limit;
   const salaryDivisor = 30;
   const dailySalary = monthlySalary > 0 ? monthlySalary / salaryDivisor : 0;
   const overtimeDailySalary = monthlySalary > 0 ? monthlySalary / 30 : 0;
   const overtimePayPerDay = overtimeDailySalary / 2;
   const hourlyRate = settings.standardWorkingHours > 0 ? dailySalary / settings.standardWorkingHours : 0;
 
-  const shiftStartMin = timeToMinutes(settings.shiftStart) ?? 540; // 9:00 default
-  const shiftEndMin = timeToMinutes(emp.shift_end_time) ?? 1080; // Default 18:00 for 9-to-6 shifts.
+  const shiftStart = emp.shift_start_time || settings.shiftStart;
   const overtimeEligible = emp.overtime_eligible === true;
   const itDepartment = isItDepartment(emp.department);
 
-  let presentDays = 0, halfDays = 0, absentDays = 0, approvedPaidLeave = 0, lateDays = 0, missingPunches = 0;
+  const allocatedDays = allocatePaidLeaveFractions(emp, days, normalizedPaidLeaveLimit, settings);
+  let presentDays = 0, halfDays = 0, absentDays = 0, approvedPaidLeave = 0, unpaidApprovedLeave = 0, lateDays = 0, missingPunches = 0;
   let weeklyOffs = 0, holidays = 0, totalWorkingHours = 0, totalOvertimeHours = 0, overtimeDays = 0, punchCount = 0;
 
-  for (const day of days) {
+  for (const day of allocatedDays) {
     const inMin = timeToMinutes(day.timeIn);
     const outMin = timeToMinutes(day.timeOut);
     if (day.timeIn || day.timeOut) punchCount++;
@@ -260,16 +363,23 @@ export function computeEmployeePayroll(
     if (inMin != null && outMin != null && outMin >= inMin) {
       workingHours = (outMin - inMin) / 60;
     }
-    const overtimeMinutes = overtimeEligible && shiftEndMin != null && outMin != null ? outMin - shiftEndMin : 0;
-    const dayOvertimeHours = overtimeMinutes > 120
-      ? overtimeMinutes / 60
-      : 0;
     let classification = classifyStatus(day.status, workingHours, settings.halfDayHours);
     classification = applyDepartmentWeeklyOffPolicy(classification, day.recordDate, itDepartment);
-    const leaveFraction = Math.max(0, Math.min(1, Number(day.approvedLeaveFraction || 0)));
+    const dayOvertimeHours = qualifyingOvertimeHours(
+      overtimeEligible,
+      classification,
+      day.timeIn,
+      day.timeOut,
+      emp.shift_end_time,
+      settings.otThresholdHours,
+    );
+    const leaveFraction = Math.max(0, Math.min(1, Number(day.payrollLeaveFraction || 0)));
     if (leaveFraction > 0 && classification !== 'weekly_off' && classification !== 'holiday') {
-      if (day.approvedLeavePaid !== false) approvedPaidLeave += leaveFraction;
-      else absentDays += leaveFraction;
+      const paidFraction = Math.max(0, Math.min(leaveFraction, Number(day.approvedPaidLeaveFraction) || 0));
+      const unpaidFraction = Math.max(0, leaveFraction - paidFraction);
+      approvedPaidLeave += paidFraction;
+      if (day.leaveAllocationSource === 'approved_request') unpaidApprovedLeave += unpaidFraction;
+      absentDays += unpaidFraction;
       const uncoveredFraction = 1 - leaveFraction;
       if (uncoveredFraction > 0) {
         if (workingHours > 0) {
@@ -281,8 +391,7 @@ export function computeEmployeePayroll(
       }
       continue;
     }
-    const isLate = (classification === 'late') ||
-      ((classification === 'present' || classification === 'half') && inMin != null && inMin > shiftStartMin + settings.lateGraceMinutes);
+    const isLate = isLateArrival(classification, day.timeIn, shiftStart, settings.lateGraceMinutes);
 
     switch (classification) {
       case 'absent': absentDays++; break;
@@ -306,8 +415,8 @@ export function computeEmployeePayroll(
     if (classification === 'late') lateDays++;
   }
 
-  // Only explicitly approved HRPulse leave is paid. A submitted/rejected request
-  // never silently turns an attendance absence into paid leave.
+  // Eligible employees receive their configured monthly allowance on the first
+  // genuine absences. Attendance always overrides an overlapping leave request.
   const paidLeave = approvedPaidLeave;
   const unpaidAbsent = absentDays;
   // Attendance-paid days are counted for reporting, but salary starts from the
@@ -324,7 +433,7 @@ export function computeEmployeePayroll(
   // but no salary amount is deducted for them.
   const missedPenalty = 0;
   // Every 3 late punches = 1 day salary deduction (hardcoded policy).
-  const lateDeductionDays = Math.floor(lateDays / 3);
+  const lateDeductionDays = calculateLateDeductionDays(lateDays);
   const latePenalty = dailySalary * lateDeductionDays;
   const totalDeductions = Math.round(absentDeduction + halfDayDeduction + missedPenalty + latePenalty);
   const netSalary = grossSalary - totalDeductions;
@@ -354,6 +463,10 @@ export function computeEmployeePayroll(
     weeklyOffs,
     holidays,
     paidLeave,
+    paidLeaveEligible: paidLeavePolicy.eligible,
+    paidLeaveLimit: normalizedPaidLeaveLimit,
+    paidLeaveRemaining: Math.max(0, normalizedPaidLeaveLimit - paidLeave),
+    unpaidApprovedLeave,
     totalWorkingHours: Math.round(totalWorkingHours * 10) / 10,
     overtimeHours: overtimeHoursRounded,
     overtimePay,
@@ -372,28 +485,34 @@ export function computeEmployeePayroll(
 
 export function buildEmployeeDetail(
   row: PayrollRow,
-  emp: { email?: string | null; department?: string | null; shift_end_time?: string | null; overtime_eligible?: boolean | null },
+  emp: { email?: string | null; department?: string | null; shift_start_time?: string | null; shift_end_time?: string | null; overtime_eligible?: boolean | null; paid_leaves_eligible?: boolean | null },
   days: RawDay[],
   settings: PayrollSettings,
   matchedRules: MatchedRuleEffect[] = [],
 ): EmployeePayrollDetail {
-  const shiftStartMin = timeToMinutes(settings.shiftStart) ?? 540;
-  const shiftEndMin = timeToMinutes(emp.shift_end_time) ?? 1080; // Default 18:00 for 9-to-6 shifts.
+  const shiftStart = emp.shift_start_time || settings.shiftStart;
   const overtimeEligible = emp.overtime_eligible === true;
   const itDepartment = isItDepartment(emp.department);
-  const breakdown: DayBreakdown[] = days.map((day) => {
+  const allocatedDays = allocatePaidLeaveFractions(emp, days, row.paidLeaveLimit, settings);
+  const breakdown: DayBreakdown[] = allocatedDays.map((day) => {
     const inMin = timeToMinutes(day.timeIn);
     const outMin = timeToMinutes(day.timeOut);
     let workingHours = 0;
     if (inMin != null && outMin != null && outMin >= inMin) workingHours = (outMin - inMin) / 60;
-    const overtimeMinutes = overtimeEligible && shiftEndMin != null && outMin != null ? outMin - shiftEndMin : 0;
-    const overtimeHours = overtimeMinutes > 120
-      ? overtimeMinutes / 60
-      : 0;
     const classification = classifyStatus(day.status, workingHours, settings.halfDayHours);
-    const effectiveClassification = applyDepartmentWeeklyOffPolicy(classification, day.recordDate, itDepartment);
-    const isLate = (classification === 'late') ||
-      ((classification === 'present' || classification === 'half') && inMin != null && inMin > shiftStartMin + settings.lateGraceMinutes);
+    let effectiveClassification = applyDepartmentWeeklyOffPolicy(classification, day.recordDate, itDepartment);
+    const paidLeaveFraction = Number(day.approvedPaidLeaveFraction) || 0;
+    const unpaidLeaveFraction = Number(day.approvedUnpaidLeaveFraction) || 0;
+    if (paidLeaveFraction >= 1 && workingHours === 0) effectiveClassification = 'paid_leave';
+    const overtimeHours = qualifyingOvertimeHours(
+      overtimeEligible,
+      effectiveClassification,
+      day.timeIn,
+      day.timeOut,
+      emp.shift_end_time,
+      settings.otThresholdHours,
+    );
+    const isLate = isLateArrival(effectiveClassification, day.timeIn, shiftStart, settings.lateGraceMinutes);
     return {
       date: day.recordDate,
       rawStatus: day.status,
@@ -404,6 +523,8 @@ export function buildEmployeeDetail(
       overtimeHours: Math.round(overtimeHours * 10) / 10,
       isOvertime: overtimeHours > 0,
       isLate,
+      paidLeaveFraction,
+      unpaidLeaveFraction,
     };
   });
 
@@ -412,19 +533,35 @@ export function buildEmployeeDetail(
   const missedPenalty = 0;
   const latePenalty = row.dailySalary * row.lateDeductionDays;
   const sortedBreakdown = breakdown.sort((a, b) => (a.date < b.date ? -1 : 1));
-  const sourceDayByDate = new Map(days.map(day => [day.recordDate, day]));
-  const paidLeaveDates = sortedBreakdown
-    .filter(day => {
+  const sourceDayByDate = new Map(allocatedDays.map(day => [day.recordDate, day]));
+  const paidLeaveDetails = sortedBreakdown
+    .map(day => {
       const source = sourceDayByDate.get(day.date);
-      return Number(source?.approvedLeaveFraction || 0) > 0 && source?.approvedLeavePaid !== false;
+      return {
+        date: day.date,
+        fraction: Number(source?.approvedPaidLeaveFraction) || 0,
+        source: source?.leaveAllocationSource || 'automatic_absence',
+      };
     })
+    .filter(day => day.fraction > 0);
+  const unpaidLeaveDetails = sortedBreakdown
+    .map(day => {
+      const source = sourceDayByDate.get(day.date);
+      return {
+        date: day.date,
+        fraction: Number(source?.approvedUnpaidLeaveFraction) || 0,
+        source: source?.leaveAllocationSource || 'automatic_absence',
+      };
+    })
+    .filter(day => day.fraction > 0);
+  const paidLeaveDates = sortedBreakdown
+    .filter(day => Number(sourceDayByDate.get(day.date)?.approvedPaidLeaveFraction || 0) > 0)
     .map(day => day.date);
   const unpaidAbsenceDates = sortedBreakdown
     .filter(day => {
       const source = sourceDayByDate.get(day.date);
-      const leaveFraction = Math.max(0, Math.min(1, Number(source?.approvedLeaveFraction || 0)));
-      if (leaveFraction > 0 && source?.approvedLeavePaid === false) return true;
-      const paidFraction = source?.approvedLeavePaid !== false ? leaveFraction : 0;
+      if (Number(source?.approvedUnpaidLeaveFraction || 0) > 0) return true;
+      const paidFraction = Number(source?.approvedPaidLeaveFraction || 0);
       return day.classification === 'absent' && paidFraction < 1;
     })
     .map(day => day.date);
@@ -484,6 +621,8 @@ export function buildEmployeeDetail(
     lateDates,
     overtimeDates,
     paidLeaveDates,
+    paidLeaveDetails,
+    unpaidLeaveDetails,
     unpaidAbsenceDates,
     missingPunchDates,
     halfDayDates,

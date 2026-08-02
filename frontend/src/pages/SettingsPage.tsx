@@ -4,7 +4,7 @@ import * as api from '../api';
 
 export default function SettingsPage() {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<'smtp' | 'ollama' | 'templates' | 'company'>('smtp');
+  const [tab, setTab] = useState<'smtp' | 'ollama' | 'payroll' | 'templates' | 'company'>('smtp');
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [templates, setTemplates] = useState<any[]>([]);
   const [editTemplate, setEditTemplate] = useState<Record<string, { subject: string; body: string }>>({});
@@ -32,6 +32,11 @@ export default function SettingsPage() {
   const set = (key: string, value: string) => setSettings(prev => ({ ...prev, [key]: value }));
 
   const saveSettings = async () => {
+    const paidLeaveDays = Number(settings['paid_leave_days'] || '2');
+    if (!Number.isFinite(paidLeaveDays) || paidLeaveDays < 0 || paidLeaveDays > 31) {
+      showToast('Paid leave days must be between 0 and 31', 'err');
+      return;
+    }
     await api.saveSettings(settings);
     qc.invalidateQueries({ queryKey: ['settings'] });
     showToast('Settings saved');
@@ -67,6 +72,7 @@ export default function SettingsPage() {
   const TABS = [
     { key: 'smtp', label: 'SMTP Email' },
     { key: 'ollama', label: 'Ollama AI' },
+    { key: 'payroll', label: 'Payroll' },
     { key: 'templates', label: 'Email Templates' },
     { key: 'company', label: 'Company Info' },
   ];
@@ -172,6 +178,30 @@ export default function SettingsPage() {
                 {testing ? 'Testing...' : 'Test Ollama'}
               </button>
             </div>
+          </div>
+        )}
+
+        {tab === 'payroll' && (
+          <div className="space-y-4">
+            <h2 className="font-semibold text-slate-700">Paid Leave Policy</h2>
+            <p className="text-sm text-slate-500">
+              Every non-IT employee automatically receives 4 paid leave days per month, excluding Sundays.
+              For IT employees, this allowance applies only when Employee Master says Paid Leaves: Yes; Sundays remain weekly offs.
+            </p>
+            <div>
+              <label className="text-sm font-medium text-slate-600 block mb-1">Paid leave days per eligible IT employee, per month</label>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                max="31"
+                value={settings['paid_leave_days'] || '2'}
+                onChange={e => set('paid_leave_days', e.target.value)}
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              />
+              <span className="text-xs text-slate-400 ml-2">Default: 2 days</span>
+            </div>
+            <button onClick={saveSettings} className="bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-brand-700">Save Payroll Policy</button>
           </div>
         )}
 
