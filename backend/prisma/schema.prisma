@@ -42,6 +42,11 @@ model Employee {
   employeeShifts    EmployeeShift[]
   biometricPunches  BiometricPunch[]
 
+  /// Archive relations. Declared so Prisma retains the legacy tables; unused by
+  /// application code.
+  legacyAttendanceRecords LegacyAttendanceRecord[]
+  legacySalaryConfigs     LegacySalaryConfig[]
+
   @@index([employeeNumber])
   @@map("employees")
 }
@@ -176,13 +181,13 @@ model AttendanceRecord {
   upload   AttendanceUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
   employee Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-  /// One attendance row per person per day, period. Previously absent, which let
-  /// a repeated upload duplicate every row and double the LOP figure derived
-  /// from it. Deliberately NOT scoped by uploadId: two uploads covering the same
-  /// month must collide rather than silently coexist.
+  /// One attendance row per person per day, period. The old table had no such
+  /// constraint, which let a repeated upload duplicate every row and double the
+  /// LOP figure derived from it. Deliberately NOT scoped by uploadId: two uploads
+  /// covering the same month must collide rather than silently coexist.
   @@unique([employeeId, recordDate])
   @@index([uploadId])
-  @@map("attendance_records")
+  @@map("attendance_days")
 }
 
 model AttendanceUpload {
@@ -196,6 +201,9 @@ model AttendanceUpload {
   records      AttendanceRecord[]
   emailDrafts  EmailDraft[]
   emailHistory EmailHistory[]
+
+  /// Archive relation — see LegacyAttendanceRecord.
+  legacyRecords LegacyAttendanceRecord[]
 
   @@map("attendance_uploads")
 }
@@ -222,7 +230,66 @@ model SalaryConfig {
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, effectiveMonth])
+  @@map("salary_structures")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEGACY TABLES — read-only archive, never written by the application
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The original `attendance_records` table, preserved exactly as it was.
+///
+/// Declared here so Prisma knows the table exists and will not propose dropping
+/// it. Nothing in `backend/src` reads or writes this model; `AttendanceRecord`
+/// (mapped to `attendance_days`) is the live table. Keep this model in the schema
+/// for as long as you want the original data retained — which should be until you
+/// have independently verified the copy.
+model LegacyAttendanceRecord {
+  id         Int     @id @default(autoincrement())
+  uploadId   Int     @map("upload_id")
+  employeeId Int     @map("employee_id")
+  /// "yyyy-MM-dd" as text, the reason the copy exists.
+  recordDate String  @map("record_date")
+  status     String
+  timeIn     String? @map("time_in")
+  timeOut    String? @map("time_out")
+
+  upload   AttendanceUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  employee Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("attendance_records")
+}
+
+/// The original `salary_configs` table, preserved exactly as it was, including
+/// `basicSalary` as a float.
+model LegacySalaryConfig {
+  id             Int    @id @default(autoincrement())
+  employeeId     Int    @map("employee_id")
+  basicSalary    Float  @default(0) @map("basic_salary")
+  effectiveMonth String @map("effective_month")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, effectiveMonth])
   @@map("salary_configs")
+}
+
+/// Rows the copy could not carry into `attendance_days`, with the reason:
+/// either an unparseable date, or a duplicate superseded by a later row for the
+/// same employee and day. Every row here still exists untouched in
+/// `attendance_records` — this table is the audit trail, not the backup.
+model AttendanceRecordUnmigrated {
+  id         Int      @id
+  uploadId   Int      @map("upload_id")
+  employeeId Int      @map("employee_id")
+  recordDate String   @map("record_date")
+  status     String
+  timeIn     String?  @map("time_in")
+  timeOut    String?  @map("time_out")
+  reason     String
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  @@map("attendance_records_unmigrated")
 }
 
 /// One payroll calculation batch for one period. This is the artifact that makes
