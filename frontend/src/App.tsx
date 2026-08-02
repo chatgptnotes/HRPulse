@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import LoginPage from './pages/LoginPage';
 import Sidebar from './components/layout/Sidebar';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
@@ -37,14 +39,37 @@ function AppShell() {
   );
 }
 
+/**
+ * Gate everything behind a session. While the stored token is being verified we
+ * render nothing rather than the app — showing the shell first would fire a
+ * burst of API calls that all 401 and bounce the user straight back out.
+ */
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-100">
+        <p className="text-sm text-slate-500">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/landing" element={<LandingPage />} />
-          <Route path="/*" element={<AppShell />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/*" element={<RequireAuth><AppShell /></RequireAuth>} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );

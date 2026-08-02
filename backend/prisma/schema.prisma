@@ -8,6 +8,33 @@ datasource db {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// AUTHENTICATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A person who can sign in to HR Pulse. Deliberately separate from `Employee`:
+/// an employee is someone whose attendance is tracked, a user is someone who
+/// operates the system. Most employees are not users.
+model User {
+  id    Int    @id @default(autoincrement())
+  email String @unique
+
+  /// bcrypt hash. Never the password itself, and never returned by any route.
+  passwordHash String @map("password_hash")
+
+  name String
+
+  /// "admin" | "hr". admin may manage users; both may use the application.
+  role String @default("hr")
+
+  isActive    Boolean   @default(true) @map("is_active")
+  lastLoginAt DateTime? @map("last_login_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // IDENTITY
 // ─────────────────────────────────────────────────────────────────────────────
 

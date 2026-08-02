@@ -11,6 +11,8 @@ import settingsRoutes from './routes/settings';
 import sopRoutes from './routes/sops';
 import rulesRoutes from './routes/rules';
 import punchesRoutes from './routes/punches';
+import authRoutes from './routes/auth';
+import { requireAuth, requireAuthOrIngestKey } from './middleware/auth';
 import aiRoutes from './routes/ai';
 import analyticsRoutes from './routes/analytics';
 
@@ -32,6 +34,22 @@ seedDatabase().catch(console.error);
 // Serve uploaded photos
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+// ── Authentication gate ──────────────────────────────────────────────────────
+//
+// Deny by default: everything under /api requires a valid token unless it is
+// explicitly exempted here. A route added later is protected automatically,
+// rather than depending on someone remembering to guard it.
+app.use('/api', (req, res, next) => {
+  // req.path is relative to the /api mount point.
+  if (req.path === '/auth/login') return next();
+
+  // A biometric device cannot log in, so ingestion also accepts a machine key.
+  if (req.path === '/punches/ingest') return requireAuthOrIngestKey(req, res, next);
+
+  return requireAuth(req, res, next);
+});
+
+app.use('/api/auth', authRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/emails', emailRoutes);
 app.use('/api/employees', employeeRoutes);

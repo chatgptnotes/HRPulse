@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
+import { useAuth } from '../../auth/AuthContext';
 
 const links = [
   { to: '/', label: 'Dispatcher', icon: 'send', end: true },
@@ -22,6 +23,8 @@ interface Props {
 }
 
 export default function Sidebar({ collapsed, onToggle }: Props) {
+  const { user, logout } = useAuth();
+
   return (
     <aside
       className={clsx(
@@ -129,6 +132,26 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             <span className="text-xs text-slate-500">Ollama · On-premises</span>
           </div>
         )}
+
+        <div className="mt-auto pt-4 border-t border-slate-800">
+          {!collapsed && user && (
+            <div className="px-3 pb-2">
+              <p className="truncate text-sm font-medium text-slate-200">{user.name}</p>
+              <p className="truncate text-xs text-slate-500">{user.email}</p>
+            </div>
+          )}
+          <button
+            onClick={logout}
+            title={collapsed ? 'Sign out' : undefined}
+            className={clsx(
+              'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all hover:bg-slate-800 hover:text-slate-100',
+              collapsed && 'justify-center px-2'
+            )}
+          >
+            <span className="material-icons text-xl flex-shrink-0">logout</span>
+            {!collapsed && <span>Sign out</span>}
+          </button>
+        </div>
       </div>
     </aside>
   );

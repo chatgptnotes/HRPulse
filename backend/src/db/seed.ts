@@ -1,4 +1,5 @@
 import prisma from './prisma';
+import { hashPassword } from '../services/authService';
 
 const DEFAULT_SETTINGS: [string, string][] = [
   ['smtp_host', process.env.SMTP_HOST || ''],
@@ -296,7 +297,52 @@ const DEFAULT_SHIFTS = [
   { name: 'General 09:00-18:00', roleTarget: 'GENERAL', startTime: '09:00', endTime: '18:00', graceMinutes: 15, isOvernight: false },
 ];
 
+/**
+ * Create the first admin account, once, from the environment.
+ *
+ * Only runs when the users table is empty — so it cannot overwrite a password
+ * that has since been changed, and rotating ADMIN_PASSWORD in the environment
+ * has no effect on an existing account (change it through the app instead).
+ *
+ * If the variables are absent, no account is created and nobody can log in.
+ * That is deliberate: a default credential baked into the source would be a
+ * published one.
+ */
+async function seedAdminUser() {
+  const email = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+  const password = process.env.ADMIN_PASSWORD;
+
+  const userCount = await prisma.user.count();
+  if (userCount > 0) return;
+
+  if (!email || !password) {
+    console.warn(
+      '[seed] No users exist and ADMIN_EMAIL / ADMIN_PASSWORD are not set — nobody can sign in. ' +
+      'Set both and restart to create the first admin account.'
+    );
+    return;
+  }
+
+  if (password.length < 12) {
+    console.error('[seed] ADMIN_PASSWORD must be at least 12 characters. No admin account created.');
+    return;
+  }
+
+  await prisma.user.create({
+    data: {
+      email,
+      name: process.env.ADMIN_NAME || 'Administrator',
+      role: 'admin',
+      passwordHash: await hashPassword(password),
+    },
+  });
+
+  console.log(`[seed] Created initial admin account: ${email}`);
+}
+
 export async function seedDatabase() {
+  await seedAdminUser();
+
   // Seed settings
   for (const [key, value] of DEFAULT_SETTINGS) {
     await prisma.setting.upsert({

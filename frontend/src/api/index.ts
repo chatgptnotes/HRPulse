@@ -2,6 +2,34 @@ import axios from 'axios';
 
 export const api = axios.create({ baseURL: '/api' });
 
+/**
+ * Attach or clear the bearer token used by every request.
+ * Called by AuthProvider on login, logout, and on restoring a stored token.
+ */
+export function setAuthToken(token: string | null): void {
+  if (token) {
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common.Authorization;
+  }
+}
+
+// A token can expire mid-session. Rather than let every page surface its own
+// confusing error, drop the dead token and send the user back to sign in.
+api.interceptors.response.use(
+  response => response,
+  error => {
+    const status = error?.response?.status;
+    const isLoginAttempt = error?.config?.url?.includes('/auth/login');
+    if (status === 401 && !isLoginAttempt) {
+      localStorage.removeItem('hrpulse.token');
+      setAuthToken(null);
+      if (window.location.pathname !== '/login') window.location.assign('/login');
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Attendance
 export const uploadAttendance = (file: File) => {
   const fd = new FormData();
