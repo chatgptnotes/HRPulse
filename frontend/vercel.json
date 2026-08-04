@@ -1,8 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://hrpulse.up.railway.app/api/:path*" },
-    { "source": "/health", "destination": "https://hrpulse.up.railway.app/health" },
-    { "source": "/uploads/:path*", "destination": "https://hrpulse.up.railway.app/uploads/:path*" },
     { "source": "/((?!api|health|uploads).*)", "destination": "/index.html" }
   ]
 }
