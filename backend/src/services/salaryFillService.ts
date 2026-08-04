@@ -157,9 +157,6 @@ export function fillSalarySheet(
     }
 
     // Read salary sheet columns
-    const orgCell = ws[xlsx.utils.encode_cell({ r, c: COL_ORG })];
-    const org = String(orgCell?.v || '').trim().toLowerCase();
-    const isSoftware = org === 'rafttar' || org === 'it' || org === 'software';
     const basicCell = ws[xlsx.utils.encode_cell({ r, c: COL_BASIC })];
     const basic = Number(basicCell?.v) || 0;
     const paidCell = ws[xlsx.utils.encode_cell({ r, c: COL_PAID })];
@@ -168,6 +165,14 @@ export function fillSalarySheet(
     const otDuties = Number(otCell?.v) || 0;
     const desigCell = ws[xlsx.utils.encode_cell({ r, c: 2 })];
     const desig = String(desigCell?.v || '').trim();
+    const orgCell = ws[xlsx.utils.encode_cell({ r, c: COL_ORG })];
+    const org = String(orgCell?.v || '').trim().toLowerCase();
+    const isSoftware = org === 'rafttar' || org === 'it' || org === 'software';
+    // General Shift: Accounts, Reception, Admin, Lab — Sundays off, no OT
+    const generalShiftDepts = ['account', 'admin', 'reception', 'lab', 'it support'];
+    const isGeneralShift = !isSoftware && generalShiftDepts.some(d => org.includes(d) || desig.toLowerCase().includes(d));
+    // Shift Workers: Nurses, Brothers, Maushi, Wardboys — work on Sundays, get OT
+    const isShiftWorker = !isSoftware && !isGeneralShift;
 
     if (attData && attData.daysWorked > 0) {
       const days = attData.daysWorked;
@@ -177,28 +182,42 @@ export function fillSalarySheet(
       let gross: number, deductions: number, net: number;
 
       if (isSoftware) {
-        const expectedDays = wd - 2;
+        // Software: Gross = Monthly (fixed), deduct for absent only
+        const swWD = monthInfo.softwareWD;
+        const expectedDays = swWD - 2;
         const capped = Math.min(days, expectedDays);
         const absent = Math.max(0, expectedDays - capped);
         gross = basic;
-        const absentDeduction = Math.round((basic / wd) * absent);
+        const absentDeduction = Math.round((basic / swWD) * absent);
         deductions = advance + absentDeduction;
         net = Math.max(0, gross - deductions);
         ws[xlsx.utils.encode_cell({ r, c: COL_DAYS })] = { t: 'n', v: capped };
         ws[xlsx.utils.encode_cell({ r, c: COL_PAYMENT })] = { t: 'n', v: gross };
         ws[xlsx.utils.encode_cell({ r, c: COL_PAYABLE })] = { t: 'n', v: net };
+      } else if (isGeneralShift) {
+        // General Shift (Accounts, Reception): Sundays off, no double deduction
+        // Gross = Monthly ÷ WD × (PunchDays + Sundays)
+        const gsWD = monthInfo.softwareWD; // same as Days - Sundays
+        const totalDays = Math.min(days + monthInfo.sundays, gsWD);
+        gross = Math.round((basic / gsWD) * totalDays);
+        deductions = advance; // NO absent deduction — already accounted for in the formula
+        net = Math.max(0, gross - deductions);
+        ws[xlsx.utils.encode_cell({ r, c: COL_DAYS })] = { t: 'n', v: totalDays };
+        ws[xlsx.utils.encode_cell({ r, c: COL_PAYMENT })] = { t: 'n', v: gross };
+        ws[xlsx.utils.encode_cell({ r, c: COL_PAYABLE })] = { t: 'n', v: net };
       } else {
-        const otAmount = Math.round((basic / wd) * otDuties);
-        gross = Math.round((basic / wd) * days + otAmount);
-        const absent = Math.max(0, wd - days);
-        const absentDeduction = Math.round((basic / wd) * absent);
-        deductions = advance + absentDeduction;
+        // Shift Workers (Nurses, Brothers): work all days, get OT, no double deduction
+        const swWD = monthInfo.hospitalWD; // Days - 4 off
+        const otAmount = Math.round((basic / swWD) * otDuties);
+        gross = Math.round((basic / swWD) * days + otAmount);
+        deductions = advance; // NO absent deduction — already accounted for in the formula
         net = Math.max(0, gross - deductions);
         ws[xlsx.utils.encode_cell({ r, c: COL_DAYS })] = { t: 'n', v: days };
-        ws[xlsx.utils.encode_cell({ r, c: COL_PAYMENT })] = { t: 'n', f: `D${excelRow}/${wd}*E${excelRow}` };
+        ws[xlsx.utils.encode_cell({ r, c: COL_PAYMENT })] = { t: 'n', f: `D${excelRow}/${swWD}*E${excelRow}` };
         ws[xlsx.utils.encode_cell({ r, c: COL_PAYABLE })] = { t: 'n', v: net };
       }
 
+      const category = isSoftware ? 'SW' : isGeneralShift ? 'Gen' : 'Shift';
       entries.push({ employeeName: sheetNameVal, designation: desig, organisation: org, monthlySalary: basic, daysPresent: days, otDuties, grossSalary: gross, deductions, netSalary: net, isSoftware });
       filled++;
       matchedNames.push(sheetNameVal);

@@ -40,6 +40,14 @@ interface FillResponse {
   fileName: string;
 }
 
+const GENERAL_SHIFT_DEPTS = ['account', 'admin', 'reception', 'lab', 'it support'];
+
+function isGeneralShift(org: string, desig: string) {
+  const o = org.toLowerCase();
+  const d = desig.toLowerCase();
+  return GENERAL_SHIFT_DEPTS.some(x => o.includes(x) || d.includes(x));
+}
+
 export default function SalaryFillPage() {
   const [salaryFile, setSalaryFile] = useState<File | null>(null);
   const [attendanceFile, setAttendanceFile] = useState<File | null>(null);
@@ -68,46 +76,47 @@ export default function SalaryFillPage() {
     } finally { setLoading(false); }
   };
 
-  // Recalculate salary with edited OT
   const recalculated = useMemo(() => {
     if (!result) return [];
     const wd = result.monthInfo;
     return result.entries.map(e => {
-      const otDuties = e.isSoftware ? 0 : (otEdits[e.employeeName] ?? e.otDuties ?? 0);
-      const workingDays = e.isSoftware ? wd.softwareWD : wd.hospitalWD;
+      const gen = isGeneralShift(e.organisation, e.designation);
+      const otDuties = e.isSoftware || gen ? 0 : (otEdits[e.employeeName] ?? e.otDuties ?? 0);
       let gross: number, deductions: number, net: number;
       if (e.isSoftware) {
-        const expected = workingDays - 2;
+        const swWD = wd.softwareWD;
+        const expected = swWD - 2;
         const absent = Math.max(0, expected - Math.min(e.daysPresent, expected));
         gross = e.monthlySalary;
-        const absentDed = Math.round((e.monthlySalary / workingDays) * absent);
-        deductions = absentDed;
+        deductions = Math.round((e.monthlySalary / swWD) * absent);
+        net = Math.max(0, gross - deductions);
+      } else if (gen) {
+        const gsWD = wd.softwareWD;
+        const totalDays = Math.min(e.daysPresent + wd.sundays, gsWD);
+        gross = Math.round((e.monthlySalary / gsWD) * totalDays);
+        deductions = 0;
         net = Math.max(0, gross - deductions);
       } else {
-        const otAmount = Math.round((e.monthlySalary / workingDays) * otDuties);
-        gross = Math.round((e.monthlySalary / workingDays) * e.daysPresent + otAmount);
-        const absent = Math.max(0, workingDays - e.daysPresent);
-        const absentDed = Math.round((e.monthlySalary / workingDays) * absent);
-        deductions = absentDed;
+        const swWD = wd.hospitalWD;
+        const otAmount = Math.round((e.monthlySalary / swWD) * otDuties);
+        gross = Math.round((e.monthlySalary / swWD) * e.daysPresent + otAmount);
+        deductions = 0;
         net = Math.max(0, gross - deductions);
       }
-      return { ...e, otDuties, grossSalary: gross, deductions, netSalary: net };
+      return { ...e, otDuties, grossSalary: gross, deductions, netSalary: net, isGen: gen };
     });
   }, [result, otEdits]);
 
   const totalNet = recalculated.reduce((sum, e) => sum + e.netSalary, 0);
 
   const handleSyncHims = async () => {
-    setSyncing(true);
-    setSyncResult(null);
+    setSyncing(true); setSyncResult(null);
     try {
       const { data } = await api.syncToHims(recalculated, month);
       setSyncResult(data as any);
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || 'Sync failed');
-    } finally {
-      setSyncing(false);
-    }
+    } finally { setSyncing(false); }
   };
 
   const handleDownload = () => {
@@ -129,7 +138,6 @@ export default function SalaryFillPage() {
         Upload salary sheet + attendance → review data → enter OT duties manually → download
       </p>
 
-      {/* Upload Section */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -175,15 +183,12 @@ export default function SalaryFillPage() {
         {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">{error}</div>}
       </div>
 
-      {/* Results — Editable Table */}
       {result && (
         <div className="mt-6 space-y-4">
-          {/* Month Info */}
           <div className="bg-blue-50 rounded-lg p-4">
-            <p className="font-semibold text-blue-700 mb-2 text-sm">📅 {month} — Days: {result.monthInfo.daysInMonth} | Sundays: {result.monthInfo.sundays} | Hospital WD: {result.monthInfo.hospitalWD} | Software WD: {result.monthInfo.softwareWD}</p>
+            <p className="font-semibold text-blue-700 text-sm">📅 {month} — Days: {result.monthInfo.daysInMonth} | Sundays: {result.monthInfo.sundays} | Shift WD: {result.monthInfo.hospitalWD} | Gen/SW WD: {result.monthInfo.softwareWD}</p>
           </div>
 
-          {/* Summary */}
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-green-50 rounded-lg p-3 text-center">
               <p className="text-2xl font-bold text-green-600">{result.filled}</p>
@@ -204,15 +209,14 @@ export default function SalaryFillPage() {
               </button>
               <button onClick={handleSyncHims} disabled={syncing}
                 className="bg-indigo-600 text-white text-sm font-medium px-3 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex-1">
-                {syncing ? '⏳ Syncing...' : '🔄 Sync with Adamrit'}
+                {syncing ? '⏳...' : '🔄 Sync'}
               </button>
             </div>
           </div>
 
-          {/* Editable Salary Table */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-              <p className="text-sm font-semibold text-slate-700">Salary Details — Enter OT Duties (editable)</p>
+              <p className="text-sm font-semibold text-slate-700">Salary Details — Enter OT Duties (Shift Workers only)</p>
             </div>
             <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
               <table className="w-full text-xs">
@@ -222,22 +226,22 @@ export default function SalaryFillPage() {
                     <th className="text-left">Designation</th>
                     <th className="text-right">Basic</th>
                     <th className="text-right">Days</th>
-                    <th className="text-center bg-amber-50">OT Duties</th>
+                    <th className="text-center bg-amber-50">OT</th>
                     <th className="text-right">Gross</th>
                     <th className="text-right">Deduct</th>
                     <th className="text-right">Net</th>
-                    <th className="text-center">Dept</th>
+                    <th className="text-center">Cat</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recalculated.map((e, i) => (
+                  {recalculated.map((e: any, i) => (
                     <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/50">
                       <td className="py-2 px-3 font-medium text-slate-700">{e.employeeName}</td>
                       <td className="text-slate-500">{e.designation}</td>
                       <td className="text-right">{e.monthlySalary.toLocaleString()}</td>
                       <td className="text-right">{e.daysPresent}</td>
                       <td className="text-center bg-amber-50/30">
-                        {e.isSoftware ? (
+                        {e.isSoftware || e.isGen ? (
                           <span className="text-slate-300">—</span>
                         ) : (
                           <input type="number" min={0} max={31}
@@ -250,8 +254,8 @@ export default function SalaryFillPage() {
                       <td className="text-right text-red-500">{e.deductions > 0 ? `−${e.deductions.toLocaleString()}` : '0'}</td>
                       <td className="text-right font-bold text-green-600">{e.netSalary.toLocaleString()}</td>
                       <td className="text-center">
-                        <span className={e.isSoftware ? 'text-purple-600 text-xs' : 'text-blue-600 text-xs'}>
-                          {e.isSoftware ? 'SW' : 'Hosp'}
+                        <span className={e.isSoftware ? 'text-purple-600' : e.isGen ? 'text-indigo-600' : 'text-blue-600'}>
+                          {e.isSoftware ? 'SW' : e.isGen ? 'Gen' : 'Shift'}
                         </span>
                       </td>
                     </tr>
@@ -261,20 +265,17 @@ export default function SalaryFillPage() {
             </div>
           </div>
 
-          {/* Sync Result */}
           {syncResult && (
             <div className={`rounded-lg p-4 text-sm ${syncResult.errors > 0 ? 'bg-amber-50' : 'bg-green-50'}`}>
               <p className="font-semibold text-slate-700">
                 {syncResult.errors > 0 ? '⚠️ Sync completed with errors' : '✅ Synced to HIMS successfully'}
               </p>
               <p className="text-slate-600 mt-1">
-                Inserted: {syncResult.inserted} | Errors: {syncResult.errors} | Skipped (0 days): {syncResult.skipped}
+                Inserted: {syncResult.inserted} | Errors: {syncResult.errors} | Skipped: {syncResult.skipped}
               </p>
-              <p className="text-xs text-slate-500 mt-1">The data is now visible in the HIMS software.</p>
             </div>
           )}
 
-          {/* Phonetic matches */}
           {result.phoneticMatches.length > 0 && (
             <details>
               <summary className="text-sm font-medium text-amber-600 cursor-pointer">
@@ -291,7 +292,6 @@ export default function SalaryFillPage() {
             </details>
           )}
 
-          {/* Skipped */}
           {result.skipped.length > 0 && (
             <details>
               <summary className="text-sm font-medium text-amber-600 cursor-pointer">
