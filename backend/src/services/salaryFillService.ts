@@ -26,14 +26,46 @@ function phoneticScore(a: string, b: string): number {
   return 1 - dist / maxLen;
 }
 
+// Calculate days in month and Sundays dynamically
+export function getMonthInfo(monthStr: string) {
+  const [year, month] = monthStr.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let sundays = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (new Date(year, month - 1, d).getDay() === 0) sundays++;
+  }
+  return {
+    daysInMonth,
+    sundays,
+    hospitalWD: daysInMonth - 4,
+    softwareWD: daysInMonth - sundays,
+  };
+}
+
 interface AttendanceEntry { name: string; daysWorked: number; }
+
+export interface SalaryEntry {
+  employeeName: string;
+  designation: string;
+  organisation: string;
+  monthlySalary: number;
+  daysPresent: number;
+  otDuties: number;
+  grossSalary: number;
+  deductions: number;
+  netSalary: number;
+  isSoftware: boolean;
+}
 
 export interface FillResult {
   filled: number;
   notFound: number;
+  skipped: string[];
   phoneticMatches: Array<{ salaryName: string; attendanceName: string; method: string; score: number; days: number }>;
   matchedNames: string[];
   unmatchedNames: string[];
+  entries: SalaryEntry[];
+  monthInfo: { daysInMonth: number; sundays: number; hospitalWD: number; softwareWD: number };
   buffer: Buffer;
 }
 
@@ -41,8 +73,10 @@ export function fillSalarySheet(
   salaryBuffer: Buffer,
   attendanceBuffer: Buffer,
   sheetName: string,
-  workingDays: number,
+  month: string,
 ): FillResult {
+  const monthInfo = getMonthInfo(month);
+
   // ── Parse attendance file ────────────────────────────────────────────────
   const attWb = xlsx.read(attendanceBuffer, { type: 'buffer' });
   const attWs = attWb.Sheets[attWb.SheetNames[0]];
@@ -56,7 +90,7 @@ export function fillSalarySheet(
     let daysWorked = 0;
     for (let day = 1; day <= 31; day++) {
       const cv = row[day + 1];
-      if (cv != null && String(cv).trim() !== '' && (/\d{2}:\d{2}/.test(String(cv)) || String(cv).length > 0)) daysWorked++;
+      if (cv != null && /\d{2}:\d{2}/.test(String(cv))) daysWorked++;
     }
     const nk = norm(name);
     if (!attendanceByNormName.has(nk) || attendanceByNormName.get(nk)!.daysWorked < daysWorked) {
@@ -71,12 +105,14 @@ export function fillSalarySheet(
   const range = xlsx.utils.decode_range(ws['!ref'] || 'A1:I1');
 
   const HEADER_ROW = 1;
-  const COL_NAME = 1, COL_DAYS = 4, COL_PAYMENT = 5, COL_PAYABLE = 7;
+  const COL_NAME = 1, COL_BASIC = 3, COL_DAYS = 4, COL_PAYMENT = 5, COL_PAID = 6, COL_PAYABLE = 7, COL_ORG = 8, COL_OT_DUTIES = 9;
 
   let filled = 0, notFound = 0;
   const phoneticMatches: FillResult['phoneticMatches'] = [];
   const matchedNames: string[] = [];
   const unmatchedNames: string[] = [];
+  const skipped: string[] = [];
+  const entries: SalaryEntry[] = [];
 
   for (let r = HEADER_ROW + 1; r <= range.e.r; r++) {
     const nameCell = ws[xlsx.utils.encode_cell({ r, c: COL_NAME })];
@@ -90,22 +126,19 @@ export function fillSalarySheet(
     let method = 'NONE';
     let score = 0;
 
-    // 1. Exact
     if (attendanceByNormName.has(snNorm)) {
       attData = attendanceByNormName.get(snNorm)!;
       method = 'EXACT'; score = 1;
     }
 
-    // 2. Substring
     if (!attData) {
       for (const [attN, att] of attendanceByNormName) {
-        if (snNorm.length >= 4 && (attN.includes(snNorm) || snNorm.includes(attN))) {
+        if (snNorm.length >= 4 && attN.includes(snNorm)) {
           attData = att; method = 'SUBSTRING'; score = 0.9; break;
         }
       }
     }
 
-    // 3. Phonetic
     if (!attData) {
       const snFirst = snNorm.split(' ')[0];
       let bestScore = 0;
@@ -120,21 +153,53 @@ export function fillSalarySheet(
             }
           }
         }
-        if (snNorm.length >= 5) {
-          const fs = phoneticScore(snNorm, attN);
-          if (fs >= 0.8 && fs > bestScore) {
-            attData = att; method = 'CLOSE'; score = fs; bestScore = fs;
-          }
-        }
       }
     }
+
+    // Read salary sheet columns
+    const orgCell = ws[xlsx.utils.encode_cell({ r, c: COL_ORG })];
+    const org = String(orgCell?.v || '').trim().toLowerCase();
+    const isSoftware = org === 'rafttar' || org === 'it' || org === 'software';
+    const basicCell = ws[xlsx.utils.encode_cell({ r, c: COL_BASIC })];
+    const basic = Number(basicCell?.v) || 0;
+    const paidCell = ws[xlsx.utils.encode_cell({ r, c: COL_PAID })];
+    const advance = Number(paidCell?.v) || 0;
+    const otCell = ws[xlsx.utils.encode_cell({ r, c: COL_OT_DUTIES })];
+    const otDuties = Number(otCell?.v) || 0;
+    const desigCell = ws[xlsx.utils.encode_cell({ r, c: 2 })];
+    const desig = String(desigCell?.v || '').trim();
 
     if (attData && attData.daysWorked > 0) {
       const days = attData.daysWorked;
       const excelRow = r + 1;
-      ws[xlsx.utils.encode_cell({ r, c: COL_DAYS })] = { t: 'n', v: days };
-      ws[xlsx.utils.encode_cell({ r, c: COL_PAYMENT })] = { t: 'n', f: `D${excelRow}/${workingDays}*E${excelRow}` };
-      ws[xlsx.utils.encode_cell({ r, c: COL_PAYABLE })] = { t: 'n', f: `F${excelRow}-G${excelRow}` };
+      const wd = isSoftware ? monthInfo.softwareWD : monthInfo.hospitalWD;
+
+      let gross: number, deductions: number, net: number;
+
+      if (isSoftware) {
+        const expectedDays = wd - 2;
+        const capped = Math.min(days, expectedDays);
+        const absent = Math.max(0, expectedDays - capped);
+        gross = basic;
+        const absentDeduction = Math.round((basic / wd) * absent);
+        deductions = advance + absentDeduction;
+        net = Math.max(0, gross - deductions);
+        ws[xlsx.utils.encode_cell({ r, c: COL_DAYS })] = { t: 'n', v: capped };
+        ws[xlsx.utils.encode_cell({ r, c: COL_PAYMENT })] = { t: 'n', v: gross };
+        ws[xlsx.utils.encode_cell({ r, c: COL_PAYABLE })] = { t: 'n', v: net };
+      } else {
+        const otAmount = Math.round((basic / wd) * otDuties);
+        gross = Math.round((basic / wd) * days + otAmount);
+        const absent = Math.max(0, wd - days);
+        const absentDeduction = Math.round((basic / wd) * absent);
+        deductions = advance + absentDeduction;
+        net = Math.max(0, gross - deductions);
+        ws[xlsx.utils.encode_cell({ r, c: COL_DAYS })] = { t: 'n', v: days };
+        ws[xlsx.utils.encode_cell({ r, c: COL_PAYMENT })] = { t: 'n', f: `D${excelRow}/${wd}*E${excelRow}` };
+        ws[xlsx.utils.encode_cell({ r, c: COL_PAYABLE })] = { t: 'n', v: net };
+      }
+
+      entries.push({ employeeName: sheetNameVal, designation: desig, organisation: org, monthlySalary: basic, daysPresent: days, otDuties, grossSalary: gross, deductions, netSalary: net, isSoftware });
       filled++;
       matchedNames.push(sheetNameVal);
       if (method === 'PHONETIC' || method === 'CLOSE') {
@@ -143,11 +208,11 @@ export function fillSalarySheet(
     } else {
       notFound++;
       unmatchedNames.push(sheetNameVal);
+      skipped.push(sheetNameVal);
     }
   }
 
-  // Write output buffer
   const outBuffer = xlsx.write(salWb, { type: 'buffer', bookType: 'xlsx' });
 
-  return { filled, notFound, phoneticMatches, matchedNames, unmatchedNames, buffer: outBuffer };
+  return { filled, notFound, skipped, phoneticMatches, matchedNames, unmatchedNames, entries, monthInfo, buffer: outBuffer };
 }

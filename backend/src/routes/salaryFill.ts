@@ -20,21 +20,24 @@ router.post('/', upload.fields([
     }
 
     const sheetName = (req.body.sheetName || 'july-26').trim();
-    const workingDays = Number(req.body.workingDays) || 26;
+    const month = (req.body.month || '2026-07').trim();
 
     const result = fillSalarySheet(
       files.salarySheet[0].buffer,
       files.attendanceFile[0].buffer,
       sheetName,
-      workingDays,
+      month,
     );
 
     res.json({
       filled: result.filled,
       notFound: result.notFound,
+      skipped: result.skipped,
       phoneticMatches: result.phoneticMatches,
       matchedNames: result.matchedNames,
       unmatchedNames: result.unmatchedNames,
+      entries: result.entries,
+      monthInfo: result.monthInfo,
       fileBase64: result.buffer.toString('base64'),
       fileName: `Salary-${sheetName}-FILLED.xlsx`,
     });

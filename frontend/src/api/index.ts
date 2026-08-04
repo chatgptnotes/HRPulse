@@ -208,12 +208,12 @@ export const getAnalyticsTrends = (uploadId: number) => api.get(`/analytics/tren
 export const getMonthlyComparison = () => api.get('/analytics/monthly-comparison');
 
 // Salary Sheet Auto-Fill
-export const fillSalarySheet = (salarySheet: File, attendanceFile: File, sheetName: string, workingDays: number) => {
+export const fillSalarySheet = (salarySheet: File, attendanceFile: File, sheetName: string, month: string) => {
   const fd = new FormData();
   fd.append('salarySheet', salarySheet);
   fd.append('attendanceFile', attendanceFile);
   fd.append('sheetName', sheetName);
-  fd.append('workingDays', String(workingDays));
+  fd.append('month', month);
   return api.post('/salary-fill', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
 };
 
