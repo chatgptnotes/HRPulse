@@ -49,6 +49,8 @@ export default function SalaryFillPage() {
   const [result, setResult] = useState<FillResponse | null>(null);
   const [error, setError] = useState('');
   const [otEdits, setOtEdits] = useState<Record<string, number>>({});
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ inserted: number; errors: number; skipped: number } | null>(null);
   const salaryInputRef = useRef<HTMLInputElement>(null);
   const attendanceInputRef = useRef<HTMLInputElement>(null);
 
@@ -94,6 +96,19 @@ export default function SalaryFillPage() {
   }, [result, otEdits]);
 
   const totalNet = recalculated.reduce((sum, e) => sum + e.netSalary, 0);
+
+  const handleSyncHims = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const { data } = await api.syncToHims(recalculated, month);
+      setSyncResult(data as any);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || 'Sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleDownload = () => {
     if (!result) return;
@@ -182,10 +197,14 @@ export default function SalaryFillPage() {
               <p className="text-2xl font-bold text-blue-600">₹{totalNet.toLocaleString()}</p>
               <p className="text-xs text-blue-700">Total Net</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3 text-center flex items-center justify-center">
+            <div className="bg-slate-50 rounded-lg p-3 text-center flex items-center justify-center gap-2">
               <button onClick={handleDownload}
-                className="bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700 w-full">
-                ⬇ Download Excel
+                className="bg-green-600 text-white text-sm font-medium px-3 py-2 rounded-lg hover:bg-green-700 flex-1">
+                ⬇ Excel
+              </button>
+              <button onClick={handleSyncHims} disabled={syncing}
+                className="bg-indigo-600 text-white text-sm font-medium px-3 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex-1">
+                {syncing ? '⏳ Syncing...' : '🔄 Sync with Adamrit'}
               </button>
             </div>
           </div>
@@ -241,6 +260,19 @@ export default function SalaryFillPage() {
               </table>
             </div>
           </div>
+
+          {/* Sync Result */}
+          {syncResult && (
+            <div className={`rounded-lg p-4 text-sm ${syncResult.errors > 0 ? 'bg-amber-50' : 'bg-green-50'}`}>
+              <p className="font-semibold text-slate-700">
+                {syncResult.errors > 0 ? '⚠️ Sync completed with errors' : '✅ Synced to HIMS successfully'}
+              </p>
+              <p className="text-slate-600 mt-1">
+                Inserted: {syncResult.inserted} | Errors: {syncResult.errors} | Skipped (0 days): {syncResult.skipped}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">The data is now visible in the HIMS software.</p>
+            </div>
+          )}
 
           {/* Phonetic matches */}
           {result.phoneticMatches.length > 0 && (

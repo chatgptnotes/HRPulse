@@ -217,6 +217,10 @@ export const fillSalarySheet = (salarySheet: File, attendanceFile: File, sheetNa
   return api.post('/salary-fill', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
 };
 
+// Sync salary data to HIMS (Adamrit) database
+export const syncToHims = (entries: any[], month: string) =>
+  api.post('/salary-fill/sync-hims', { entries, month });
+
 // AI
 export const askAi = (question: string, uploadId?: number) => api.post('/ai/ask', { question, uploadId });
 export const analyzeUpload = (uploadId: number) => api.post(`/ai/analyze/${uploadId}`);
