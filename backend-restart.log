@@ -1,125 +1,23 @@
-
-> @hrpulse/backend@1.0.0 dev
-> ts-node-dev --respawn --transpile-only src/index.ts
-
-[INFO] 16:02:23 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.9.2, typescript ver. 5.9.3)
+[INFO] 13:33:47 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.9.2, typescript ver. 5.9.3)
 HRPulse backend running on http://localhost:3001
-[INFO] 10:29:43 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts has been modified
-[ERROR] 10:30:29 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 10:34:33 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 10:35:19 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 10:35:29 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
-[ERROR] 10:36:04 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 10:36:15 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
-[ERROR] 10:36:50 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 10:37:57 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 10:38:41 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 10:39:13 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 10:39:47 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 10:39:58 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts has been modified
-[ERROR] 10:40:31 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 10:41:23 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\rules.ts has been modified
-[ERROR] 10:42:01 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 10:42:08 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts has been modified
-[ERROR] 10:42:38 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 10:44:56 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
-[ERROR] 10:45:29 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 11:02:25 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts has been modified
-[ERROR] 11:02:56 Error: listen EADDRINUSE: addres[INFO] 13:27:13 Restartin[INFO] 13:27:13 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollServHRPulse backend running o[ERROR] 13:27:41 Error: [INFO] 13:29:14 Restarting: C:\Users\hope4\hrpulse[INFO] 13:29:14 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\ser[ERROR] 13:29:45 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 13:30:15 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 13:30:41 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 14:11:09 Restarting: C:\Users\hope4\hrpulse[INFO] 14:11:09 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend[ERROR] 14:11:37 Error: listen EADDRINUSE: address[ERROR] 14:11:40 Error: [INFO] 14:11:41 Restarting: C:\Users\hope4\hrpulse[INFO] 14:11:41 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend[ERROR] 14:11:59 Error: listen EADDRINUSE: address[ERROR] 14:12:04 Error: [INFO] 14:12:25 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 14:12:47 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 14:13:13 Restarting: C:\Users\hope4\hrpulse[INFO] 14:13:13 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend[ERROR] 14:13:29 Error: listen EADDRINUSE: address[ERROR] 14:13:31 Error: [INFO] 15:48:43 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
+[INFO] 13:35:50 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceRecordWriter.ts has been modified
+[INFO] 13:36:08 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
 HRPulse backend running on http://localhost:3001
-[INFO] 16:20:20 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\serv[INFO] 16:20:20 Restarting: C:\Users\hope[ERROR] 16:20:46 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 16:24:46 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\rout[INFO] 16:24:46 Restarting: C:\U[ERROR] 16:25:37 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 16:32:11 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
+[INFO] 14:14:59 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
 HRPulse backend running on http://localhost:3001
-[INFO] 16:32:43 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been mo[INFO] HRPulse backend running on http://localhost:3001
-[INFO] 16:33:10 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
-[ERROR] 16:33:30 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 16:33:35 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 16:33:52 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 16:35:07 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 16:35:30 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 16:35:39 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 16:35:58 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 16:37:39 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
+[INFO] 14:15:42 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
 HRPulse backend running on http://localhost:3001
-[INFO] 17:49:20 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 17:49:45 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 17:49:57 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 17:50:15 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 11:30:52 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
-[ERROR] 11:31:25 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 13:04:16 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 13:09:21 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 13:13:20 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 13:13:50 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 13:39:23 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 13:39:48 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 14:05:57 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 14:11:12 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 17:18:34 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 17:19:38 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:17:57 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\hrNotificationService.ts has been modified
-[ERROR] 18:18:24 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:19:32 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts has been modified
-[ERROR] 18:19:54 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:20:00 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modifi[INHRPulse backend running on http://localhost:3001
-[INFO] 18:43:35 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:44:14 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:44:19 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
+[INFO] 14:16:28 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
 HRPulse backend running on http://localhost:3001
-[INFO] 18:46:44 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:47:07 Error: listen EADDRINUSE: address already in use :::3001
-RPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:47:05 Error: listen EADDRINUSE: address already in use :::3001
-Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:20:28 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:43:35 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:44:14 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:44:19 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[E[ERROR] 18:44:48 Error: listen EADDRINUSE: address already in use :::300[I[INFO] 18:46:44 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modifieHR[ERROR] 18:47:07 Error: listen EADDRINUSE: address already in use :::3001
-lse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:47:07 Error: listen EADDRINUSE: address already in use :::3001
-n EADDRINUSE: address already in use :::3001
-[INFO] 18:46:44 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:47:07 Error: listen EADDRINUSE: address already in use :::3001
-r: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:19:32 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts has been modified
-[ERROR] 18:19:53 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:20:00 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:20:29 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:43:35 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:44:14 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:44:19 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:44:49 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:46:44 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:47:03 Error: listen EADDRINUSE: address already in use :::3001
-ess.ts has been modified
-[ERROR] 18:20:28 Erro[ERROR] 18:20:28 Error: listen EADDRINUSE: address al[INFO] 18:43:35 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:44:09 Erro[ERROR] 18:44:14 Error: listen EADDRINUSE: address al[INFO] 18:44:19 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:44:45 Erro[ERROR] 18:44:48 Error: listen EADDRINUSE: address al[INFO] 18:46:44 Resta[INFO] 18:46:44 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.[ERROR] 18:47:09 Error: listen EADDRINUSE: address already in use :::3001
-ready in use :::3001
-hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 14:11:39 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 17:18:34 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
-[ERROR] 17:19:37 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:17:57 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\hrNotificationService.ts has been modified
+[INFO] 14:28:46 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\salaryRules.ts has been modified
 HRPulse backend running on http://localhost:3001
-[INFO] 18:19:32 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts has been modified
-[ERROR] 18:19:49 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:20:00 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:20:26 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:43:35 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:44:13 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:44:19 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:44:51 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:46:44 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:47:03 Error: listen EADDRINUSE: address already in use :::3001
-arting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:44:42 Error: listen EADDRINUSE: address already in use :::3001
-[INFO] 18:46:44 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
-[ERROR] 18:47:06 Error: listen EADDRINUSE: address already in use :::3001
+[INFO] 14:42:40 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\salaryRules.ts has been modified
+HRPulse backend running on http://localhost:3001
+[INFO] 14:42:52 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
+HRPulse backend running on http://localhost:3001
+[INFO] 16:00:50 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+HRPulse backend running on http://localhost:3001
+[INFO] 16:01:49 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
+HRPulse backend running on http://localhost:3001
+[INFO] 16:08:19 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
+HRPulse backend running on http://localhost:3001

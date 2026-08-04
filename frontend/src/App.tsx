@@ -8,6 +8,7 @@ import SalaryPage from './pages/SalaryPage';
 import PayrollPage from './pages/PayrollPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
+import SalaryFillPage from './pages/SalaryFillPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import EmployeesPage from './pages/EmployeesPage';
 import RulesPage from './pages/RulesPage';
@@ -29,6 +30,7 @@ function AppShell() {
           <Route path="/payroll" element={<PayrollPage />} />
           <Route path="/salary" element={<SalaryPage />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/salary-fill" element={<SalaryFillPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/employees" element={<EmployeesPage />} />

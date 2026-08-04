@@ -1,0 +1,125 @@
+excel_name,designation,basic_salary,org,hrpulse_id,hrpulse_current_name,confidence
+RAVINA BALVIR,STAFF NURSE,7000,Hope,10,ravina.balvir,FIRST-WORD
+SEJAL GEDAM,STAFF NURSE,7000,Hope,580,"sejal,gedam",FIRST-WORD
+NATASHA,LAB,7000,Hope,474,Natasha.Lab,FUZZY 70%
+Rajkumar Walake,House Keeping,8000,Hope,138,rajkumar,FUZZY 53%
+Janardhan Motghare,House Keeping,8000,Hope,482,janardhan.kaka,FIRST-WORD
+KIRTI  MESHRAM,MAUSHI,8000,Hope,426,kirti,FUZZY 38%
+Shubhangi Naik,MAUSHI,8000,Hope,366,Shubhangi N,FUZZY 79%
+Priti Sakhare,MAUSHI,8000,Hope,96,Priti Ramteke,FIRST-WORD
+Manthan,OT,8000,Ayushman,400,Manthan,EXACT
+PRIYANKA TEMBURNE,MAUSHI,8000,Hope,502,priyanka,FUZZY 47%
+JYOTI,MAUSHI,8000,Hope,450,jyoti,EXACT
+AYUSHI NANDAGAWLI / lokhande,Physiotherapist,12000,Hope,546,ayushi lokhande,FIRST-WORD
+Tejaswini Sharma,SISTER,9000,Hope,532,Tejaswini Dhage,FIRST-WORD
+SHILPA BANKAR,MAUSHI,9000,Hope,500,shilpa,FUZZY 46%
+Gumfa Temburne,Maushi,9000,Hope,,,
+Urmila Lautkar 9 HOURS,Maushi,9000,Hope,84,urmila.mavci,FIRST-WORD
+Komal Nagrare,OPD Nurse,9000,Hope,146,komal nagarare,FIRST-WORD
+Noor,STAFF NURSE,10000,Hope,386,noor mrd,FUZZY 50%
+Anjali sis,SISTER,10000,Hope,408,anjali sis,EXACT
+Sarita Rangari,Lab Technician,10000,Hope,108,"sarita,jab",FIRST-WORD
+Shrutika,OT SISTER,15000,Hope,282,Shrutika OT,FUZZY 73%
+Madhuri Gawadi,maushi,10000,Ayushman,,,
+aarti telang,maushi,10000,Ayushman,476,arti,FUZZY 33%
+Uttara Ponikar,maushi,13000,Ayushman,,,
+Laxmi Wase,maushi,10000,Ayushman,564,laxmi  dhurve,FIRST-WORD
+Sonam Masih,PATIENT COORDINATOR,10000,Hope,20,sonam,FUZZY 45%
+APEKSHA WANDRE,OT SISTER,15000,Hope,284,Apeksha OT,FIRST-WORD
+Kiran Nandanwar,maushi,10000,Ayushman,326,kiran deshbhrar,FIRST-WORD
+Trupti lab,lab,10000,Ayushman,98,TRUPTI,FUZZY 60%
+Sagar Vaidya,wardboy,10000,Ayushman,,,
+Pinki Dhahenwar,maushi,10000,Ayushman,,,
+Manjusha Koche,Guard,11000,Ayushman,,,
+Priti Warjukar,Guard,10000,Ayushman,96,Priti Ramteke,FIRST-WORD
+VIVEK CHANNE,wardboy,11000,Hope,234,VIVEK THAKRE,FIRST-WORD
+KASHISH SISTER,STAFF NURSE,11000,Hope,318,Kashish Billing,FIRST-WORD
+PRANAY THAKRE,X RAY,11000,Ayushman,186,Pranay Radioloy,FIRST-WORD
+MAHENDRA BAHE,BROTHER,11000,Hope,12,mahendra,FUZZY 62%
+AJAY MESHRAM,Brother,15000,Hope,280,ajay,FUZZY 33%
+SAGAR BAWANE,wardboy,12000,Ayushman,,,
+Aarti Suryawanshi,OT SISTER,12000,Hope,476,arti,FUZZY 24%
+KUNAL AKHARE,OT TECHNICINE,12000,Hope,276,kunal akhare,EXACT
+Meena Yadav,maushi,12000,Ayushman,,,
+Rima Varade,OT,12000,Ayushman,,,
+Shrawan Ingole,Guard,12000,Ayushman,,,
+Dnyaneshwar Warghane,Guard,12000,Ayushman,60,Dnyaneshwar,FUZZY 55%
+NIKITA SISTER,SISTER,12000,Hope,100,nikita patil,FIRST-WORD
+Lalita Nishad,SISTER,12000,Hope,182,lalit,FUZZY 38%
+VISHAL DEEPCLEANING,DEEP CLEANING,13000,Hope,274,vishal,FUZZY 32%
+KIRAN KADBE,BOUNCER,13000,Hope,326,kiran deshbhrar,FIRST-WORD
+Utkarsha Gajbhiye,STAFF NURSE,13000,Hope,294,utkarsha,FUZZY 47%
+Savita Patle,STAFF NURSE,13000,Hope,206,"savita,ptel",FIRST-WORD
+Oshin Tembhurne,X-ray tecnician,13000,Ayushman,460,oshin,FUZZY 33%
+RAJAT SURJARE,wardboy,14000,Hope,246,rajat,FUZZY 38%
+AFROJ KHAN,Night Guard,14000,Hope,,,
+TILAK YADAV,Jr. Accountant,15000,Hope,16,tilak,FUZZY 45%
+SARVESH BRAMHANE,OT TECHNICINE,15000,Hope,14,Sarvesh OT,FIRST-WORD
+Jiyalal Security Guard,Guard,15000,Hope,472,jiyalal guard,FIRST-WORD
+Praful Ambade,wardboy,15000,Hope,8,Praful WB,FIRST-WORD
+PRATIK BROTHER,BROTHER,14000,Ayushman,492,pratik,FUZZY 43%
+VIVEK BROTHER,BROTHER,14000,Ayushman,234,VIVEK THAKRE,FIRST-WORD
+Aarti Dudhabade,Nurse ( ANM ),15000,Ayushman,476,arti,FUZZY 27%
+Sonali Kakde,SISTER,15000,Hope,442,sonali,FUZZY 50%
+Pankaj Shende,Brother,15000,Hope,576,pankaj,FUZZY 46%
+Shoibh Sheikh,Receptionist,15000,Ayushman,488,sheikh,FUZZY 46%
+Abuzar,Receptionist,15000,Ayushman,,,
+Harsh Bouncer,Bouncer,15000,Ayushman,80,harsh tandekar,FIRST-WORD
+Lalit Meshram,Pharmacist,20000,Hope,182,lalit,FUZZY 38%
+SNEHAL TIMANDE,SOFTWARE,12000,Hope,270,sneha,FUZZY 36%
+YASH DESHMUKH,SOFTWARE,15000,Rafttar,34,yash,FUZZY 31%
+Dr. ARUN Agre,Pathology,15000,Hope,,,
+Sagar Vaidya,Housekeeping,15000,Ayushman,,,
+KARTIK MESHRAM,WARDBOY,15000,Ayushman,476,arti,FUZZY 29%
+ABHISHEKH KUMAR,SOFTWEAR,15000,Rafttar,30,abhishek,FUZZY 53%
+AKSHAY,SOFTWARE,15000,Rafttar,32,akshay,EXACT
+PALAK DONGRE,SOFTWARE,15000,Rafttar,1,palak,FUZZY 42%
+REHA KHER,SOFTWARE,15000,Rafttar,36,reha,FUZZY 44%
+ASHRAY  SALVE,SOFTWARE,15000,Rafttar,24,ashray,FUZZY 50%
+BHAVIK SHARMA,SOFTWARE,15000,Rafttar,18,bhavik,FUZZY 46%
+SONAM,SOFTWARE,15000,Rafttar,20,sonam,EXACT
+RUCHIKA ZADE,SOFTWARE,15000,Rafttar,22,ruchika,FUZZY 58%
+Abhishekh Dannar,Billing,15000,Hope,30,abhishek,FUZZY 50%
+Santoshi Patle,Nurse,16500,Ayushman,156,santoshi. donge,FIRST-WORD
+Shubham Dubey,X-ray tecnician,17000,Hope,112,shubham,FUZZY 54%
+Pratik Vyankat,Wardboy,17000,Hope,492,pratik,FUZZY 43%
+REENA NIRGULE,HOUSE KEEPING SUPERVISOR,17000,Hope,224,reena,FUZZY 38%
+SHAHNAWAAZ,BILLING,18000,Hope,,,
+Azhar Shaik,Electrician,18000,Ayushman,126,azhar,FUZZY 45%
+Rupali Ghumde,Nurse ( OPD ),18000,Ayushman,184,Rupali C,FIRST-WORD
+ANIRUDDHA,Software,18000,Rafttar,116,aniruddha,EXACT
+KAUSTUBH HADKE,Software,18000,Rafttar,160,kaustubh,FUZZY 57%
+NITIN DRIVER,Driver,18000,Hope,104,nitin driver,EXACT
+Chetna Kurvanshi,RECEIPTION,18000,Ayushman,440,chetna,FUZZY 38%
+SHAILESH GANESH NINAWE,Accountant,20000,Hope,486,ganesh,FUZZY 27%
+Diksha Sakhare,Receptionist,20000,Hope,378,diksha recep,FIRST-WORD
+Nisha Sharma,Receptionist,20000,Hope,374,nisha recep,FIRST-WORD
+Pankaj Patel,OT,20000,Ayushman,576,pankaj,FUZZY 50%
+RUCHIKA JAMBULKAR,Pharmacist,20000,Hope,22,ruchika,FUZZY 41%
+Lokeash Ambade,(Marketing),20000,Ayushman,,,
+Akshay Barapatre,(Marketing),20000,Ayushman,32,akshay,FUZZY 38%
+Digesh Bisen,Lab Technician,23000,Hope,522,digesh. bisen,EXACT
+AZHER KHAN,Billing,30000,Hope,328,azher,FUZZY 50%
+RIZWANA SHEIKH,Billing,25000,Hope,414,rizwana,FUZZY 50%
+Shashank Upgade,Billing Executive,25000,Hope,464,shashank upgade,EXACT
+Sanjay Khobragade,(Marketing),25000,Ayushman,,,
+Bunty Dalne,(Marketing),25000,Ayushman,,,
+ARPIT KINARKAR,(Marketing),25000,Ayushman,,,
+VIJI MEDAM,,25000,Hope,,,
+ISHITA,,25000,Hope,,,
+ANORA,,25000,Hope,,,
+Mohammad Anas,Software,30000,Rafttar,,,
+SAHIL JHA,Software,30000,Rafttar,420,sahil jha soft,FUZZY 64%
+Ganesh Sharnagat,(Marketing),31000,Ayushman,486,ganesh,FUZZY 38%
+ROMA KUNGAVANI,Physiotherapist,35000,Hope,572,roma.mam,FIRST-WORD
+Suraj Rajput,Marketing,75000,Ayushman,,,
+DR VISHWAJEET RAJPUT,MO (medical officer),49500,,,,
+Dr. Shiraz Khan,Physician,75000,Hope,,,
+AMBAR MALIK,PRO,20000,Hope,,,
+RAJESH CHANDRAWANSHI,PRO,20000,Hope,470,rajesh.kaja,FIRST-WORD
+Baba Khan,OPD PRO,15000,Ayushman,,,
+Bablu Thakur,OPD PRO,15000,Ayushman,,,
+Asif,OPD PRO,15000,Ayushman,,,
+Babla,OPD PRO,15000,Ayushman,,,
+Vikas,OPD PRO,15000,Ayushman,,,
+RISHABH,OPD PRO,10000,Ayushman,,,

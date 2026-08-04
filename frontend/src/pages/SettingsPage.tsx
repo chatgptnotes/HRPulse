@@ -161,7 +161,6 @@ export default function SettingsPage() {
             <h2 className="font-semibold text-slate-700">Ollama AI Configuration</h2>
             <Field label="Ollama URL" value={settings['ollama_url'] || 'http://localhost:11434'} onChange={v => set('ollama_url', v)} />
             <Field label="Model Name" value={settings['ollama_model'] || 'llama3.1:8b'} onChange={v => set('ollama_model', v)} placeholder="llama3.1:8b" />
-            <Field label="Working Days per Month" value={settings['working_days'] || '26'} onChange={v => set('working_days', v)} placeholder="26" />
             <div>
               <label className="text-sm text-slate-600 block mb-1">Missed Swipe counts as (fraction of a day)</label>
               <input
@@ -182,24 +181,59 @@ export default function SettingsPage() {
         )}
 
         {tab === 'payroll' && (
-          <div className="space-y-4">
-            <h2 className="font-semibold text-slate-700">Paid Leave Policy</h2>
-            <p className="text-sm text-slate-500">
-              Every non-IT employee automatically receives 4 paid leave days per month, excluding Sundays.
-              For IT employees, this allowance applies only when Employee Master says Paid Leaves: Yes; Sundays remain weekly offs.
-            </p>
-            <div>
-              <label className="text-sm font-medium text-slate-600 block mb-1">Paid leave days per eligible IT employee, per month</label>
-              <input
-                type="number"
-                step="0.5"
-                min="0"
-                max="31"
-                value={settings['paid_leave_days'] || '2'}
-                onChange={e => set('paid_leave_days', e.target.value)}
-                className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-              />
-              <span className="text-xs text-slate-400 ml-2">Default: 2 days</span>
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h2 className="font-semibold text-slate-700">Salary & Deduction Policy</h2>
+              <p className="text-sm text-slate-500">
+                The per-day salary is calculated as Monthly Salary ÷ Working Days. With 26 working days, a ₹26,000 salary yields ₹1,000/day. This rate drives all deductions (absence, half-day, late penalty) and overtime pay.
+              </p>
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">Working Days per Month</label>
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  max="31"
+                  value={settings['working_days'] || '26'}
+                  onChange={e => set('working_days', e.target.value)}
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                />
+                <span className="text-xs text-slate-400 ml-2">Default: 26</span>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">Late days required for 1 salary-day deduction</label>
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  max="31"
+                  value={settings['late_days_per_deduction'] || '3'}
+                  onChange={e => set('late_days_per_deduction', e.target.value)}
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                />
+                <span className="text-xs text-slate-400 ml-2">Default: 3 (every 3 late arrivals = 1 day deduction)</span>
+              </div>
+            </div>
+
+            <div className="space-y-4 border-t border-slate-100 pt-4">
+              <h2 className="font-semibold text-slate-700">Paid Leave Policy</h2>
+              <p className="text-sm text-slate-500">
+                Every non-IT employee automatically receives 4 paid leave days per month, excluding Sundays.
+                For IT employees, this allowance applies only when Employee Master says Paid Leaves: Yes; Sundays remain weekly offs.
+              </p>
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">Paid leave days per eligible IT employee, per month</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="31"
+                  value={settings['paid_leave_days'] || '2'}
+                  onChange={e => set('paid_leave_days', e.target.value)}
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                />
+                <span className="text-xs text-slate-400 ml-2">Default: 2 days</span>
+              </div>
             </div>
             <button onClick={saveSettings} className="bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-brand-700">Save Payroll Policy</button>
           </div>

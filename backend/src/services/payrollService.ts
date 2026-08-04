@@ -35,6 +35,7 @@ export interface PayrollSettings {
   otMultiplier: number;
   latePenaltyDays: number; // LOP days per late occurrence
   paidLeaveDays: number; // fixed paid leave days granted per month
+  lateDaysPerDeduction: number; // late days required for one salary-day deduction (default 3)
 }
 
 export interface PayrollRow {
@@ -112,7 +113,7 @@ export interface PayrollResult {
 }
 
 export const DEFAULT_PAYROLL_SETTINGS: PayrollSettings = {
-  workingDays: 30,
+  workingDays: 26,
   missedSwipeWeight: 0.5,
   standardWorkingHours: 9,
   halfDayHours: 4,
@@ -122,6 +123,7 @@ export const DEFAULT_PAYROLL_SETTINGS: PayrollSettings = {
   otMultiplier: 1.5,
   latePenaltyDays: 0,
   paidLeaveDays: 2,
+  lateDaysPerDeduction: 3,
 };
 
 export const NON_IT_PAID_LEAVE_DAYS = 4;
@@ -139,7 +141,7 @@ export function parseSettings(raw: Record<string, string>): PayrollSettings {
     return isNaN(v) ? def : v;
   };
   return {
-    workingDays: 30,
+    workingDays: Math.max(1, num('working_days', DEFAULT_PAYROLL_SETTINGS.workingDays)),
     missedSwipeWeight: num('missed_swipe_weight', DEFAULT_PAYROLL_SETTINGS.missedSwipeWeight),
     standardWorkingHours: num('standard_working_hours', DEFAULT_PAYROLL_SETTINGS.standardWorkingHours),
     halfDayHours: num('half_day_hours', DEFAULT_PAYROLL_SETTINGS.halfDayHours),
@@ -149,6 +151,7 @@ export function parseSettings(raw: Record<string, string>): PayrollSettings {
     otMultiplier: num('ot_multiplier', DEFAULT_PAYROLL_SETTINGS.otMultiplier),
     latePenaltyDays: num('late_penalty_days', DEFAULT_PAYROLL_SETTINGS.latePenaltyDays),
     paidLeaveDays: Math.max(0, Math.min(31, num('paid_leave_days', DEFAULT_PAYROLL_SETTINGS.paidLeaveDays))),
+    lateDaysPerDeduction: Math.max(1, num('late_days_per_deduction', DEFAULT_PAYROLL_SETTINGS.lateDaysPerDeduction)),
   };
 }
 
@@ -341,9 +344,9 @@ export function computeEmployeePayroll(
 ): PayrollRow {
   const paidLeavePolicy = paidLeavePolicyForEmployee(emp, paidLeaveDays);
   const normalizedPaidLeaveLimit = paidLeavePolicy.limit;
-  const salaryDivisor = 30;
+  const salaryDivisor = settings.workingDays;
   const dailySalary = monthlySalary > 0 ? monthlySalary / salaryDivisor : 0;
-  const overtimeDailySalary = monthlySalary > 0 ? monthlySalary / 30 : 0;
+  const overtimeDailySalary = monthlySalary > 0 ? monthlySalary / salaryDivisor : 0;
   const overtimePayPerDay = overtimeDailySalary / 2;
   const hourlyRate = settings.standardWorkingHours > 0 ? dailySalary / settings.standardWorkingHours : 0;
 
@@ -427,16 +430,20 @@ export function computeEmployeePayroll(
   const overtimePay = Math.round(overtimeDays * overtimePayPerDay);
   const absentDeduction = Math.round(unpaidAbsent * dailySalary);
   const halfDayDeduction = Math.round(halfDays * (dailySalary / 2));
-  const grossSalary = Math.round(monthlySalary + overtimePay);
+  // Gross salary is always the fixed monthly salary — it never increases above it.
+  // Overtime pay and allowances are tracked separately for reporting, not added to gross.
+  // Net salary is therefore always less than or equal to the gross salary.
+  const grossSalary = Math.round(monthlySalary);
 
   // Deductions: late penalties only. Missing punches are displayed and notified,
   // but no salary amount is deducted for them.
   const missedPenalty = 0;
-  // Every 3 late punches = 1 day salary deduction (hardcoded policy).
-  const lateDeductionDays = calculateLateDeductionDays(lateDays);
+  // Late deduction: every N late days (configurable, default 3) = 1 salary-day deduction.
+  const lateDeductionDays = calculateLateDeductionDays(lateDays, settings.lateDaysPerDeduction);
   const latePenalty = dailySalary * lateDeductionDays;
   const totalDeductions = Math.round(absentDeduction + halfDayDeduction + missedPenalty + latePenalty);
-  const netSalary = grossSalary - totalDeductions;
+  // Net salary is always clamped: never below 0, never above the fixed gross salary.
+  const netSalary = Math.min(grossSalary, Math.max(0, grossSalary - totalDeductions));
 
   let status = 'Processed';
   if (monthlySalary <= 0) status = 'No Salary Config';
@@ -604,7 +611,7 @@ export function buildEmployeeDetail(
       dates: halfDayDates,
       amountPerDate: Math.round(row.dailySalary / 2),
       totalAmount: row.halfDayDeduction,
-      formula: `${row.halfDays} half day${row.halfDays === 1 ? '' : 's'} x Monthly Salary / 30 / 2`,
+      formula: `${row.halfDays} half day${row.halfDays === 1 ? '' : 's'} x Monthly Salary / ${settings.workingDays} / 2`,
       reason: 'Worked less than configured half-day hours',
       effectType: 'deduction',
     });

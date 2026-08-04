@@ -282,7 +282,7 @@ function ruleImpact(
     allowance += scaledOvertimeHalfDayAllowance;
     parts.push(`add ${repeatCount} half-day overtime pay`);
     amountPerDate = Math.round(dailySalary / 2);
-    formula = `${repeatCount} overtime day${repeatCount > 1 ? 's' : ''} x Monthly Salary / 30 / 2`;
+    formula = `${repeatCount} overtime day${repeatCount > 1 ? 's' : ''} x Monthly Salary / Working Days / 2`;
     reason = 'Overtime eligible employee worked more than 2 hours after shift end';
     effectType = 'allowance';
   }

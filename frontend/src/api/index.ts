@@ -207,6 +207,16 @@ export const getAnalyticsOverview = () => api.get('/analytics/overview');
 export const getAnalyticsTrends = (uploadId: number) => api.get(`/analytics/trends/${uploadId}`);
 export const getMonthlyComparison = () => api.get('/analytics/monthly-comparison');
 
+// Salary Sheet Auto-Fill
+export const fillSalarySheet = (salarySheet: File, attendanceFile: File, sheetName: string, workingDays: number) => {
+  const fd = new FormData();
+  fd.append('salarySheet', salarySheet);
+  fd.append('attendanceFile', attendanceFile);
+  fd.append('sheetName', sheetName);
+  fd.append('workingDays', String(workingDays));
+  return api.post('/salary-fill', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+};
+
 // AI
 export const askAi = (question: string, uploadId?: number) => api.post('/ai/ask', { question, uploadId });
 export const analyzeUpload = (uploadId: number) => api.post(`/ai/analyze/${uploadId}`);

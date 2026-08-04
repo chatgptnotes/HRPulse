@@ -278,10 +278,10 @@ function applyRulesToRow(
   row.ruleDeductionDays = res.deductDays;
   row.ruleDeductionAmount = res.deductionAmount;
   row.ruleAllowanceAmount = res.allowanceAmount;
-  // Allowances are earnings → added to gross; deductions raise totalDeductions.
-  row.grossSalary += res.allowanceAmount;
-  row.totalDeductions += res.deductionAmount;
-  row.netSalary = row.grossSalary - row.totalDeductions;
+  // Gross salary stays fixed at the monthly salary — it never increases.
+  // Allowances reduce deductions instead of inflating gross; net never exceeds gross.
+  row.totalDeductions = Math.max(0, row.totalDeductions + res.deductionAmount - res.allowanceAmount);
+  row.netSalary = Math.min(row.grossSalary, row.grossSalary - row.totalDeductions);
   return res.matchedRules;
 }
 

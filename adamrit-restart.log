@@ -42,3 +42,139 @@ Re-optimizing dependencies because vite config has changed
 [2m6:23:29 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
 [2m6:32:19 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
 [2m6:32:38 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m10:00:44 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m10:00:44 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m10:06:23 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m10:06:23 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m1:21:04 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/modules/hr/HrEssFlow.tsx, /src/index.css[22m
+[2m1:21:22 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/SourceBadge.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/AdvancePaymentModal.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PatientRegistrationForm/DocumentUploadSection.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/AccountMasters.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/government-portal/GovernmentPortalCsvSection.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/patient/PatientTabs.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/pharmacy/EditPurchaseOrder.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/AppSidebar.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/tally/TallyApprovals.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/enhanced-date-picker.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/visit/VisitDetailsSection.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/AuthContext.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/hooks/useCompanies.ts[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/integrations/supabase/types.ts[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/AdvancePaymentModal.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AppRoutes.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/DailyAllocationSheet.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/DailyRevenueReportSection.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/DiscountTab.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PatientRegistrationForm.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/VisitRegistrationForm.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PatientRegistrationForm/DocumentUploadSection.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PatientRegistrationForm/PatientInfoSection.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/PatientRegistrationForm/types.ts[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/PatientRegistrationForm.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/AccountingPage.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/AccountMasters.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/BalanceSheet.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/Banking.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/BillsPayable.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/BankReconciliation.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/BillsReceivable.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/BillwiseOutstanding.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/CashBankBook.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/CashFlow.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/ChartOfAccounts.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/CostCentres.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/CashBankSummary.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/Dashboard.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/DayBook.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/EditLog.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/ExceptionReports.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/FundsFlow.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/GatewayOfTally.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/GroupSummary.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/LedgerView.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/OpeningBalances.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/ProfitLoss.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/RatioAnalysis.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/ReceiptsPayments.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/StatisticsScreen.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/TallyImportExport.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/VoucherEntry.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/VoucherRegister.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/TrialBalance.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/tally/TallyChrome.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/accounting/tally/heads.ts[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/AppSidebar.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdvanceStatementReport.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/corporate-bill/BillDocumentsSection.tsx, /src/index.css[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletHome.tsx, /src/tablet/screens/TabletModuleHost.tsx, /src/tablet/shell/TabletBottomNav.tsx, /src/tablet/shell/TabletTopBar.tsx[22m
+[2m1:21:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/government-portal/GovernmentPortalCsvSection.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/tablet/modules/director/DirectorView.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/patient/PatientTabs.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/pharmacy/EditPurchaseOrder.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/pharmacy/PharmacyBilling.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/AppSidebar.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/tally/TallyApprovals.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/tally/TallyPage.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/tablet/modules/patient-profile/PatientDocsTab.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/enhanced-date-picker.tsx, /src/index.css[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/screens/TabletModuleHost.tsx, /src/index.css[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/shell/GovernmentPortalExtensionBell.tsx, /src/index.css[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/styles/tablet.css[22m
+[2m1:21:24 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/types/pharmacy.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/visit/VisitDetailsSection.tsx, /src/index.css[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/AuthContext.tsx, /src/index.css[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/hooks/useCompanies.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css, /src/pages/Index.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/hooks/useDailyPaymentAllocation.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/hooks/useDirectorKpis.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/hooks/useFinalBillData.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/hooks/useFinancialSummary.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/AppSidebar.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/hooks/useOccupancy.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/hooks/usePaymentObligations.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/hooks/usePendingPrescriptions.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/integrations/supabase/types.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/lib/accounting-voucher-service.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/AdvanceStatementReport.tsx, /src/tablet/shell/GovernmentPortalExtensionBell.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/AdvanceStatementReport.tsx, /src/tablet/shell/GovernmentPortalExtensionBell.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/lib/grn-service.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/lib/mergedLedgerBalances.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/lib/pharmacy-billing-service.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/lib/tallyCompanyMatch.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/main.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mvite.config.ts changed, restarting server...[39m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdvanceStatementReport.tsx, /src/index.css[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Index.tsx, /src/index.css[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/TodaysIpdDashboard.tsx, /src/index.css[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/corporate-bill/BillDocumentsSection.tsx, /src/index.css[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletHome.tsx, /src/tablet/screens/TabletModuleHost.tsx, /src/tablet/shell/TabletBottomNav.tsx, /src/tablet/shell/TabletTopBar.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/corporate-bill/BillDocumentsSection.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/tablet/hooks/usePatients.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/tablet/lib/vasooli.ts[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/tablet/modules/director/DirectorView.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/tablet/modules/director/OccupancyCard.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/tablet/modules/patient-profile/PatientDocsTab.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/tablet/screens/TabletModuleHost.tsx[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/screens/TabletModuleHost.tsx, /src/index.css[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/shell/GovernmentPortalExtensionBell.tsx, /src/index.css[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/shell/TabletNotificationBell.tsx, /src/index.css[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/tablet/shell/TabletTopBar.tsx, /src/index.css[22m
+[2m1:21:25 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/types/pharmacy.ts[22m
+[2m2:44:49 pm[22m [36m[1m[vite][22m[39m changed tsconfig file detected: C:\Users\hope4\hrpulse\HRPulse\adamrit\claude-auto-confirm\tsconfig.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.

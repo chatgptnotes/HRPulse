@@ -161,12 +161,17 @@ export async function syncEmployeesFromExcel(records: ParsedRecord[]) {
   const existingEmployees = await fetchEmployees();
   const byNumber = new Map<string, any>();
   const byName = new Map<string, any[]>();
+  const byBiometric = new Map<string, any>();
   const emailOwner = new Map<string, number>();
   for (const employee of existingEmployees) {
     const number = normalizedNumber(employee.employee_number);
     if (number) byNumber.set(number, employee);
     const name = normalizedEmployeeName(employee.name);
     if (name) byName.set(name, [...(byName.get(name) || []), employee]);
+    if (employee.biometric_name) {
+      const bKey = normalizedEmployeeName(employee.biometric_name);
+      if (bKey && !byBiometric.has(bKey)) byBiometric.set(bKey, employee);
+    }
     if (employee.email) emailOwner.set(String(employee.email).trim().toLowerCase(), Number(employee.id));
   }
 
@@ -177,8 +182,9 @@ export async function syncEmployeesFromExcel(records: ParsedRecord[]) {
   const reservedEmails = new Set(emailOwner.keys());
   const plans = collected.candidates.map(candidate => {
     const nameMatches = byName.get(normalizedEmployeeName(candidate.name)) || [];
+    const biometricMatch = byBiometric.get(normalizedEmployeeName(candidate.name));
     const numberMatch = byNumber.get(normalizedNumber(candidate.employeeNumber));
-    const uniqueNameMatch = nameMatches.length === 1 ? nameMatches[0] : null;
+    const uniqueNameMatch = nameMatches.length === 1 ? nameMatches[0] : (biometricMatch || null);
     const nameMatchNumber = normalizedNumber(uniqueNameMatch?.employee_number);
     const generatedNumber = candidate.employeeNumber.startsWith('XLS-');
     const existing = numberMatch || (

@@ -442,550 +442,796 @@ AggregateError [ECONNREFUSED]:
 AggregateError [ECONNREFUSED]: 
     at internalConnectMultiple (node:net:1134:18)
     at afterConnectMultiple (node:net:1715:7)
-js:11331:23)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4764:20)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10891:30)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9603:18)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10885:17)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10784:23)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:17)
-      at TypeScriptParserMixin.jsxParseExpressionContainer (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4632:31)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4711:36)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4698:32)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-[2m12:03:29 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\adamrit\src\tablet\modules\hr\HrEssFlow.tsx: Expected corresponding JSX closing tag for <HrCard>. (804:10)
+[2m9:59:59 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:00:01 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m11:30:10 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/employees[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m11:30:10 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m11:30:11 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/employees[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m11:30:12 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m11:50:01 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m11:50:03 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m11:51:47 am[22m [31m[1m[vite][22m[39m [31mInternal server error: Transform failed with 1 error:
+C:/Users/hope4/hrpulse/HRPulse/frontend/src/pages/RulesPage.tsx:776:43: ERROR: The character ">" is not valid inside a JSX element[39m
+  Plugin: [35mvite:esbuild[39m
+  File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/pages/RulesPage.tsx[39m:757:0
+[33m  
+  [33mThe character ">" is not valid inside a JSX element[33m
+  774|                    <div className="font-semibold">Repeat this salary effect for every threshold group</div>
+  775|                    <div className="mt-1 text-xs text-slate-500">
+  776|                      Example: Late arrivals >= 3 with deduct 1 day means 10 late arrivals deduct 3 salary days.
+     |                                             ^
+  777|                    </div>
+  778|                  </div>
+  [39m
+      at failureErrorWithLog (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:1472:15)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:755:50
+      at responseCallbacks.<computed> (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:622:9)
+      at handleIncomingPacket (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:677:12)
+      at Socket.readFromStdout (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:600:7)
+      at Socket.emit (node:events:508:28)
+      at addChunk (node:internal/streams/readable:559:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+      at Readable.push (node:internal/streams/readable:390:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+[2m2:41:25 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m2:41:27 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:17:36 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/attendance/summary/32[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:17:36 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/attendance/sheet/32[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:17:36 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:17:36 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/employees[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:17:36 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/attendance/uploads[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:17:36 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/emails/drafts/32[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:17:36 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:18:11 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:19:07 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:19:10 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:20:47 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:21:38 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:21:53 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:22:15 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:27:04 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:27:42 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:28:16 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:29:51 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:31:06 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:32:18 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m8:37:22 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:01:30 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:01:30 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/history[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:01:30 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/runs/32[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:01:30 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/filters[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:01:30 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/finalization/2026-07/status[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:01:30 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:01:34 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:02:03 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:02:16 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:03:27 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:04:13 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:04:38 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:05:54 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:05:59 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:06:14 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:17:38 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:17:44 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:18:09 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:18:18 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:19:33 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:19:59 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:20:07 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:20:29 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:20:34 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:20:46 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:20:56 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:21:00 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:21:05 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:21:26 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:27:42 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:27:42 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/filters[39m
+AggregateError [ETIMEDOUT]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:27:42 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/runs/32[39m
+AggregateError [ETIMEDOUT]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:27:42 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/finalization/2026-07/status[39m
+AggregateError [ETIMEDOUT]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:27:42 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ETIMEDOUT]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:27:43 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/history[39m
+AggregateError [ETIMEDOUT]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:30:11 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:30:19 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:30:35 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:30:40 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:31:18 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:31:38 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:31:44 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:32:10 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:32:21 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:32:31 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:34:03 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:35:39 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m10:35:44 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:35:35 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:35:50 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:36:07 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:36:11 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m9:37:16 am[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m11:11:20 am[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\pages\EmployeesPage.tsx: Expected corresponding JSX closing tag for <section>. (767:6)
 
-[0m [90m 802 |[31m               [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
- [90m 803 |[31m             [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
-[31m[1m>[22m[31m[90m 804 |[31m           [33m<[31m[33m/[31m[33mTabletCard[31m[33m>[31m
- [90m     |[31m           [31m[1m^[22m[31m
- [90m 805 |[31m         ) [33m:[31m [36mnull[31m}
- [90m 806 |[31m
- [90m 807 |[31m         {hasLoaded [33m&&[31m [33m![31merror [33m?[31m ([0m[39m
+[0m [90m 765 |[31m           [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m 766 |[31m         [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+[31m[1m>[22m[31m[90m 767 |[31m       [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m     |[31m       [31m[1m^[22m[31m
+ [90m 768 |[31m
+ [90m 769 |[31m       {[90m/* Add / Edit modal */[31m}
+ [90m 770 |[31m       {formOpen [33m&&[31m ([0m[39m
   Plugin: [35mvite:react-babel[39m
-  File: [36mC:/Users/hope4/hrpulse/HRPulse/adamrit/src/tablet/modules/hr/HrEssFlow.tsx[39m:804:10
-[33m  812|                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#273449]">
-  813|                  {payload.profile.photoUrl ? (
-  814|                    <img src={payload.profile.photoUrl} alt="" className="h-full w-full object-cover" />
-     |                                                           ^
-  815|                  ) : (
-  816|                    <UserRound className="h-10 w-10 text-[#3B82F6]" />[39m
-      at constructor (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:365:19)
-      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6599:19)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4727:16)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:39
-      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6907:20)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:18)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12493:17)
-      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11675:28)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11331:23)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4764:20)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10891:30)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9603:18)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10885:17)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10784:23)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:17)
-      at TypeScriptParserMixin.jsxParseExpressionContainer (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4632:31)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4711:36)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4698:32)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-[2m12:03:45 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\adamrit\src\tablet\modules\hr\HrEssFlow.tsx: Expected corresponding JSX closing tag for <HrCard>. (804:10)
+  File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/pages/EmployeesPage.tsx[39m:767:6
+[33m  765|            </div>
+  766|          </div>
+  767|        </div>
+     |        ^
+  768|  
+  769|        {/* Add / Edit modal */}[39m
+      at constructor (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6616:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4739:16)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4761:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4771:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:39
+      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6924:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12443:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12510:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11692:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11348:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4776:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9803:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10801:23)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12438:16)
+      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13159:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12815:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9525:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12784:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12764:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13333:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13326:10)
+      at TypeScriptParserMixin.parseBlock (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13314:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12117:24)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12103:10)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9189:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13462:12
+[2m11:13:59 am[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\pages\EmployeesPage.tsx: Expected corresponding JSX closing tag for <section>. (770:6)
 
-[0m [90m 802 |[31m               [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
- [90m 803 |[31m             [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
-[31m[1m>[22m[31m[90m 804 |[31m           [33m<[31m[33m/[31m[33mTabletCard[31m[33m>[31m
- [90m     |[31m           [31m[1m^[22m[31m
- [90m 805 |[31m         ) [33m:[31m [36mnull[31m}
- [90m 806 |[31m
- [90m 807 |[31m         {hasLoaded [33m&&[31m [33m![31merror [33m?[31m ([0m[39m
+[0m [90m 768 |[31m           [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m 769 |[31m         [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+[31m[1m>[22m[31m[90m 770 |[31m       [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m     |[31m       [31m[1m^[22m[31m
+ [90m 771 |[31m
+ [90m 772 |[31m       {[90m/* Add / Edit modal */[31m}
+ [90m 773 |[31m       {formOpen [33m&&[31m ([0m[39m
   Plugin: [35mvite:react-babel[39m
-  File: [36mC:/Users/hope4/hrpulse/HRPulse/adamrit/src/tablet/modules/hr/HrEssFlow.tsx[39m:804:10
-[33m  812|                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#273449]">
-  813|                  {payload.profile.photoUrl ? (
-  814|                    <img src={payload.profile.photoUrl} alt="" className="h-full w-full object-cover" />
-     |                                                           ^
-  815|                  ) : (
-  816|                    <UserRound className="h-10 w-10 text-[#3B82F6]" />[39m
-      at constructor (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:365:19)
-      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6599:19)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4727:16)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:39
-      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6907:20)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:18)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12493:17)
-      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11675:28)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11331:23)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4764:20)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10891:30)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9603:18)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10885:17)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10784:23)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:17)
-      at TypeScriptParserMixin.jsxParseExpressionContainer (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4632:31)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4711:36)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4698:32)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-[2m12:03:45 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\adamrit\src\tablet\modules\hr\HrEssFlow.tsx: Expected corresponding JSX closing tag for <HrCard>. (804:10)
+  File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/pages/EmployeesPage.tsx[39m:770:6
+[33m  768|            </div>
+  769|          </div>
+  770|        </div>
+     |        ^
+  771|  
+  772|        {/* Add / Edit modal */}[39m
+      at constructor (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6616:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4739:16)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4761:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4771:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:39
+      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6924:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12443:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12510:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11692:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11348:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4776:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9803:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10801:23)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12438:16)
+      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13159:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12815:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9525:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12784:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12764:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13333:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13326:10)
+      at TypeScriptParserMixin.parseBlock (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13314:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12117:24)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12103:10)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9189:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13462:12
+[2m11:15:12 am[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\pages\EmployeesPage.tsx: Expected corresponding JSX closing tag for <section>. (788:6)
 
-[0m [90m 802 |[31m               [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
- [90m 803 |[31m             [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
-[31m[1m>[22m[31m[90m 804 |[31m           [33m<[31m[33m/[31m[33mTabletCard[31m[33m>[31m
- [90m     |[31m           [31m[1m^[22m[31m
- [90m 805 |[31m         ) [33m:[31m [36mnull[31m}
- [90m 806 |[31m
- [90m 807 |[31m         {hasLoaded [33m&&[31m [33m![31merror [33m?[31m ([0m[39m
+[0m [90m 786 |[31m           [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m 787 |[31m         [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+[31m[1m>[22m[31m[90m 788 |[31m       [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m     |[31m       [31m[1m^[22m[31m
+ [90m 789 |[31m
+ [90m 790 |[31m       {[90m/* Add / Edit modal */[31m}
+ [90m 791 |[31m       {formOpen [33m&&[31m ([0m[39m
   Plugin: [35mvite:react-babel[39m
-  File: [36mC:/Users/hope4/hrpulse/HRPulse/adamrit/src/tablet/modules/hr/HrEssFlow.tsx[39m:804:10
-[33m  812|                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#273449]">
-  813|                  {payload.profile.photoUrl ? (
-  814|                    <img src={payload.profile.photoUrl} alt="" className="h-full w-full object-cover" />
-     |                                                           ^
-  815|                  ) : (
-  816|                    <UserRound className="h-10 w-10 text-[#3B82F6]" />[39m
-      at constructor (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:365:19)
-      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6599:19)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4727:16)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:39
-      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6907:20)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:18)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12493:17)
-      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11675:28)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11331:23)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4764:20)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10891:30)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9603:18)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10885:17)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10784:23)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:17)
-      at TypeScriptParserMixin.jsxParseExpressionContainer (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4632:31)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4711:36)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4698:32)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-[2m12:04:28 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\adamrit\src\tablet\modules\hr\HrEssFlow.tsx: Expected corresponding JSX closing tag for <HrCard>. (804:10)
+  File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/pages/EmployeesPage.tsx[39m:788:6
+[33m  786|            </div>
+  787|          </div>
+  788|        </div>
+     |        ^
+  789|  
+  790|        {/* Add / Edit modal */}[39m
+      at constructor (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6616:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4739:16)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4761:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4771:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:39
+      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6924:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12443:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12510:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11692:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11348:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4776:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9803:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10801:23)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12438:16)
+      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13159:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12815:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9525:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12784:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12764:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13333:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13326:10)
+      at TypeScriptParserMixin.parseBlock (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13314:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12117:24)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12103:10)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9189:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13462:12
+[2m11:17:20 am[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\pages\EmployeesPage.tsx: Expected corresponding JSX closing tag for <section>. (788:6)
 
-[0m [90m 802 |[31m               [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
- [90m 803 |[31m             [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
-[31m[1m>[22m[31m[90m 804 |[31m           [33m<[31m[33m/[31m[33mTabletCard[31m[33m>[31m
- [90m     |[31m           [31m[1m^[22m[31m
- [90m 805 |[31m         ) [33m:[31m [36mnull[31m}
- [90m 806 |[31m
- [90m 807 |[31m         {hasLoaded [33m&&[31m [33m![31merror [33m?[31m ([0m[39m
+[0m [90m 786 |[31m           [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m 787 |[31m         [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+[31m[1m>[22m[31m[90m 788 |[31m       [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m     |[31m       [31m[1m^[22m[31m
+ [90m 789 |[31m
+ [90m 790 |[31m       {[90m/* Add / Edit modal */[31m}
+ [90m 791 |[31m       {formOpen [33m&&[31m ([0m[39m
   Plugin: [35mvite:react-babel[39m
-  File: [36mC:/Users/hope4/hrpulse/HRPulse/adamrit/src/tablet/modules/hr/HrEssFlow.tsx[39m:804:10
-[33m  812|                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#273449]">
-  813|                  {payload.profile.photoUrl ? (
-  814|                    <img src={payload.profile.photoUrl} alt="" className="h-full w-full object-cover" />
-     |                                                           ^
-  815|                  ) : (
-  816|                    <UserRound className="h-10 w-10 text-[#3B82F6]" />[39m
-      at constructor (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:365:19)
-      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6599:19)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4727:16)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:39
-      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6907:20)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:18)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12493:17)
-      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11675:28)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11331:23)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4764:20)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10891:30)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9603:18)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10885:17)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10784:23)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:17)
-      at TypeScriptParserMixin.jsxParseExpressionContainer (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4632:31)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4711:36)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4698:32)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-[2m12:04:28 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\adamrit\src\tablet\modules\hr\HrEssFlow.tsx: Expected corresponding JSX closing tag for <HrCard>. (804:10)
+  File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/pages/EmployeesPage.tsx[39m:788:6
+[33m  786|            </div>
+  787|          </div>
+  788|        </div>
+     |        ^
+  789|  
+  790|        {/* Add / Edit modal */}[39m
+      at constructor (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6616:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4739:16)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4761:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4771:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:39
+      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6924:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12443:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12510:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11692:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11348:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4776:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9803:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10801:23)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12438:16)
+      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13159:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12815:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9525:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12784:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12764:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13333:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13326:10)
+      at TypeScriptParserMixin.parseBlock (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13314:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12117:24)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12103:10)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9189:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13462:12
+[2m11:17:58 am[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\pages\EmployeesPage.tsx: Expected corresponding JSX closing tag for <section>. (788:6)
 
-[0m [90m 802 |[31m               [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
- [90m 803 |[31m             [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
-[31m[1m>[22m[31m[90m 804 |[31m           [33m<[31m[33m/[31m[33mTabletCard[31m[33m>[31m
- [90m     |[31m           [31m[1m^[22m[31m
- [90m 805 |[31m         ) [33m:[31m [36mnull[31m}
- [90m 806 |[31m
- [90m 807 |[31m         {hasLoaded [33m&&[31m [33m![31merror [33m?[31m ([0m[39m
+[0m [90m 786 |[31m           [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m 787 |[31m         [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+[31m[1m>[22m[31m[90m 788 |[31m       [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m     |[31m       [31m[1m^[22m[31m
+ [90m 789 |[31m
+ [90m 790 |[31m       {[90m/* Add / Edit modal */[31m}
+ [90m 791 |[31m       {formOpen [33m&&[31m ([0m[39m
   Plugin: [35mvite:react-babel[39m
-  File: [36mC:/Users/hope4/hrpulse/HRPulse/adamrit/src/tablet/modules/hr/HrEssFlow.tsx[39m:804:10
-[33m  812|                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#273449]">
-  813|                  {payload.profile.photoUrl ? (
-  814|                    <img src={payload.profile.photoUrl} alt="" className="h-full w-full object-cover" />
-     |                                                           ^
-  815|                  ) : (
-  816|                    <UserRound className="h-10 w-10 text-[#3B82F6]" />[39m
-      at constructor (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:365:19)
-      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6599:19)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4727:16)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:39
-      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6907:20)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:18)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12493:17)
-      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11675:28)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11331:23)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4764:20)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10891:30)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9603:18)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10885:17)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10784:23)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:17)
-      at TypeScriptParserMixin.jsxParseExpressionContainer (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4632:31)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4711:36)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4698:32)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-[2m12:05:48 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\adamrit\src\tablet\modules\hr\HrEssFlow.tsx: Expected corresponding JSX closing tag for <HrCard>. (804:10)
+  File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/pages/EmployeesPage.tsx[39m:788:6
+[33m  786|            </div>
+  787|          </div>
+  788|        </div>
+     |        ^
+  789|  
+  790|        {/* Add / Edit modal */}[39m
+      at constructor (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6616:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4739:16)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4761:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4771:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:39
+      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6924:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12443:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12510:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11692:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11348:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4776:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9803:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10801:23)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12438:16)
+      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13159:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12815:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9525:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12784:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12764:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13333:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13326:10)
+      at TypeScriptParserMixin.parseBlock (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13314:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12117:24)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12103:10)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9189:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13462:12
+[2m11:18:24 am[22m [31m[1m[vite][22m[39m Pre-transform error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\pages\EmployeesPage.tsx: Expected corresponding JSX closing tag for <section>. (788:6)
 
-[0m [90m 802 |[31m               [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
- [90m 803 |[31m             [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
-[31m[1m>[22m[31m[90m 804 |[31m           [33m<[31m[33m/[31m[33mTabletCard[31m[33m>[31m
- [90m     |[31m           [31m[1m^[22m[31m
- [90m 805 |[31m         ) [33m:[31m [36mnull[31m}
- [90m 806 |[31m
- [90m 807 |[31m         {hasLoaded [33m&&[31m [33m![31merror [33m?[31m ([0m[39m
-  Plugin: [35mvite:react-babel[39m
-  File: [36mC:/Users/hope4/hrpulse/HRPulse/adamrit/src/tablet/modules/hr/HrEssFlow.tsx[39m:804:10
-[33m  812|                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#273449]">
-  813|                  {payload.profile.photoUrl ? (
-  814|                    <img src={payload.profile.photoUrl} alt="" className="h-full w-full object-cover" />
-     |                                                           ^
-  815|                  ) : (
-  816|                    <UserRound className="h-10 w-10 text-[#3B82F6]" />[39m
-      at constructor (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:365:19)
-      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6599:19)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4727:16)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:39
-      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6907:20)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:18)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12493:17)
-      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11675:28)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11331:23)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4764:20)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10891:30)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9603:18)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10885:17)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10784:23)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:17)
-      at TypeScriptParserMixin.jsxParseExpressionContainer (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4632:31)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4711:36)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4698:32)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-[2m12:05:49 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\adamrit\src\tablet\modules\hr\HrEssFlow.tsx: Expected corresponding JSX closing tag for <HrCard>. (804:10)
+[0m [90m 786 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 787 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 788 |[39m       [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m     |[39m       [31m[1m^[22m[39m
+ [90m 789 |[39m
+ [90m 790 |[39m       {[90m/* Add / Edit modal */[39m}
+ [90m 791 |[39m       {formOpen [33m&&[39m ([0m
+[2m11:18:25 am[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\pages\EmployeesPage.tsx: Expected corresponding JSX closing tag for <section>. (788:6)
 
-[0m [90m 802 |[31m               [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
- [90m 803 |[31m             [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
-[31m[1m>[22m[31m[90m 804 |[31m           [33m<[31m[33m/[31m[33mTabletCard[31m[33m>[31m
- [90m     |[31m           [31m[1m^[22m[31m
- [90m 805 |[31m         ) [33m:[31m [36mnull[31m}
- [90m 806 |[31m
- [90m 807 |[31m         {hasLoaded [33m&&[31m [33m![31merror [33m?[31m ([0m[39m
+[0m [90m 786 |[31m           [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m 787 |[31m         [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+[31m[1m>[22m[31m[90m 788 |[31m       [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m     |[31m       [31m[1m^[22m[31m
+ [90m 789 |[31m
+ [90m 790 |[31m       {[90m/* Add / Edit modal */[31m}
+ [90m 791 |[31m       {formOpen [33m&&[31m ([0m[39m
   Plugin: [35mvite:react-babel[39m
-  File: [36mC:/Users/hope4/hrpulse/HRPulse/adamrit/src/tablet/modules/hr/HrEssFlow.tsx[39m:804:10
-[33m  812|                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#273449]">
-  813|                  {payload.profile.photoUrl ? (
-  814|                    <img src={payload.profile.photoUrl} alt="" className="h-full w-full object-cover" />
-     |                                                           ^
-  815|                  ) : (
-  816|                    <UserRound className="h-10 w-10 text-[#3B82F6]" />[39m
-      at constructor (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:365:19)
-      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6599:19)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4727:16)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:39
-      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6907:20)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:18)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12493:17)
-      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11675:28)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11331:23)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4764:20)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10891:30)
-      at TypeScriptParserMixin.parseConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9603:18)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10885:17)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)
-      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10784:23)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10780:17)
-      at TypeScriptParserMixin.jsxParseExpressionContainer (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4632:31)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4711:36)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4698:32)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-[2m12:06:19 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\adamrit\src\tablet\modules\hr\HrEssFlow.tsx: Expected corresponding JSX closing tag for <HrCard>. (804:10)
-
-[0m [90m 802 |[31m               [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
- [90m 803 |[31m             [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
-[31m[1m>[22m[31m[90m 804 |[31m           [33m<[31m[33m/[31m[33mTabletCard[31m[33m>[31m
- [90m     |[31m           [31m[1m^[22m[31m
- [90m 805 |[31m         ) [33m:[31m [36mnull[31m}
- [90m 806 |[31m
- [90m 807 |[31m         {hasLoaded [33m&&[31m [33m![31merror [33m?[31m ([0m[39m
-  Plugin: [35mvite:react-babel[39m
-  File: [36mC:/Users/hope4/hrpulse/HRPulse/adamrit/src/tablet/modules/hr/HrEssFlow.tsx[39m:804:10
-[33m  812|                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#273449]">
-  813|                  {payload.profile.photoUrl ? (
-  814|                    <img src={payload.profile.photoUrl} alt="" className="h-full w-full object-cover" />
-     |                                                           ^
-  815|                  ) : (
-  816|                    <UserRound className="h-10 w-10 text-[#3B82F6]" />[39m
-      at constructor (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:365:19)
-      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6599:19)
-      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4727:16)
-      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4749:17)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4759:19)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
-      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:39
-      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:6907:20)
-      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9775:18)
-      at C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:39
-      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12426:12)
-      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10800:17)
-      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:12493:17)
-      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11675:28)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11331:23)
-      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:4764:20)
-      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11081:23)
-      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11066:21)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:11046:23)
-      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9837:18)
-      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10899:61)
-      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
+  File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/pages/EmployeesPage.tsx[39m:788:6
+[33m  786|            </div>
+  787|          </div>
+  788|        </div>
+     |        ^
+  789|  
+  790|        {/* Add / Edit modal */}[39m
+      at constructor (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:365:19)
+      at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6616:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4739:16)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+      at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4761:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4771:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:39
+      at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6924:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12443:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12510:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11692:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11348:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4776:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9803:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10801:23)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12438:16)
+      at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13159:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12815:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9525:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12784:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12764:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13333:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13326:10)
+      at TypeScriptParserMixin.parseBlock (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13314:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12117:24)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12103:10)
+      at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9189:18)
+      at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13462:12
+[2m1:15:03 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/employee/40/241[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m1:15:05 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/employee/40/241[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m2:16:36 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/employee/40/360[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m2:16:37 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/employee/40/360[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m4:00:51 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/runs/40[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10904:23)
       at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10881:23)
       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:10831:21)
       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\adamrit\node_modules\@babel\parser\lib\index.js:9786:20)

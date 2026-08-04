@@ -68,6 +68,13 @@ export function classifyLateAttendanceStatus(
   return status;
 }
 
-export function lateDeductionDays(lateDays: number) {
-  return Math.floor(Math.max(0, Number(lateDays) || 0) / LATE_DAYS_PER_DEDUCTION);
+/**
+ * Late-coming salary deduction days.
+ * @param lateDays   total late days in the period
+ * @param perDeduction  number of late days required for one salary-day deduction
+ *                      (defaults to the hardcoded LATE_DAYS_PER_DEDUCTION = 3)
+ */
+export function lateDeductionDays(lateDays: number, perDeduction = LATE_DAYS_PER_DEDUCTION) {
+  const denom = Math.max(1, Number(perDeduction) || LATE_DAYS_PER_DEDUCTION);
+  return Math.floor(Math.max(0, Number(lateDays) || 0) / denom);
 }

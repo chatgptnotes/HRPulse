@@ -41,7 +41,7 @@ test('eligible employees automatically receive paid leave on their first absence
   const result = computeEmployeePayroll(
     employee,
     [{ recordDate: '2026-07-01', status: 'Absent', timeIn: null, timeOut: null }],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -61,7 +61,7 @@ test('an approved paid half day covers only half of an otherwise absent day', ()
       approvedLeaveFraction: 0.5,
       approvedLeavePaid: true,
     }],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -77,7 +77,7 @@ test('approved leave is unpaid when Employee Master says Paid Leaves: No', () =>
       recordDate: '2026-07-03', status: 'Absent', timeIn: null, timeOut: null,
       approvedLeaveFraction: 1, approvedLeavePaid: true,
     }],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -94,7 +94,7 @@ test('eligible employees receive only the configured monthly paid-leave limit', 
       recordDate: `2026-07-${day}`, status: 'Absent', timeIn: null, timeOut: null,
       approvedLeaveFraction: 1, approvedLeavePaid: true,
     })),
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -112,7 +112,7 @@ test('half-day leave uses only half a day of the allowance', () => {
       { recordDate: '2026-07-02', status: 'Present', timeIn: '09:00', timeOut: '12:00', approvedLeaveFraction: 0.5, approvedLeavePaid: true },
       { recordDate: '2026-07-03', status: 'Absent', timeIn: null, timeOut: null, approvedLeaveFraction: 1, approvedLeavePaid: true },
     ],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -128,7 +128,7 @@ test('an explicitly unpaid approved leave never consumes paid allowance', () => 
       recordDate: '2026-07-04', status: 'Absent', timeIn: null, timeOut: null,
       approvedLeaveFraction: 1, approvedLeavePaid: false,
     }],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -144,7 +144,7 @@ test('approved leave on a holiday does not consume the paid allowance', () => {
       recordDate: '2026-07-06', status: 'Holiday', timeIn: null, timeOut: null,
       approvedLeaveFraction: 1, approvedLeavePaid: true,
     }],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -161,7 +161,7 @@ test('every non-IT employee receives four paid leaves regardless of the eligibil
     ['01', '02', '03', '04', '06'].map(day => ({
       recordDate: `2026-07-${day}`, status: 'Absent', timeIn: null, timeOut: null,
     })),
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -182,7 +182,7 @@ test('a non-IT Sunday absence uses the four-day paid-leave allowance', () => {
   const result = computeEmployeePayroll(
     nonItEmployee,
     days,
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -200,7 +200,7 @@ test('a non-IT weekday marked Weekend uses one paid leave day', () => {
   const result = computeEmployeePayroll(
     nonItEmployee,
     [{ recordDate: '2026-07-04', status: 'Weekend', timeIn: null, timeOut: null }],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -226,7 +226,7 @@ test('Nisha Reception gets paid leave for weekday and Sunday absences', () => {
     { recordDate: '2026-07-07', status: 'Absent', timeIn: null, timeOut: null },
     { recordDate: '2026-07-12', status: 'Weekend', timeIn: null, timeOut: null },
   ];
-  const result = computeEmployeePayroll(nisha, days, 15_000, 2, DEFAULT_PAYROLL_SETTINGS);
+  const result = computeEmployeePayroll(nisha, days, 13_000, 2, DEFAULT_PAYROLL_SETTINGS);
   assert.equal(result.paidLeave, 2);
   assert.equal(result.paidLeaveRemaining, 2);
   assert.equal(result.absentDays, 0);
@@ -234,7 +234,7 @@ test('Nisha Reception gets paid leave for weekday and Sunday absences', () => {
   assert.equal(result.lateDays, 12);
   assert.equal(result.lateDeductionDays, 4);
   assert.equal(result.totalDeductions, 2000);
-  assert.equal(result.netSalary, 13_000);
+  assert.equal(result.netSalary, 11_000);
 });
 
 test('payroll uses the assigned shift plus 30 minutes and deducts every third late day', () => {
@@ -247,7 +247,7 @@ test('payroll uses the assigned shift plus 30 minutes and deducts every third la
       { recordDate: '2026-07-03', status: 'Normal', timeIn: '09:05', timeOut: '18:00' },
       { recordDate: '2026-07-04', status: 'Late Coming', timeIn: '09:20', timeOut: '18:00' },
     ],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -266,7 +266,7 @@ test('eligible overtime starts only after more than two hours beyond shift end a
       { recordDate: '2026-07-03', status: 'Missed Swipe', timeIn: null, timeOut: '21:00' },
       { recordDate: '2026-07-04', status: 'Holiday', timeIn: '09:00', timeOut: '21:00' },
     ],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -279,7 +279,7 @@ test('an overtime-ineligible employee never receives overtime pay', () => {
   const result = computeEmployeePayroll(
     { ...employee, overtime_eligible: false, shift_end_time: '18:00' },
     [{ recordDate: '2026-07-01', status: 'Normal', timeIn: '09:00', timeOut: '21:00' }],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -287,7 +287,7 @@ test('an overtime-ineligible employee never receives overtime pay', () => {
   assert.equal(result.overtimePay, 0);
 });
 
-test('half day, unpaid absence, missing punch, and the fixed 30-day divisor apply together', () => {
+test('half day, unpaid absence, missing punch, and the configured working-days divisor apply together', () => {
   const result = computeEmployeePayroll(
     { ...employee, paid_leaves_eligible: false },
     [
@@ -295,7 +295,7 @@ test('half day, unpaid absence, missing punch, and the fixed 30-day divisor appl
       { recordDate: '2026-07-02', status: 'Absent', timeIn: null, timeOut: null },
       { recordDate: '2026-07-03', status: 'Missed Swipe', timeIn: '09:00', timeOut: null },
     ],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -312,14 +312,14 @@ test('Sunday is a weekly off only for IT employees', () => {
   const itResult = computeEmployeePayroll(
     { ...employee, department: 'IT', paid_leaves_eligible: false },
     sunday,
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
   const nonItResult = computeEmployeePayroll(
     { ...employee, department: 'Reception', paid_leaves_eligible: false },
     sunday,
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -337,7 +337,7 @@ test('attendance overrides overlapping approved leave and does not consume allow
       recordDate: '2026-07-24', status: 'Normal', timeIn: '08:56', timeOut: '18:01',
       approvedLeaveFraction: 1, approvedLeavePaid: true,
     }],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -353,7 +353,7 @@ test('a third automatic absence is unpaid after the monthly limit is exhausted',
     ['01', '02', '03'].map(day => ({
       recordDate: `2026-07-${day}`, status: 'Absent', timeIn: null, timeOut: null,
     })),
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -367,7 +367,7 @@ test('day 31 is ignored by the fixed 30-day payroll period', () => {
   const result = computeEmployeePayroll(
     employee,
     [{ recordDate: '2026-07-31', status: 'Absent', timeIn: null, timeOut: null }],
-    30_000,
+    26_000,
     2,
     DEFAULT_PAYROLL_SETTINGS,
   );
@@ -386,7 +386,7 @@ test('Palak July attendance uses 21 and 23 as paid leave and keeps 24 and 25 pre
     { recordDate: '2026-07-26', status: 'Weekend', timeIn: null, timeOut: null, approvedLeaveFraction: 1, approvedLeavePaid: true },
     { recordDate: '2026-07-31', status: 'Absent', timeIn: null, timeOut: null },
   ];
-  const row = computeEmployeePayroll(palak, days, 15_000, 2, DEFAULT_PAYROLL_SETTINGS);
+  const row = computeEmployeePayroll(palak, days, 13_000, 2, DEFAULT_PAYROLL_SETTINGS);
   const detail = buildEmployeeDetail(row, palak, days, DEFAULT_PAYROLL_SETTINGS);
   assert.equal(row.paidLeave, 2);
   assert.equal(row.presentDays, 2);
@@ -461,7 +461,7 @@ test('a duplicate late rule stays visible but adds no second deduction', () => {
       deductDays: 1,
       repeat: true,
     })],
-    15_000,
+    13_000,
     500,
   );
   assert.equal(result.deductionAmount, 0);

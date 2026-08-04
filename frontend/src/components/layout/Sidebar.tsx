@@ -18,6 +18,7 @@ const links = [
 ];
 
 const bottomLinks = [
+  { to: '/salary-fill', label: 'Salary Fill', icon: 'salary-fill', end: false },
   { to: '/settings', label: 'Settings', icon: 'settings', end: false },
 ];
 

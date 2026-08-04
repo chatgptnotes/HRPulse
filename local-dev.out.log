@@ -1,0 +1,1346 @@
+
+> dev
+> concurrently "npm run dev --workspace=backend" "npm run dev --workspace=frontend"
+
+[1] 
+[1] > @hrpulse/frontend@1.0.0 dev
+[1] > vite
+[1] 
+[0] 
+[0] > @hrpulse/backend@1.0.0 dev
+[0] > ts-node-dev --respawn --transpile-only src/index.ts
+[0] 
+[0] [INFO] 17:06:09 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.9.2, typescript ver. 5.9.3)
+[1] 
+[1]   [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m5052[22m[2m[0m ms[22m
+[1] 
+[1]   [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m12:20:52 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[1] [2m12:20:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[1] [2m12:21:30 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/contexts/AuthContext.tsx, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/Dashboard.tsx, /src/pages/PayrollPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/employees/EmployeeProfileDrawer.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/components/payroll/PayrollDetailModal.tsx[22m
+[1] [2m12:21:32 pm[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[1] [2m12:21:32 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/LoginPage.tsx[22m
+[1] [2m12:21:33 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.tsx, /src/index.css[22m
+[1] [2m12:21:36 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/IntegrationsPage.tsx, /src/index.css[22m
+[0] [INFO] 12:21:39 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\middleware\auth.ts has been modified
+[0] [INFO] 12:21:42 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\index.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m12:24:31 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/AuthContext.tsx, /src/index.css[22m
+[1] [2m12:24:37 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/LoginPage.tsx, /src/index.css[22m
+[1] [2m12:24:42 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/lib/supabase.ts[22m
+[1] [2m12:38:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m12:39:17 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m12:39:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m12:40:03 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m12:45:11 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m12:48:27 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m12:50:38 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[0] [unhandledRejection] getSettings: JWT issued at future
+[0] [unhandledRejection] getSettings: Could not find the table 'public.settings' in the schema cache
+[0] [INFO] 14:57:03 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[1] [2m2:57:04 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/settings[39m
+[1] Error: read ECONNRESET
+[1]     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[0] HRPulse backend running on http://localhost:3001
+[0] [seed] settings smtp_host: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_port: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_secure: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_user: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_pass: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ollama_url: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ollama_model: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings company_name: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings hr_name: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings working_days: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings missed_swipe_weight: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings standard_working_hours: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings half_day_hours: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings late_grace_minutes: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings shift_start: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ot_threshold_hours: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ot_multiplier: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings late_penalty_days: Could not find the table 'public.settings' in the schema cache
+[0] [seed] template initial: Could not find the table 'public.email_templates' in the schema cache
+[0] [seed] template reminder: Could not find the table 'public.email_templates' in the schema cache
+[0] [seed] template escalation: Could not find the table 'public.email_templates' in the schema cache
+[0] [seed] sop Attendance Regularization Policy: Could not find the table 'public.sops' in the schema cache
+[0] [seed] sop Late Coming & Early Leaving Policy: TypeError: fetch failed
+[0] [seed] sop Email Notification SOP for HR: Could not find the table 'public.sops' in the schema cache
+[0] [seed] rule Unexcused Absence — First Notice: Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Repeated Absence — Formal Warning (3+ Days): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Critical Absence — Escalation to HR Director (5+ Days): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule AWOL — Consecutive Absence (3 Days): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Late Coming — Reminder (1–3 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Late Coming — Half-Day LOP Warning (4–6 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Late Coming — Full-Day LOP + Formal Notice (7+ Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Missed Biometric — Initial Notice (1–2 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Missed Biometric — Formal Warning (3+ Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Early Leaving — Reminder (1–2 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Early Leaving — Formal Warning (3+ Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Combined Attendance Issues — High Risk: Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Salary Deduction Notice — LOP Exceeds 3 Days: Could not find the table 'public.attendance_rules' in the schema cache
+[1] [2m2:57:37 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/Dashboard.tsx, /src/pages/PayrollPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/employees/EmployeeProfileDrawer.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/components/payroll/PayrollDetailModal.tsx[22m
+[1] [2m2:59:47 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m2:59:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx[22m
+[1] [2m3:00:41 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/PayrollPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/employees/EmployeeProfileDrawer.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/components/payroll/PayrollDetailModal.tsx, /src/pages/Dashboard.tsx[22m
+[0] [INFO] 15:02:51 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [seed] settings smtp_host: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_port: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_secure: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_user: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_pass: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ollama_url: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ollama_model: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings company_name: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings hr_name: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings working_days: TypeError: fetch failed
+[0] [seed] settings missed_swipe_weight: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings standard_working_hours: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings half_day_hours: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings late_grace_minutes: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings shift_start: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ot_threshold_hours: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ot_multiplier: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings late_penalty_days: Could not find the table 'public.settings' in the schema cache
+[0] [seed] template initial: Could not find the table 'public.email_templates' in the schema cache
+[0] [seed] template reminder: Could not find the table 'public.email_templates' in the schema cache
+[0] [seed] template escalation: Could not find the table 'public.email_templates' in the schema cache
+[0] [seed] sop Attendance Regularization Policy: Could not find the table 'public.sops' in the schema cache
+[0] [seed] sop Late Coming & Early Leaving Policy: Could not find the table 'public.sops' in the schema cache
+[0] [seed] sop Email Notification SOP for HR: Could not find the table 'public.sops' in the schema cache
+[0] [seed] rule Unexcused Absence — First Notice: Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Repeated Absence — Formal Warning (3+ Days): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Critical Absence — Escalation to HR Director (5+ Days): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule AWOL — Consecutive Absence (3 Days): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Late Coming — Reminder (1–3 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Late Coming — Half-Day LOP Warning (4–6 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Late Coming — Full-Day LOP + Formal Notice (7+ Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Missed Biometric — Initial Notice (1–2 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Missed Biometric — Formal Warning (3+ Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Early Leaving — Reminder (1–2 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Early Leaving — Formal Warning (3+ Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Combined Attendance Issues — High Risk: Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Salary Deduction Notice — LOP Exceeds 3 Days: Could not find the table 'public.attendance_rules' in the schema cache
+[0] [INFO] 15:07:05 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [seed] settings smtp_host: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_port: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_secure: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_user: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings smtp_pass: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ollama_url: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ollama_model: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings company_name: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings hr_name: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings working_days: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings missed_swipe_weight: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings standard_working_hours: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings half_day_hours: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings late_grace_minutes: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings shift_start: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ot_threshold_hours: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings ot_multiplier: Could not find the table 'public.settings' in the schema cache
+[0] [seed] settings late_penalty_days: Could not find the table 'public.settings' in the schema cache
+[0] [seed] template initial: Could not find the table 'public.email_templates' in the schema cache
+[0] [seed] template reminder: Could not find the table 'public.email_templates' in the schema cache
+[0] [seed] template escalation: Could not find the table 'public.email_templates' in the schema cache
+[0] [seed] sop Attendance Regularization Policy: Could not find the table 'public.sops' in the schema cache
+[0] [seed] sop Late Coming & Early Leaving Policy: Could not find the table 'public.sops' in the schema cache
+[0] [seed] sop Email Notification SOP for HR: Could not find the table 'public.sops' in the schema cache
+[0] [seed] rule Unexcused Absence — First Notice: Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Repeated Absence — Formal Warning (3+ Days): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Critical Absence — Escalation to HR Director (5+ Days): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule AWOL — Consecutive Absence (3 Days): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Late Coming — Reminder (1–3 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Late Coming — Half-Day LOP Warning (4–6 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Late Coming — Full-Day LOP + Formal Notice (7+ Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Missed Biometric — Initial Notice (1–2 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Missed Biometric — Formal Warning (3+ Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Early Leaving — Reminder (1–2 Times): Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Early Leaving — Formal Warning (3+ Times): Could not find the table 'public.attendance_rules' in the schema cache
+[1] [2m3:07:19 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeFormModal.tsx, /src/index.css[22m
+[0] [seed] rule Combined Attendance Issues — High Risk: Could not find the table 'public.attendance_rules' in the schema cache
+[0] [seed] rule Salary Deduction Notice — LOP Exceeds 3 Days: Could not find the table 'public.attendance_rules' in the schema cache
+[0] [INFO] 15:07:29 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\index.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:09:10 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:13:40 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:17:43 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] [INFO] 15:17:46 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:43:09 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:43:52 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:45:02 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:45:27 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:46:12 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:46:29 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:47:06 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:47:55 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m3:48:37 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/PayrollPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/employees/EmployeeProfileDrawer.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/components/payroll/PayrollDetailModal.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m3:49:24 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m3:49:44 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m3:50:46 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m3:51:21 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m3:52:09 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[0] [INFO] 15:56:08 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:56:31 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m3:56:44 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[0] [INFO] 15:57:53 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 16:00:19 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[1] [2m4:00:22 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m4:00:24 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/attendance/imports[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 16:00:45 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [unhandledRejection] getSettings: Could not find the table 'public.settings' in the schema cache
+[0] [unhandledRejection] getSettings: Could not find the table 'public.settings' in the schema cache
+[0] [unhandledRejection] getSettings: Could not find the table 'public.settings' in the schema cache
+[0] [unhandledRejection] getSettings: Could not find the table 'public.settings' in the schema cache
+[0] [INFO] 16:53:48 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 16:54:43 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m4:55:54 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/PayrollPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/employees/EmployeeProfileDrawer.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/components/payroll/PayrollDetailModal.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m4:55:57 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx, /src/components/employees/EmployeeAvatar.tsx, /src/components/employees/EmployeeProfileDrawer.tsx[22m
+[1] [2m4:55:59 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeFormModal.tsx, /src/index.css[22m
+[1] [2m4:56:02 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/EmployeesPage.tsx, /src/index.css[22m
+[1] [2m4:56:04 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx[22m
+[1] [2m4:57:36 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeProfileDrawer.tsx, /src/index.css[22m
+[0] [INFO] 16:59:54 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m5:03:16 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/EmployeesPage.tsx, /src/index.css[22m
+[1] [2m5:03:20 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx[22m
+[0] [unhandledRejection] getSettings: Could not find the table 'public.settings' in the schema cache
+[1] [2m5:21:29 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m5:21:32 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx[22m
+[0] [INFO] 17:22:37 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 17:22:49 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m5:23:18 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/PayrollPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/employees/EmployeeProfileDrawer.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/components/payroll/PayrollDetailModal.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m5:23:54 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/PayrollPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/employees/EmployeeProfileDrawer.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/components/payroll/PayrollDetailModal.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m5:23:57 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx, /src/components/employees/EmployeeAvatar.tsx, /src/components/employees/EmployeeProfileDrawer.tsx[22m
+[1] [2m5:23:59 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/EmployeesPage.tsx, /src/index.css[22m
+[1] [2m5:24:02 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeFormModal.tsx, /src/index.css[22m
+[1] [2m5:24:04 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeProfileDrawer.tsx, /src/index.css[22m
+[1] [2m5:24:07 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx[22m
+[0] [unhandledRejection] getSettings: Could not find the table 'public.settings' in the schema cache
+[0] [INFO] 17:44:25 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[1] [2m5:44:25 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/attendance/summary/1[39m
+[1] Error: read ECONNRESET
+[1]     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[1] [2m5:44:28 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/PayrollPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/employees/EmployeeProfileDrawer.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/components/payroll/PayrollDetailModal.tsx, /src/pages/Dashboard.tsx[22m
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m5:44:30 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[0] [INFO] 17:45:23 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [unhandledRejection] getSettings: JWT issued at future
+[0] Upload error: Error: Could not create employee admin: new row for relation "employees" violates check constraint "employees_active_schedule_check"
+[0]     at syncEmployeesFromExcel (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts:176:22)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts:103:26
+[0] Upload error: Error: Could not create employee admin: new row for relation "employees" violates check constraint "employees_active_schedule_check"
+[0]     at syncEmployeesFromExcel (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts:176:22)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts:103:26
+[0] Upload error: Error: Could not create employee admin: new row for relation "employees" violates check constraint "employees_active_schedule_check"
+[0]     at syncEmployeesFromExcel (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts:176:22)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts:103:26
+[0] [INFO] 17:52:59 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts has been modified
+[1] [2m5:52:59 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/attendance/uploads[39m
+[1] Error: read ECONNRESET
+[1]     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[1] [2m5:52:59 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+[1] Error: read ECONNRESET
+[1]     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[1] [2m5:52:59 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/employees[39m
+[1] Error: read ECONNRESET
+[1]     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 17:53:48 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 17:58:23 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 18:04:38 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceRecordWriter.ts has been modified
+[0] [INFO] 18:04:41 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 18:12:14 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] Upload error: Error: Could not update employee shanu: TypeError: fetch failed
+[0]     at saveCandidate (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts:170:24)
+[0]     at async Promise.all (index 20)
+[0]     at syncEmployeesFromExcel (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts:208:5)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts:103:26
+[0] [INFO] 18:14:52 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 18:20:36 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m6:33:59 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/PayrollPage.tsx, /src/index.css[22m
+[1] [2m6:39:16 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/PayrollPage.tsx, /src/index.css[22m
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:111:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:290:11
+[0] Attendance alerts could not be generated for upload 6: Error: TypeError: fetch failed
+[0]     at upsertHrNotification (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\hrNotificationService.ts:161:32)
+[0]     at ensureAttendanceAlertNotifications (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts:504:5)
+[0]     at ensureAttendanceAlertNotificationsForUpload (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts:594:20)
+[0] Attendance alerts could not be generated for upload 5: Error: TypeError: fetch failed
+[0]     at insertHrNotification (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\hrNotificationService.ts:139:11)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at upsertHrNotification (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\hrNotificationService.ts:164:24)
+[0]     at ensureAttendanceAlertNotifications (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts:504:5)
+[0]     at ensureAttendanceAlertNotificationsForUpload (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts:594:20)
+[0] [INFO] 19:28:32 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 19:28:41 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 19:29:11 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m7:30:01 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/PayrollPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/employees/EmployeeProfileDrawer.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/components/payroll/PayrollDetailModal.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m7:30:53 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m7:31:33 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m7:32:10 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[0] Error generating draft for palak: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for admin: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Praful WB: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for ravina.balvir: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for mahendra: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Sarvesh OT: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for tilak: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for bhavik: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for sonam: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for ruchika: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for ashray: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Ashwin Dahikar: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for vishai: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for abhishek: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for akshay: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for yash: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for reha: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for shahnawaz billg: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for rukhasr sistr: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for pratima sister: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for rajat sujurjuse: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for bhagyashree, ch: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for sonali.meshrm: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for snehal soft: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for ruchika jambulr: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for darshana.maushi: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Dhiraj Kanare: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for babita: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Dnyaneshwar: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for chetana sahare: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for sahil sheikh: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for darshana.thool: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for unnati joshi: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for raziya ansari: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for RAKHI: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for harsh tandekar: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for pranali: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for urmila.mavci: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for pallavi sister: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Ayush Wardboy: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Nilesh Pharmacy: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Vaishnavi Kohle: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Someshwar: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Priti Ramteke: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for TRUPTI: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for nikita patil: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for Dr DIPTI: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for nitin driver: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for akshay mhaiswae: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for PAYAL: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] Error generating draft for pratiksha: TypeError: Cannot read properties of undefined (reading 'subject')
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts:97:20
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0] [INFO] 20:01:03 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:01:43 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\latePolicy.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:03:07 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:03:55 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\attendance.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:05:50 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:07:14 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:08:01 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\salaryRules.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:08:21 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:08:44 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m8:13:20 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/payroll/PayrollDetailModal.tsx, /src/index.css[22m
+[1] [2m8:13:20 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/payroll/PayrollDetailModal.tsx, /src/index.css[22m
+[0] [INFO] 20:26:44 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:27:15 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[1] [2m8:27:17 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:17 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/history[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:17 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/filters[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:17 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/runs/6[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:17 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/finalization/2026-07/status[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:17 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/employee/6/1[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:18 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:18 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/history[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:18 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/filters[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:18 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/runs/6[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:18 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/finalization/2026-07/status[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:27:18 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/employee/6/1[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:27:46 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
+[1] [2m8:27:46 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/employees[39m
+[1] Error: read ECONNRESET
+[1]     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[1] [2m8:27:48 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/employees[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:28:40 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:29:02 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:29:47 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts has been modified
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[1] [2m8:29:48 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/employees[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m8:29:49 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/employees[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[0] HRPulse backend running on http://localhost:3001
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] [INFO] 20:36:18 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] [INFO] 20:40:19 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\rules.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 20:40:30 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\rules.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] [INFO] 21:12:26 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 21:13:11 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[1] [2m9:13:14 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/payroll/PayrollDetailModal.tsx, /src/index.css[22m
+[0] HRPulse backend running on http://localhost:3001
+[0] [TEST EMAIL] Preview: https://ethereal.email/message/anAvC4e.DCattDCQanAvET9JACjbxK8uAAAAAYc6DYPc7Ge4f9BB5oViOxM
+[0] [TEST EMAIL] Preview: https://ethereal.email/message/anAvC4e.DCattDCQanAvFQu8O4A4H4aRAAAAAm5wi3erpcNsZgvO5o0AH70
+[0] [TEST EMAIL] Preview: https://ethereal.email/message/anAvC4e.DCattDCQanAvHKY14xtor3HbAAAAA-rDZ0JlTXjv.ojRELv7rwc
+[1] [2m12:48:54 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/attendance/AttendanceSheetModal.tsx, /src/index.css[22m
+[0] [INFO] 12:48:54 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\emails.ts has been modified
+[1] [2m12:48:54 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/attendance/InspectExcelModal.tsx, /src/index.css[22m
+[1] [2m12:48:54 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/payroll/PayrollDetailModal.tsx[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/IntegrationsPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/PayrollPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/employees/EmployeeProfileDrawer.tsx, /src/components/payroll/PayrollDetailModal.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeActionMenu.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeAvatar.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeFormModal.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeProfileDrawer.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeStatCard.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/payroll/AttendanceCharts.tsx[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/PayrollPage.tsx, /src/components/payroll/PayrollDetailModal.tsx[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/payroll/PayrollDetailModal.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/payroll/SalarySummaryCard.tsx[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/payroll/UploadCard.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/vite-env.d.ts[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx, /src/pages/PayrollPage.tsx, /src/pages/RulesPage.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx, /src/pages/PayrollPage.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/utils/punchTiming.ts[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/IntegrationsPage.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/EmployeesPage.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/RulesPage.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SalaryPage.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SettingsPage.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mvite.config.ts changed, restarting server...[39m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mindex.html[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/LeaveRequestsPage.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/PayrollPage.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/LoginPage.tsx[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[1] [2m12:48:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/SopsPage.tsx, /src/pages/HistoryPage.tsx, /src/components/layout/Sidebar.tsx, /src/pages/EmployeesPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/AnalyticsPage.tsx, /src/pages/SalaryPage.tsx, /src/pages/SettingsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/EmployeesPage.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mvite.config.ts changed, restarting server...[39m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/LeaveRequestsPage.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/PayrollPage.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/RulesPage.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SalaryPage.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mvite.config.ts changed, restarting server...[39m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx, /src/pages/RulesPage.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx, /src/pages/Dashboard.tsx[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeActionMenu.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeAvatar.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeFormModal.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeProfileDrawer.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/EmployeesPage.tsx[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/employees/EmployeeStatCard.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/attendance/AttendanceSheetModal.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/attendance/InspectExcelModal.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/attendance/punchTimingPdf.ts[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/payroll/AttendanceCharts.tsx[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/payroll/format.ts[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/payroll/PayrollDetailModal.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/payroll/SalarySummaryCard.tsx[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/payroll/UploadCard.tsx, /src/index.css[22m
+[1] [2m12:48:56 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/utils/punchTiming.ts[22m
+[0] Compilation error in C:\Users\hope4\hrpulse\HRPulse\backend\src\index.ts
+[0] [ERROR] 12:48:59 ⨯ Unable to compile TypeScript:
+[0] src/index.ts(13,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(17,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(19,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(77,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(79,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(81,1): error TS1185: Merge conflict marker encountered.
+[0] 
+[1] Re-optimizing dependencies because lockfile has changed
+[1] [2m12:49:02 pm[22m [36m[1m[vite][22m[39m server restarted.
+[1] Error: [31m  Failed to scan for dependencies from entries:
+[1]   C:/Users/hope4/hrpulse/HRPulse/frontend/index.html
+[1] 
+[1]   [39m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExpected identifier but found "<"[0m
+[1] 
+[1]     src/App.tsx:69:1:
+[1] [37m      69 │ <[32m<[37m<<<<< HEAD
+[1]          ╵  [32m^[0m
+[1] 
+[1] 
+[1]     at failureErrorWithLog (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:1472:15)
+[1]     at C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:945:25
+[1]     at runOnEndCallbacks (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:1315:45)
+[1]     at buildResponseToResult (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:943:7)
+[1]     at C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:955:9
+[1]     at new Promise (<anonymous>)
+[1]     at requestCallbacks.on-end (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:954:54)
+[1]     at handleRequest (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:647:17)
+[1]     at handleIncomingPacket (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:672:7)
+[1]     at Socket.readFromStdout (C:\Users\hope4\hrpulse\HRPulse\node_modules\esbuild\lib\main.js:600:7)
+[1]     at Socket.emit (node:events:508:28)
+[1]     at addChunk (node:internal/streams/readable:559:12)
+[1]     at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+[1]     at Readable.push (node:internal/streams/readable:390:5)
+[1]     at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+[1] [2m12:49:07 pm[22m [31m[1m[vite][22m[39m Pre-transform error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\App.tsx: Unexpected token (69:1)
+[1] 
+[1] [0m [90m 67 |[39m   [36mreturn[39m (
+[1]  [90m 68 |[39m     [33m<[39m[33mQueryClientProvider[39m client[33m=[39m{queryClient}[33m>[39m
+[1] [31m[1m>[22m[39m[90m 69 |[39m [33m<<[39m[33m<<[39m[33m<<[39m[33m<[39m [33mHEAD[39m
+[1]  [90m    |[39m  [31m[1m^[22m[39m
+[1]  [90m 70 |[39m       [33m<[39m[33mBrowserRouter[39m[33m>[39m
+[1]  [90m 71 |[39m         [33m<[39m[33mAuthProvider[39m[33m>[39m
+[1]  [90m 72 |[39m           [33m<[39m[33mRoutes[39m[33m>[39m[0m
+[1] [2m12:49:23 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\App.tsx: Unexpected token (69:1)
+[1] 
+[1] [0m [90m 67 |[31m   [36mreturn[31m (
+[1]  [90m 68 |[31m     [33m<[31m[33mQueryClientProvider[31m client[33m=[31m{queryClient}[33m>[31m
+[1] [31m[1m>[22m[31m[90m 69 |[31m [33m<<[31m[33m<<[31m[33m<<[31m[33m<[31m [33mHEAD[31m
+[1]  [90m    |[31m  [31m[1m^[22m[31m
+[1]  [90m 70 |[31m       [33m<[31m[33mBrowserRouter[31m[33m>[31m
+[1]  [90m 71 |[31m         [33m<[31m[33mAuthProvider[31m[33m>[31m
+[1]  [90m 72 |[31m           [33m<[31m[33mRoutes[31m[33m>[31m[0m[39m
+[1]   Plugin: [35mvite:react-babel[39m
+[1]   File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/App.tsx[39m:69:1
+[1] [33m  70 |        <BrowserRouter>
+[1]   71 |          <AuthProvider>
+[1]   72 |            <Routes>
+[1]      |             ^
+[1]   73 |              <Route path="/login" element={<LoginPage />} />
+[1]   74 |              <Route path="/landing" element={<LandingPage />} />[39m
+[1]       at constructor (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:365:19)
+[1]       at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6616:19)
+[1]       at TypeScriptParserMixin.unexpected (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6636:16)
+[1]       at TypeScriptParserMixin.jsxParseIdentifier (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4581:12)
+[1]       at TypeScriptParserMixin.jsxParseNamespacedName (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4588:23)
+[1]       at TypeScriptParserMixin.jsxParseElementName (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4597:21)
+[1]       at TypeScriptParserMixin.jsxParseOpeningElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4673:22)
+[1]       at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4698:33)
+[1]       at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+[1]       at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4761:17)
+[1]       at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4771:19)
+[1]       at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+[1]       at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+[1]       at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+[1]       at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+[1]       at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:39
+[1]       at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6924:20)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:18)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:39
+[1]       at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12443:12)
+[1]       at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:17)
+[1]       at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12510:17)
+[1]       at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11692:28)
+[1]       at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11348:23)
+[1]       at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4776:20)
+[1]       at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+[1]       at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+[1]       at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+[1]       at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+[1]       at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9803:20)
+[1]       at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10801:23)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:39
+[1]       at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12438:16)
+[1]       at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:17)
+[1]       at TypeScriptParserMixin.parseReturnStatement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13159:28)
+[1]       at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12815:21)
+[1]       at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9525:18)
+[1]       at TypeScriptParserMixin.parseStatementLike (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12784:17)
+[1]       at TypeScriptParserMixin.parseStatementListItem (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12764:17)
+[1]       at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13333:61)
+[1]       at TypeScriptParserMixin.parseBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13326:10)
+[1]       at TypeScriptParserMixin.parseBlock (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13314:10)
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/auth/AuthContext.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/LoginPage.tsx[22m
+[0] [INFO] 12:53:50 Reinitializing TS compilation
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/App.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/payroll/PayrollDetailModal.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/employees/EmployeeActionMenu.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mindex.html[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/employees/EmployeeFormModal.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/employees/EmployeeProfileDrawer.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/employees/EmployeeStatCard.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/employees/employeeCsv.ts[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/employees/types.ts[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/layout/Sidebar.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/payroll/PayrollDetailModal.tsx, /src/index.css[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/Dashboard.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/payroll/UploadCard.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/EmployeesPage.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/PayrollPage.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/RulesPage.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/SalaryPage.tsx[22m
+[1] [2m12:53:50 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/SettingsPage.tsx[22m
+[0] [INFO] 12:53:50 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\tsconfig.json has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m12:55:04 pm[22m [36m[1m[vite][22m[39m [32m✨ new dependencies optimized: [33mreact-router-dom, react-dropzone, date-fns, react-markdown, xlsx, recharts, lucide-react[32m[39m
+[1] [2m12:55:04 pm[22m [36m[1m[vite][22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[0] [INFO] 12:55:44 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\index.ts has been modified
+[0] Compilation error in C:\Users\hope4\hrpulse\HRPulse\backend\src\index.ts
+[1] [2m12:55:45 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[1] [2m12:55:45 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/payroll/PayrollDetailModal.tsx, /src/components/layout/Sidebar.tsx, /src/pages/SettingsPage.tsx, /src/pages/IntegrationsPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/Dashboard.tsx, /src/pages/PayrollPage.tsx, /src/pages/HistoryPage.tsx, /src/pages/SopsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/pages/AnalyticsPage.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/pages/EmployeesPage.tsx, /src/pages/SalaryPage.tsx, /src/components/employees/EmployeeProfileDrawer.tsx[22m
+[1] [2m12:55:45 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.tsx, /src/index.css[22m
+[1] [2m12:55:45 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/LoginPage.tsx[22m
+[1] [2m12:55:45 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/auth/AuthContext.tsx[22m
+[0] [ERROR] 12:55:46 ⨯ Unable to compile TypeScript:
+[0] src/index.ts(12,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(14,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(18,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(67,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(72,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(89,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(97,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(99,1): error TS1185: Merge conflict marker encountered.
+[0] src/index.ts(101,1): error TS1185: Merge conflict marker encountered.
+[0] 
+[1] [2m12:55:46 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\App.tsx: Unexpected token (71:1)
+[1] 
+[1] [0m [90m 69 |[31m   [36mreturn[31m (
+[1]  [90m 70 |[31m     [33m<[31m[33mQueryClientProvider[31m client[33m=[31m{queryClient}[33m>[31m
+[1] [31m[1m>[22m[31m[90m 71 |[31m [33m<<[31m[33m<<[31m[33m<<[31m[33m<[31m [33mHEAD[31m
+[1]  [90m    |[31m  [31m[1m^[22m[31m
+[1]  [90m 72 |[31m       [33m<[31m[33mBrowserRouter[31m future[33m=[31m{{ v7_startTransition[33m:[31m [36mtrue[31m[33m,[31m v7_relativeSplatPath[33m:[31m [36mtrue[31m }}[33m>[31m
+[1]  [90m 73 |[31m         [33m<[31m[33mRoutes[31m[33m>[31m
+[1]  [90m 74 |[31m           [33m<[31m[33mRoute[31m path[33m=[31m[32m"/landing"[31m element[33m=[31m{[33m<[31m[33mLandingPage[31m [35m/>} /[31m[33m>[31m[0m[39m
+[1]   Plugin: [35mvite:react-babel[39m
+[1]   File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/App.tsx[39m:71:1
+[1] [33m  70 |      <QueryClientProvider client={queryClient}>
+[1]   71 |  <<<<<<< HEAD
+[1]   72 |        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+[1]      |                                                            ^
+[1]   73 |          <Routes>
+[1]   74 |            <Route path="/landing" element={<LandingPage />} />[39m
+[1]       at constructor (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:365:19)
+[1]       at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6616:19)
+[1]       at TypeScriptParserMixin.unexpected (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6636:16)
+[1]       at TypeScriptParserMixin.jsxParseIdentifier (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4581:12)
+[1]       at TypeScriptParserMixin.jsxParseNamespacedName (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4588:23)
+[1]       at TypeScriptParserMixin.jsxParseElementName (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4597:21)
+[1]       at TypeScriptParserMixin.jsxParseOpeningElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4673:22)
+[1]       at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4698:33)
+[1]       at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+[1]       at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4761:17)
+[1]       at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4771:19)
+[1]       at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+[1]       at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+[1]       at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+[1]       at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+[1]       at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:39
+[1]       at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6924:20)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:18)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:39
+[1]       at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12443:12)
+[1]       at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:17)
+[1]       at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12510:17)
+[1]       at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11692:28)
+[1]       at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11348:23)
+[1]       at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4776:20)
+[1]       at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+[1]       at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+[1]       at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+[1]       at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+[1]       at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9803:20)
+[1]       at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10801:23)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:39
+[1]       at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12438:16)
+[1]       at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:17)
+[1]       at TypeScriptParserMixin.parseReturnStatement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13159:28)
+[1]       at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12815:21)
+[1]       at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9525:18)
+[1]       at TypeScriptParserMixin.parseStatementLike (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12784:17)
+[1]       at TypeScriptParserMixin.parseStatementListItem (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12764:17)
+[1]       at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13333:61)
+[1]       at TypeScriptParserMixin.parseBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13326:10)
+[1]       at TypeScriptParserMixin.parseBlock (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13314:10)
+[1] [2m12:55:47 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\components\layout\Sidebar.tsx: Unexpected token (4:1)
+[1] 
+[1] [0m [90m 2 |[31m [36mimport[31m { useQuery } [36mfrom[31m [32m'@tanstack/react-query'[31m[33m;[31m
+[1]  [90m 3 |[31m [36mimport[31m clsx [36mfrom[31m [32m'clsx'[31m[33m;[31m
+[1] [31m[1m>[22m[31m[90m 4 |[31m [33m<<[31m[33m<<[31m[33m<<[31m[33m<[31m [33mHEAD[31m
+[1]  [90m   |[31m  [31m[1m^[22m[31m
+[1]  [90m 5 |[31m [36mimport[31m { getLeaveRequests } [36mfrom[31m [32m'../../api'[31m[33m;[31m
+[1]  [90m 6 |[31m [33m===[31m[33m===[31m[33m=[31m
+[1]  [90m 7 |[31m [36mimport[31m { useAuth } [36mfrom[31m [32m'../../auth/AuthContext'[31m[33m;[31m[0m[39m
+[1]   Plugin: [35mvite:react-babel[39m
+[1]   File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/components/layout/Sidebar.tsx[39m:4:1
+[1] [33m  2  |  import { useQuery } from '@tanstack/react-query';
+[1]   3  |  import clsx from 'clsx';
+[1]   4  |  <<<<<<< HEAD
+[1]      |      ^
+[1]   5  |  import { getLeaveRequests } from '../../api';
+[1]   6  |  =======[39m
+[1]       at constructor (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:365:19)
+[1]       at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6616:19)
+[1]       at TypeScriptParserMixin.unexpected (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6636:16)
+[1]       at TypeScriptParserMixin.jsxParseIdentifier (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4581:12)
+[1]       at TypeScriptParserMixin.jsxParseNamespacedName (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4588:23)
+[1]       at TypeScriptParserMixin.jsxParseElementName (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4597:21)
+[1]       at TypeScriptParserMixin.jsxParseOpeningElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4673:22)
+[1]       at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4698:33)
+[1]       at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4761:17)
+[1]       at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4771:19)
+[1]       at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+[1]       at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+[1]       at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+[1]       at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+[1]       at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:39
+[1]       at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6924:20)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:18)
+[1]       at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10801:23)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:39
+[1]       at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12438:16)
+[1]       at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:17)
+[1]       at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12912:23)
+[1]       at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9525:18)
+[1]       at TypeScriptParserMixin.parseStatementLike (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12784:17)
+[1]       at TypeScriptParserMixin.parseModuleItem (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12761:17)
+[1]       at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13333:36)
+[1]       at TypeScriptParserMixin.parseBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13326:10)
+[1]       at TypeScriptParserMixin.parseProgram (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12639:10)
+[1]       at TypeScriptParserMixin.parseTopLevel (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12629:25)
+[1]       at TypeScriptParserMixin.parse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:14505:25)
+[1]       at TypeScriptParserMixin.parse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10143:18)
+[1]       at parse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:14539:38)
+[1]       at parser (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\core\lib\parser\index.js:41:34)
+[1]       at parser.next (<anonymous>)
+[1]       at normalizeFile (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\core\lib\transformation\normalize-file.js:64:37)
+[1]       at normalizeFile.next (<anonymous>)
+[1]       at run (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\core\lib\transformation\index.js:22:50)
+[1]       at run.next (<anonymous>)
+[1]       at transform (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\core\lib\transform.js:22:33)
+[1]       at transform.next (<anonymous>)
+[1]       at step (C:\Users\hope4\hrpulse\HRPulse\node_modules\gensync\index.js:261:32)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\gensync\index.js:273:13
+[1]       at async.call.result.err.err (C:\Users\hope4\hrpulse\HRPulse\node_modules\gensync\index.js:223:11)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\gensync\index.js:189:28
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\core\lib\gensync-utils\async.js:67:7
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\gensync\index.js:113:33
+[1] [2m12:55:47 pm[22m [31m[1m[vite][22m[39m Pre-transform error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\App.tsx: Unexpected token (71:1)
+[1] 
+[1] [0m [90m 69 |[39m   [36mreturn[39m (
+[1]  [90m 70 |[39m     [33m<[39m[33mQueryClientProvider[39m client[33m=[39m{queryClient}[33m>[39m
+[1] [31m[1m>[22m[39m[90m 71 |[39m [33m<<[39m[33m<<[39m[33m<<[39m[33m<[39m [33mHEAD[39m
+[1]  [90m    |[39m  [31m[1m^[22m[39m
+[1]  [90m 72 |[39m       [33m<[39m[33mBrowserRouter[39m future[33m=[39m{{ v7_startTransition[33m:[39m [36mtrue[39m[33m,[39m v7_relativeSplatPath[33m:[39m [36mtrue[39m }}[33m>[39m
+[1]  [90m 73 |[39m         [33m<[39m[33mRoutes[39m[33m>[39m
+[1]  [90m 74 |[39m           [33m<[39m[33mRoute[39m path[33m=[39m[32m"/landing"[39m element[33m=[39m{[33m<[39m[33mLandingPage[39m [35m/>} /[39m[33m>[39m[0m
+[1] [2m12:55:48 pm[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\hope4\hrpulse\HRPulse\frontend\src\App.tsx: Unexpected token (71:1)
+[1] 
+[1] [0m [90m 69 |[31m   [36mreturn[31m (
+[1]  [90m 70 |[31m     [33m<[31m[33mQueryClientProvider[31m client[33m=[31m{queryClient}[33m>[31m
+[1] [31m[1m>[22m[31m[90m 71 |[31m [33m<<[31m[33m<<[31m[33m<<[31m[33m<[31m [33mHEAD[31m
+[1]  [90m    |[31m  [31m[1m^[22m[31m
+[1]  [90m 72 |[31m       [33m<[31m[33mBrowserRouter[31m future[33m=[31m{{ v7_startTransition[33m:[31m [36mtrue[31m[33m,[31m v7_relativeSplatPath[33m:[31m [36mtrue[31m }}[33m>[31m
+[1]  [90m 73 |[31m         [33m<[31m[33mRoutes[31m[33m>[31m
+[1]  [90m 74 |[31m           [33m<[31m[33mRoute[31m path[33m=[31m[32m"/landing"[31m element[33m=[31m{[33m<[31m[33mLandingPage[31m [35m/>} /[31m[33m>[31m[0m[39m
+[1]   Plugin: [35mvite:react-babel[39m
+[1]   File: [36mC:/Users/hope4/hrpulse/HRPulse/frontend/src/App.tsx[39m:71:1
+[1] [33m  70 |      <QueryClientProvider client={queryClient}>
+[1]   71 |  <<<<<<< HEAD
+[1]   72 |        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+[1]      |                                                            ^
+[1]   73 |          <Routes>
+[1]   74 |            <Route path="/landing" element={<LandingPage />} />[39m
+[1]       at constructor (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:365:19)
+[1]       at TypeScriptParserMixin.raise (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6616:19)
+[1]       at TypeScriptParserMixin.unexpected (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6636:16)
+[1]       at TypeScriptParserMixin.jsxParseIdentifier (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4581:12)
+[1]       at TypeScriptParserMixin.jsxParseNamespacedName (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4588:23)
+[1]       at TypeScriptParserMixin.jsxParseElementName (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4597:21)
+[1]       at TypeScriptParserMixin.jsxParseOpeningElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4673:22)
+[1]       at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4698:33)
+[1]       at TypeScriptParserMixin.jsxParseElementAt (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4710:32)
+[1]       at TypeScriptParserMixin.jsxParseElement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4761:17)
+[1]       at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4771:19)
+[1]       at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+[1]       at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+[1]       at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+[1]       at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+[1]       at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:39
+[1]       at TypeScriptParserMixin.tryParse (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:6924:20)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9792:18)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:39
+[1]       at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12443:12)
+[1]       at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10817:17)
+[1]       at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12510:17)
+[1]       at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11692:28)
+[1]       at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11348:23)
+[1]       at TypeScriptParserMixin.parseExprAtom (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:4776:20)
+[1]       at TypeScriptParserMixin.parseExprSubscripts (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11098:23)
+[1]       at TypeScriptParserMixin.parseUpdate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11083:21)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:11063:23)
+[1]       at TypeScriptParserMixin.parseMaybeUnary (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9854:18)
+[1]       at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10916:61)
+[1]       at TypeScriptParserMixin.parseExprOps (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10921:23)
+[1]       at TypeScriptParserMixin.parseMaybeConditional (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10898:23)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10848:21)
+[1]       at TypeScriptParserMixin.parseMaybeAssign (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9803:20)
+[1]       at TypeScriptParserMixin.parseExpressionBase (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10801:23)
+[1]       at C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:39
+[1]       at TypeScriptParserMixin.allowInAnd (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12438:16)
+[1]       at TypeScriptParserMixin.parseExpression (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:10797:17)
+[1]       at TypeScriptParserMixin.parseReturnStatement (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13159:28)
+[1]       at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12815:21)
+[1]       at TypeScriptParserMixin.parseStatementContent (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:9525:18)
+[1]       at TypeScriptParserMixin.parseStatementLike (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12784:17)
+[1]       at TypeScriptParserMixin.parseStatementListItem (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:12764:17)
+[1]       at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13333:61)
+[1]       at TypeScriptParserMixin.parseBlockBody (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13326:10)
+[1]       at TypeScriptParserMixin.parseBlock (C:\Users\hope4\hrpulse\HRPulse\node_modules\@babel\parser\lib\index.js:13314:10)
+[0] [INFO] 12:58:16 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\index.ts has been modified
+[1] [2m12:58:16 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[1] [2m12:58:16 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/payroll/PayrollDetailModal.tsx, /src/components/layout/Sidebar.tsx, /src/pages/SettingsPage.tsx, /src/pages/IntegrationsPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/Dashboard.tsx, /src/pages/PayrollPage.tsx, /src/pages/HistoryPage.tsx, /src/pages/SopsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/pages/AnalyticsPage.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/pages/EmployeesPage.tsx, /src/pages/SalaryPage.tsx, /src/components/employees/EmployeeProfileDrawer.tsx[22m
+[1] [2m12:58:16 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.tsx, /src/index.css[22m
+[1] [2m12:58:16 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/auth/AuthContext.tsx[22m
+[1] [2m12:58:16 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/LoginPage.tsx[22m
+[1] [2m12:58:24 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m12:58:24 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/history[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m12:58:24 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/payroll/filters[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 13:28:26 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\latePolicy.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 13:30:07 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 13:30:56 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 13:31:25 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 13:31:53 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 13:32:50 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 13:34:32 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 13:36:33 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\salaryRules.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m1:39:43 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SettingsPage.tsx, /src/index.css[22m
+[1] [2m1:39:43 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SettingsPage.tsx, /src/index.css[22m
+[0] [unhandledRejection] getSettings: TypeError: fetch failed
+[0] [INFO] 15:12:49 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeMatch.ts has been modified
+[1] [2m3:12:51 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/settings[39m
+[1] Error: read ECONNRESET
+[1]     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:14:46 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\employeeExcelImportService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:35:56 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 16:24:09 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\index.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 16:24:33 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\index.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m4:25:09 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/payroll/PayrollDetailModal.tsx, /src/components/layout/Sidebar.tsx, /src/pages/SettingsPage.tsx, /src/pages/IntegrationsPage.tsx, /src/pages/AiInsightsPage.tsx, /src/pages/RulesPage.tsx, /src/pages/LeaveRequestsPage.tsx, /src/pages/Dashboard.tsx, /src/pages/PayrollPage.tsx, /src/pages/HistoryPage.tsx, /src/pages/SopsPage.tsx, /src/components/email/EmailDraftModal.tsx, /src/components/attendance/InspectExcelModal.tsx, /src/pages/AnalyticsPage.tsx, /src/components/attendance/AttendanceSheetModal.tsx, /src/pages/EmployeesPage.tsx, /src/pages/SalaryPage.tsx, /src/components/employees/EmployeeProfileDrawer.tsx[22m
+[1] [2m4:27:21 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[1] [2m4:27:42 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.tsx, /src/index.css[22m
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] Employee sync queue failed: Error: Could not find the table 'public.integration_connectors' in the schema cache
+[0]     at enqueueForActiveConnectors (C:\Users\hope4\hrpulse\HRPulse\backend\src\services\connectorService.ts:90:20)
+[0]     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+[0]     at queueEmployeeSync (C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:114:3)
+[0]     at C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\employees.ts:355:11
+[0] [INFO] 12:00:40 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] [INFO] 12:00:48 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001

@@ -1,0 +1,10 @@
+-- Add biometric_name column to employees table.
+-- This stores the old GDHR SmartTime / biometric device name so attendance
+-- files using the old naming convention can still match employees after
+-- the master was renamed to formal salary-sheet names.
+-- Idempotent — safe to run multiple times.
+
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS biometric_name text;
+
+COMMENT ON COLUMN employees.biometric_name IS
+  'Original name from the GDHR SmartTime biometric system. Used as an alias for attendance matching when the biometric Excel name differs from the formal master name.';

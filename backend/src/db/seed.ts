@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS: [string, string][] = [
   ['ot_threshold_hours', '2'],
   ['ot_multiplier', '1.5'],
   ['late_penalty_days', '0'],
+  ['late_days_per_deduction', '3'],
 ];
 
 const DEFAULT_TEMPLATES = [
