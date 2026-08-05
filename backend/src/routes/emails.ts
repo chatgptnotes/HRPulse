@@ -20,7 +20,7 @@ router.post('/generate/:uploadId', async (req: Request, res: Response) => {
 
   try {
     const settings = await getSettings();
-    const workingDays = parseFloat(settings['working_days'] || '26');
+    const workingDays = parseFloat(settings['working_days'] || '30');
     const missedSwipeWeight = parseFloat(settings['missed_swipe_weight'] || '0.5');
 
     const { data: uploadRow } = await supabase.from('attendance_uploads').select('*').eq('id', uploadId).single();

@@ -291,7 +291,7 @@ export async function ensureAttendanceAlertNotifications(
   uploadedDates?: Set<string>,
 ) {
   const settings: Record<string, string> = await getSettings().catch(() => ({} as Record<string, string>));
-  const workingDays = Number(settings['working_days'] || 26);
+  const workingDays = Number(settings['working_days'] || 30);
   const standardHours = Number(settings['standard_working_hours'] || 8);
   const overtimeThresholdHours = Number(settings['ot_threshold_hours'] || 2);
   const lateGraceMinutes = Number(settings['late_grace_minutes'] || settings['ess_late_grace_minutes'] || LATE_GRACE_MINUTES);
@@ -303,7 +303,7 @@ export async function ensureAttendanceAlertNotifications(
   const summary = summarizeAttendance(
     sortedRecords,
     employee,
-    Number.isFinite(workingDays) && workingDays > 0 ? workingDays : 26,
+    Number.isFinite(workingDays) && workingDays > 0 ? workingDays : 30,
     Number.isFinite(standardHours) && standardHours > 0 ? standardHours : 8,
     Number.isFinite(overtimeThresholdHours) && overtimeThresholdHours >= 0 ? overtimeThresholdHours : 2,
     Number.isFinite(lateGraceMinutes) ? lateGraceMinutes : LATE_GRACE_MINUTES,

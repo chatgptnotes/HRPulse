@@ -130,7 +130,7 @@ router.put('/payments/:employeeId', async (req: Request, res: Response) => {
 router.get('/deductions/:uploadId', async (req: Request, res: Response) => {
   const uploadId = parseInt(req.params.uploadId);
   const settings = await getSettings();
-  const workingDays = parseFloat(settings['working_days'] || '26');
+  const workingDays = parseFloat(settings['working_days'] || '30');
   const missedSwipeWeight = parseFloat(settings['missed_swipe_weight'] || '0.5');
 
   const { data: records, error: rErr } = await supabase

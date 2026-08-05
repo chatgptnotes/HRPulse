@@ -1344,3 +1344,53 @@
 [0] [INFO] 12:00:40 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
 [0] [INFO] 12:00:48 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
 [0] HRPulse backend running on http://localhost:3001
+[1] [2m2:42:30 pm[22m [36m[1m[vite][22m[39m [32m.env.local changed, restarting server...[39m
+[1] [2m2:42:32 pm[22m [36m[1m[vite][22m[39m server restarted.
+[0] [INFO] 15:16:00 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\salaryFillService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:16:26 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\salaryFill.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 15:43:15 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\index.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m4:06:52 pm[22m [36m[1m[vite][22m[39m [32m.env.local changed, restarting server...[39m
+[1] [2m4:06:53 pm[22m [36m[1m[vite][22m[39m [32m.env.local changed, restarting server...[39m
+[1] [2m4:06:54 pm[22m [36m[1m[vite][22m[39m server restarted.
+[0] [INFO] 16:22:18 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\salaryFillService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 16:23:02 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\salaryFillService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[1] [2m4:25:57 pm[22m [36m[1m[vite][22m[39m [32m.env.local changed, restarting server...[39m
+[1] [2m4:25:57 pm[22m [36m[1m[vite][22m[39m [32m.env.local changed, restarting server...[39m
+[1] [2m4:25:57 pm[22m [36m[1m[vite][22m[39m server restarted.
+[1] [2m5:26:25 pm[22m [36m[1m[vite][22m[39m [32m.env.local changed, restarting server...[39m
+[1] [2m5:26:25 pm[22m [36m[1m[vite][22m[39m [32m.env.local changed, restarting server...[39m
+[1] [2m5:26:26 pm[22m [36m[1m[vite][22m[39m server restarted.
+[0] [INFO] 17:34:08 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\index.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 11:40:05 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[1] [2m11:40:06 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SettingsPage.tsx, /src/index.css[22m
+[1] [2m11:40:06 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SettingsPage.tsx, /src/index.css[22m
+[0] [ERROR] 11:40:14 Error: listen EADDRINUSE: address already in use :::3001
+[0] [uncaughtException] listen EADDRINUSE: address already in use :::3001
+[0] [INFO] 11:40:19 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts has been modified
+[0] HRPulse backend running on http://localhost:3001
+[0] [INFO] 11:40:41 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\attendanceAlertService.ts has been modified
+[0] [ERROR] 11:40:49 Error: listen EADDRINUSE: address already in use :::3001
+[0] [uncaughtException] listen EADDRINUSE: address already in use :::3001
+[0] [INFO] 13:09:41 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\services\payrollService.ts has been modified
+[1] [2m1:09:50 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[1] [2m1:09:51 pm[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/leaves?status=pending[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1134:18)
+[1]     at afterConnectMultiple (node:net:1715:7)
+[0] [ERROR] 13:09:51 Error: listen EADDRINUSE: address already in use :::3001
+[0] [uncaughtException] listen EADDRINUSE: address already in use :::3001
+[0] [INFO] 13:09:52 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\payroll.ts has been modified
+[0] [ERROR] 13:09:55 Error: listen EADDRINUSE: address already in use :::3001
+[0] [uncaughtException] listen EADDRINUSE: address already in use :::3001
+[0] [INFO] 13:10:02 Restarting: C:\Users\hope4\hrpulse\HRPulse\backend\src\routes\ess.ts has been modified
+[0] [ERROR] 13:10:07 Error: listen EADDRINUSE: address already in use :::3001
+[0] [uncaughtException] listen EADDRINUSE: address already in use :::3001

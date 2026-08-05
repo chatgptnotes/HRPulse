@@ -113,7 +113,7 @@ export interface PayrollResult {
 }
 
 export const DEFAULT_PAYROLL_SETTINGS: PayrollSettings = {
-  workingDays: 26,
+  workingDays: 30,
   missedSwipeWeight: 0.5,
   standardWorkingHours: 9,
   halfDayHours: 4,
@@ -430,9 +430,9 @@ export function computeEmployeePayroll(
   const overtimePay = Math.round(overtimeDays * overtimePayPerDay);
   const absentDeduction = Math.round(unpaidAbsent * dailySalary);
   const halfDayDeduction = Math.round(halfDays * (dailySalary / 2));
-  // Gross salary is always the fixed monthly salary — it never increases above it.
-  // Overtime pay and allowances are tracked separately for reporting, not added to gross.
-  // Net salary is therefore always less than or equal to the gross salary.
+  // Gross salary is the fixed monthly salary reference. Overtime pay is added to the
+  // final net amount for overtime-eligible employees who worked qualifying overtime,
+  // so the net can exceed the gross salary by the overtime pay earned.
   const grossSalary = Math.round(monthlySalary);
 
   // Deductions: late penalties only. Missing punches are displayed and notified,
@@ -442,8 +442,9 @@ export function computeEmployeePayroll(
   const lateDeductionDays = calculateLateDeductionDays(lateDays, settings.lateDaysPerDeduction);
   const latePenalty = dailySalary * lateDeductionDays;
   const totalDeductions = Math.round(absentDeduction + halfDayDeduction + missedPenalty + latePenalty);
-  // Net salary is always clamped: never below 0, never above the fixed gross salary.
-  const netSalary = Math.min(grossSalary, Math.max(0, grossSalary - totalDeductions));
+  // Net salary = gross minus deductions, plus overtime pay for eligible employees.
+  // Clamped to never go below 0. Overtime pay can make net exceed gross.
+  const netSalary = Math.max(0, grossSalary - totalDeductions + overtimePay);
 
   let status = 'Processed';
   if (monthlySalary <= 0) status = 'No Salary Config';

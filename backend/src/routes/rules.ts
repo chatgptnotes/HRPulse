@@ -239,7 +239,7 @@ router.post('/evaluate/:uploadId', async (req: Request, res: Response) => {
   if (!upload) { res.status(404).json({ error: 'Upload not found' }); return; }
 
   const periodMonth = upload.period_month;
-  const workingDays = parseFloat(settings['working_days'] || '26');
+  const workingDays = parseFloat(settings['working_days'] || '30');
   const missedSwipeWeight = parseFloat(settings['missed_swipe_weight'] || '0.5');
   const halfDayHours = parseFloat(settings['half_day_hours'] || '4');
   const lateGraceMinutes = parseFloat(settings['late_grace_minutes'] || String(LATE_GRACE_MINUTES));

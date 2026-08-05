@@ -26,7 +26,6 @@ function phoneticScore(a: string, b: string): number {
   return 1 - dist / maxLen;
 }
 
-// Calculate days in month and Sundays dynamically
 export function getMonthInfo(monthStr: string) {
   const [year, month] = monthStr.split('-').map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -77,7 +76,7 @@ export function fillSalarySheet(
 ): FillResult {
   const monthInfo = getMonthInfo(month);
 
-  // ── Parse attendance file ────────────────────────────────────────────────
+  // Parse attendance file
   const attWb = xlsx.read(attendanceBuffer, { type: 'buffer' });
   const attWs = attWb.Sheets[attWb.SheetNames[0]];
   const attRows = xlsx.utils.sheet_to_json(attWs, { header: 1 }) as any[][];
@@ -98,7 +97,7 @@ export function fillSalarySheet(
     }
   }
 
-  // ── Parse salary sheet ───────────────────────────────────────────────────
+  // Parse salary sheet
   const salWb = xlsx.read(salaryBuffer, { type: 'buffer', cellStyles: true });
   const ws = salWb.Sheets[sheetName];
   if (!ws) throw new Error(`Sheet "${sheetName}" not found. Available: ${salWb.SheetNames.join(', ')}`);
@@ -121,16 +120,18 @@ export function fillSalarySheet(
     if (!sheetNameVal || sheetNameVal.length < 2) continue;
     const snNorm = norm(sheetNameVal);
 
-    // Find attendance
+    // Find attendance — name matching with full-name awareness
     let attData: AttendanceEntry | null = null;
     let method = 'NONE';
     let score = 0;
 
+    // 1. Exact full-name match
     if (attendanceByNormName.has(snNorm)) {
       attData = attendanceByNormName.get(snNorm)!;
       method = 'EXACT'; score = 1;
     }
 
+    // 2. Substring match (attendance name contains salary name)
     if (!attData) {
       for (const [attN, att] of attendanceByNormName) {
         if (snNorm.length >= 4 && attN.includes(snNorm)) {
@@ -139,17 +140,33 @@ export function fillSalarySheet(
       }
     }
 
+    // 3. Phonetic match — requires BOTH first AND last name to match
+    //    Prevents confusion between people with same first name (Ruchika Zade vs Ruchika Jambulkar)
     if (!attData) {
-      const snFirst = snNorm.split(' ')[0];
+      const snParts = snNorm.split(' ').filter(p => p.length >= 2);
+      const snFirst = snParts[0] || '';
+      const snLast = snParts.length > 1 ? snParts[snParts.length - 1] : '';
       let bestScore = 0;
       for (const [attN, att] of attendanceByNormName) {
-        const attFirst = attN.split(' ')[0];
+        const attParts = attN.split(' ').filter(p => p.length >= 2);
+        const attFirst = attParts[0] || '';
+        const attLast = attParts.length > 1 ? attParts[attParts.length - 1] : '';
+
+        // First name must match phonetically
         if (snFirst.length >= 4 && attFirst.length >= 4) {
           const fs = phoneticScore(snFirst, attFirst);
           if (fs >= 0.75) {
-            const combined = fs * 0.6 + phoneticScore(snNorm, attN) * 0.4;
-            if (combined >= 0.6 && combined > bestScore) {
-              attData = att; method = 'PHONETIC'; score = combined; bestScore = combined;
+            // If both have last names, last name must also match (at least loosely)
+            let lastNameOk = true;
+            if (snLast && attLast) {
+              const ls = phoneticScore(snLast, attLast);
+              lastNameOk = ls >= 0.6;
+            }
+            if (lastNameOk) {
+              const combined = fs * 0.5 + phoneticScore(snNorm, attN) * 0.5;
+              if (combined >= 0.6 && combined > bestScore) {
+                attData = att; method = 'PHONETIC'; score = combined; bestScore = combined;
+              }
             }
           }
         }
@@ -168,10 +185,8 @@ export function fillSalarySheet(
     const orgCell = ws[xlsx.utils.encode_cell({ r, c: COL_ORG })];
     const org = String(orgCell?.v || '').trim().toLowerCase();
     const isSoftware = org === 'rafttar' || org === 'it' || org === 'software';
-    // General Shift: Accounts, Reception, Admin, Lab — Sundays off, no OT
     const generalShiftDepts = ['account', 'admin', 'reception', 'lab', 'it support'];
     const isGeneralShift = !isSoftware && generalShiftDepts.some(d => org.includes(d) || desig.toLowerCase().includes(d));
-    // Shift Workers: Nurses, Brothers, Maushi, Wardboys — work on Sundays, get OT
     const isShiftWorker = !isSoftware && !isGeneralShift;
 
     if (attData && attData.daysWorked > 0) {
@@ -182,7 +197,6 @@ export function fillSalarySheet(
       let gross: number, deductions: number, net: number;
 
       if (isSoftware) {
-        // Software: Gross = Monthly (fixed), deduct for absent only
         const swWD = monthInfo.softwareWD;
         const expectedDays = swWD - 2;
         const capped = Math.min(days, expectedDays);
@@ -195,29 +209,25 @@ export function fillSalarySheet(
         ws[xlsx.utils.encode_cell({ r, c: COL_PAYMENT })] = { t: 'n', v: gross };
         ws[xlsx.utils.encode_cell({ r, c: COL_PAYABLE })] = { t: 'n', v: net };
       } else if (isGeneralShift) {
-        // General Shift (Accounts, Reception): Sundays off, no double deduction
-        // Gross = Monthly ÷ WD × (PunchDays + Sundays)
-        const gsWD = monthInfo.softwareWD; // same as Days - Sundays
+        const gsWD = monthInfo.softwareWD;
         const totalDays = Math.min(days + monthInfo.sundays, gsWD);
         gross = Math.round((basic / gsWD) * totalDays);
-        deductions = advance; // NO absent deduction — already accounted for in the formula
+        deductions = advance;
         net = Math.max(0, gross - deductions);
         ws[xlsx.utils.encode_cell({ r, c: COL_DAYS })] = { t: 'n', v: totalDays };
         ws[xlsx.utils.encode_cell({ r, c: COL_PAYMENT })] = { t: 'n', v: gross };
         ws[xlsx.utils.encode_cell({ r, c: COL_PAYABLE })] = { t: 'n', v: net };
       } else {
-        // Shift Workers (Nurses, Brothers): work all days, get OT, no double deduction
-        const swWD = monthInfo.hospitalWD; // Days - 4 off
+        const swWD = monthInfo.hospitalWD;
         const otAmount = Math.round((basic / swWD) * otDuties);
         gross = Math.round((basic / swWD) * days + otAmount);
-        deductions = advance; // NO absent deduction — already accounted for in the formula
+        deductions = advance;
         net = Math.max(0, gross - deductions);
         ws[xlsx.utils.encode_cell({ r, c: COL_DAYS })] = { t: 'n', v: days };
         ws[xlsx.utils.encode_cell({ r, c: COL_PAYMENT })] = { t: 'n', f: `D${excelRow}/${swWD}*E${excelRow}` };
         ws[xlsx.utils.encode_cell({ r, c: COL_PAYABLE })] = { t: 'n', v: net };
       }
 
-      const category = isSoftware ? 'SW' : isGeneralShift ? 'Gen' : 'Shift';
       entries.push({ employeeName: sheetNameVal, designation: desig, organisation: org, monthlySalary: basic, daysPresent: days, otDuties, grossSalary: gross, deductions, netSalary: net, isSoftware });
       filled++;
       matchedNames.push(sheetNameVal);

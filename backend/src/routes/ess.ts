@@ -570,10 +570,11 @@ function applyRulesToRow(row: PayrollRow, days: any[], employee: EssEmployee, mo
   row.ruleDeductionDays = res.deductDays;
   row.ruleDeductionAmount = res.deductionAmount;
   row.ruleAllowanceAmount = res.allowanceAmount;
-  // Gross salary stays fixed at the monthly salary — it never increases.
-  // Allowances reduce deductions instead of inflating gross; net never exceeds gross.
+  // Gross salary stays fixed at the monthly salary.
+  // Rule allowances reduce deductions; rule deductions increase them.
+  // Overtime pay is added on top of net for overtime-eligible employees, so net can exceed gross.
   row.totalDeductions = Math.max(0, row.totalDeductions + res.deductionAmount - res.allowanceAmount);
-  row.netSalary = Math.min(row.grossSalary, row.grossSalary - row.totalDeductions);
+  row.netSalary = Math.max(0, row.grossSalary - row.totalDeductions + (row.overtimePay || 0));
   return res.matchedRules;
 }
 

@@ -194,7 +194,7 @@ export default function SettingsPage() {
                   step="1"
                   min="1"
                   max="31"
-                  value={settings['working_days'] || '26'}
+                  value={settings['working_days'] || '30'}
                   onChange={e => set('working_days', e.target.value)}
                   className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                 />

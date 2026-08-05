@@ -10,7 +10,7 @@ const DEFAULT_SETTINGS: [string, string][] = [
   ['ollama_model', process.env.OLLAMA_MODEL || 'llama3.2:3b'],
   ['company_name', process.env.COMPANY_NAME || 'Your Company'],
   ['hr_name', process.env.HR_NAME || 'HR Department'],
-  ['working_days', '26'],
+  ['working_days', '30'],
   ['missed_swipe_weight', '0.5'],
   ['standard_working_hours', '9'],
   ['half_day_hours', '4'],

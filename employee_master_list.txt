@@ -1,0 +1,125 @@
+EMP_ID	NAME	DESIGNATION	DEPARTMENT	MONTHLY_SALARY
+GEN-429651-9	Aarti Dudhabade	Nurse ( ANM )	Ayushman	15000
+GEN-428516-6	Aarti Suryawanshi	OT SISTER	Hope	12000
+GEN-427097-2	aarti telang	maushi	Ayushman	10000
+110	Abhishekh Dannar	Billing	Hope	15000
+GEN-430396-11	ABHISHEKH KUMAR	SOFTWEAR	IT	15000
+GEN-008576-12	Abuzar	Receptionist	Ayushman	15000
+GEN-008355-11	AFROJ KHAN	Night Guard	Hope	14000
+223	AJAY MESHRAM	Brother	Hope	15000
+GEN-430821-12	AKSHAY	SOFTWARE	IT	15000
+111	Akshay Barapatre	(Marketing)	Ayushman	20000
+GEN-012253-27	AMBAR MALIK	PRO	Hope	20000
+15	ANIRUDDHA	Software	IT	18000
+284	Anjali sis	SISTER	Hope	10000
+GEN-011270-22	ANORA	-	Hope	25000
+225	APEKSHA WANDRE	OT SISTER	Hope	15000
+GEN-010674-19	ARPIT KINARKAR	(Marketing)	Ayushman	25000
+108	ASHRAY  SALVE	SOFTWARE	IT	15000
+GEN-012848-30	Asif	OPD PRO	Ayushman	15000
+83	AYUSHI NANDAGAWLI / lokhande	Physiotherapist	Hope	12000
+154	Azhar Shaik	Electrician	Ayushman	18000
+247	AZHER KHAN	Billing	Hope	30000
+GEN-012452-28	Baba Khan	OPD PRO	Ayushman	15000
+GEN-013084-31	Babla	OPD PRO	Ayushman	15000
+GEN-012651-29	Bablu Thakur	OPD PRO	Ayushman	15000
+104	BHAVIK SHARMA	SOFTWARE	IT	15000
+GEN-010472-18	Bunty Dalne	(Marketing)	Ayushman	25000
+35	Chetna Kurvanshi	RECEIPTION	Ayushman	18000
+72	Digesh Bisen	Lab Technician	Hope	23000
+270	Diksha Sakhare	Receptionist	Hope	20000
+124	Dnyaneshwar Warghane	Guard	Ayushman	12000
+GEN-011853-25	DR VISHWAJEET RAJPUT	MO (medical officer)	-	49500
+GEN-008776-13	Dr. ARUN Agre	Pathology	Hope	15000
+GEN-012054-26	Dr. Shiraz Khan	Physician	Hope	75000
+56	Ganesh Sharnagat	(Marketing)	Ayushman	31000
+GEN-005756-1	Gumfa Temburne	Maushi	Hope	9000
+133	Harsh Bouncer	Bouncer	Ayushman	15000
+GEN-011072-21	ISHITA	-	Hope	25000
+54	Janardhan Motghare	House Keeping	Hope	8000
+5	Jiyalal Security Guard	Guard	Hope	15000
+4	JYOTI	MAUSHI	Hope	8000
+51	KARTIK MESHRAM	WARDBOY	Ayushman	15000
+242	KASHISH SISTER	STAFF NURSE	Hope	11000
+17	KAUSTUBH HADKE	Software	IT	18000
+246	KIRAN KADBE	BOUNCER	Hope	13000
+GEN-427601-4	Kiran Nandanwar	maushi	Ayushman	10000
+294	KIRTI  MESHRAM	MAUSHI	Hope	8000
+163	Komal Nagrare	OPD Nurse	Hope	9000
+221	KUNAL AKHARE	OT TECHNICINE	Hope	12000
+18	Lalit Meshram	Pharmacist	Hope	20000
+GEN-428771-7	Lalita Nishad	SISTER	Hope	12000
+91	Laxmi Wase	maushi	Ayushman	10000
+GEN-009709-16	Lokeash Ambade	(Marketing)	Ayushman	20000
+GEN-005975-2	Madhuri Gawadi	maushi	Ayushman	10000
+101	MAHENDRA BAHE	BROTHER	Hope	11000
+GEN-006864-6	Manjusha Koche	Guard	Ayushman	11000
+280	Manthan	OT	Ayushman	8000
+GEN-007759-8	Meena Yadav	maushi	Ayushman	12000
+GEN-011469-23	Mohammad Anas	Software	IT	30000
+50	NATASHA	LAB	Hope	7000
+142	NIKITA SISTER	SISTER	Hope	12000
+269	Nisha Sharma	Receptionist	Hope	20000
+144	NITIN DRIVER	Driver	Hope	18000
+274	Noor	STAFF NURSE	Hope	10000
+44	Oshin Tembhurne	X-ray tecnician	Ayushman	13000
+107	PALAK DONGRE	SOFTWARE	IT	15000
+97	Pankaj Patel	OT	Ayushman	20000
+GEN-429881-10	Pankaj Shende	Brother	Hope	15000
+GEN-006669-5	Pinki Dhahenwar	maushi	Ayushman	10000
+10	Praful Ambade	wardboy	Hope	15000
+181	PRANAY THAKRE	X RAY	Ayushman	11000
+GEN-429217-8	PRATIK BROTHER	BROTHER	Ayushman	14000
+59	Pratik Vyankat	Wardboy	Hope	17000
+GEN-426719-1	Priti Sakhare	MAUSHI	Hope	8000
+140	Priti Warjukar	Guard	Ayushman	10000
+63	PRIYANKA TEMBURNE	MAUSHI	Hope	8000
+208	RAJAT SURJARE	wardboy	Hope	14000
+49	RAJESH CHANDRAWANSHI	PRO	Hope	20000
+16	Rajkumar Walake	House Keeping	Hope	8000
+100	RAVINA BALVIR	STAFF NURSE	Hope	7000
+199	REENA NIRGULE	HOUSE KEEPING SUPERVISOR	Hope	17000
+113	REHA KHER	SOFTWARE	IT	15000
+GEN-007959-9	Rima Varade	OT	Ayushman	12000
+GEN-013479-33	RISHABH	OPD PRO	Ayushman	10000
+288	RIZWANA SHEIKH	Billing	Hope	25000
+95	ROMA KUNGAVANI	Physiotherapist	Hope	35000
+106	RUCHIKA JAMBULKAR	Pharmacist	Hope	20000
+GEN-431236-13	RUCHIKA ZADE	SOFTWARE	IT	15000
+180	Rupali Ghumde	Nurse ( OPD )	Ayushman	18000
+GEN-007076-7	SAGAR BAWANE	wardboy	Ayushman	12000
+GEN-008991-14	Sagar Vaidya	Housekeeping	Ayushman	15000
+GEN-006475-4	Sagar Vaidya	wardboy	Ayushman	10000
+290	SAHIL JHA	Software	IT	30000
+GEN-009990-17	Sanjay Khobragade	(Marketing)	Ayushman	25000
+168	Santoshi Patle	Nurse	Ayushman	16500
+146	Sarita Rangari	Lab Technician	Hope	10000
+102	SARVESH BRAMHANE	OT TECHNICINE	Hope	15000
+190	Savita Patle	STAFF NURSE	Hope	13000
+99	SEJAL GEDAM	STAFF NURSE	Hope	7000
+GEN-009502-15	SHAHNAWAAZ	BILLING	Hope	18000
+GEN-431736-14	SHAILESH GANESH NINAWE	Accountant	Hope	20000
+46	Shashank Upgade	Billing Executive	Hope	25000
+62	SHILPA BANKAR	MAUSHI	Hope	9000
+57	Shoibh Sheikh	Receptionist	Ayushman	15000
+GEN-008151-10	Shrawan Ingole	Guard	Ayushman	12000
+224	Shrutika	OT SISTER	Hope	15000
+148	Shubham Dubey	X-ray tecnician	Hope	17000
+265	Shubhangi Naik	MAUSHI	Hope	8000
+219	SNEHAL TIMANDE	SOFTWARE	Hope	12000
+36	Sonali Kakde	SISTER	Hope	15000
+105	SONAM	SOFTWARE	IT	15000
+GEN-427327-3	Sonam Masih	PATIENT COORDINATOR	Hope	10000
+GEN-011662-24	Suraj Rajput	Marketing	Ayushman	75000
+77	Tejaswini Sharma	SISTER	Hope	9000
+103	TILAK YADAV	Jr. Accountant	Hope	15000
+141	Trupti lab	lab	Ayushman	10000
+135	Urmila Lautkar 9 HOURS	Maushi	Hope	9000
+23	Utkarsha Gajbhiye	STAFF NURSE	Hope	13000
+GEN-006193-3	Uttara Ponikar	maushi	Ayushman	13000
+GEN-010874-20	VIJI MEDAM	-	Hope	25000
+GEN-013282-32	Vikas	OPD PRO	Ayushman	15000
+220	VISHAL DEEPCLEANING	DEEP CLEANING	Hope	13000
+202	VIVEK BROTHER	BROTHER	Ayushman	14000
+GEN-428256-5	VIVEK CHANNE	wardboy	Hope	11000
+112	YASH DESHMUKH	SOFTWARE	IT	15000
