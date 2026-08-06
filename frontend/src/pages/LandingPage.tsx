@@ -2,24 +2,20 @@ import { useNavigate } from 'react-router-dom';
 
 const features = [
   { icon: 'upload_file', title: 'GDHR SmartTime Integration', desc: 'Upload your SmartTime Excel export and HRPulse instantly parses all 15+ column variants — no config needed.' },
-  { icon: 'psychology', title: 'Local AI Email Drafting', desc: 'Ollama + llama3.1:8b generates personalized, empathetic attendance notification emails offline. Zero cloud dependency.' },
+  { icon: 'mail', title: 'Template Email Drafting', desc: 'Generate consistent attendance emails from editable HR templates, with previews before dispatch.' },
   { icon: 'payments', title: 'Loss of Pay Calculator', desc: 'Configurable LOP formula: basic salary / working days × effective absent days with adjustable missed-swipe weights.' },
   { icon: 'send', title: 'Bulk SMTP Dispatch', desc: 'Preview, edit, and dispatch emails to 100+ employees in one click via your corporate SMTP server.' },
-  { icon: 'bar_chart', title: 'Attendance Analytics', desc: 'Trend charts, top offenders, monthly comparisons, and AI-powered anomaly detection across all periods.' },
+  { icon: 'bar_chart', title: 'Attendance Analytics', desc: 'Trend charts, top offenders, and monthly comparisons across all uploaded periods.' },
   { icon: 'rule', title: 'Rules & SOPs Engine', desc: 'Define HR policy rules and maintain standard operating procedures in a searchable knowledge base.' },
-  { icon: 'security', title: '100% On-Premises', desc: 'All data stays on your server. No SaaS subscription, no data leaving your premises, no internet required.' },
+  { icon: 'cloud', title: 'Supabase + Vercel', desc: 'Secure hosted database and reliable web deployment with HR access from anywhere.' },
   { icon: 'history', title: 'Full Audit Trail', desc: 'Complete email dispatch history with per-employee records, reminder logic for repeat offenders.' },
 ];
 
 const competitors = [
-  { feature: 'Local AI (no cloud)', hrpulse: true, bayzat: false, keka: false, greythr: false, zoho: false },
-  { feature: 'On-premises deployment', hrpulse: true, bayzat: false, keka: false, greythr: false, zoho: false },
+  { feature: 'Supabase + Vercel deployment', hrpulse: true, bayzat: false, keka: false, greythr: false, zoho: false },
   { feature: 'GDHR SmartTime Excel parser', hrpulse: true, bayzat: false, keka: false, greythr: false, zoho: false },
   { feature: 'Bulk attendance email dispatch', hrpulse: true, bayzat: true, keka: true, greythr: true, zoho: true },
   { feature: 'LOP calculation', hrpulse: true, bayzat: true, keka: true, greythr: true, zoho: true },
-  { feature: 'AI email personalization', hrpulse: true, bayzat: false, keka: false, greythr: false, zoho: false },
-  { feature: 'Anomaly detection', hrpulse: true, bayzat: false, keka: false, greythr: false, zoho: false },
-  { feature: 'Zero data cost', hrpulse: true, bayzat: false, keka: false, greythr: false, zoho: false },
 ];
 
 export default function LandingPage() {
@@ -46,13 +42,13 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-1.5 text-sm mb-6">
             <span className="material-icons text-base">lock</span>
-            100% On-Premises &middot; No data leaves your server
+            Supabase database &middot; Vercel deployment
           </div>
           <h1 className="text-5xl font-extrabold mb-5 leading-tight">
-            AI-Powered HR Attendance<br />Email Dispatcher
+            HR Attendance<br />Email Dispatcher
           </h1>
           <p className="text-indigo-100 text-lg mb-8 max-w-xl mx-auto">
-            Upload your GDHR SmartTime Excel, let local AI draft personalized absence notifications, and dispatch to your entire team — all without an internet connection.
+            Upload your GDHR SmartTime Excel, review attendance issues, and dispatch consistent HR notifications from one secure web app.
           </p>
           <div className="flex items-center justify-center gap-4">
             <button
@@ -79,9 +75,9 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-8 grid grid-cols-4 gap-6">
           {[
             { value: '100+', label: 'Employees per dispatch' },
-            { value: '0 AED', label: 'Cloud subscription cost' },
-            { value: '100%', label: 'Data stays on your server' },
-            { value: 'Offline', label: 'AI works without internet' },
+            { value: '1', label: 'Supabase database' },
+            { value: 'Vercel', label: 'Web deployment' },
+            { value: '100+', label: 'Employees per dispatch' },
           ].map(s => (
             <div key={s.label} className="text-center">
               <div className="text-3xl font-bold text-brand-600">{s.value}</div>
@@ -146,7 +142,7 @@ export default function LandingPage() {
       <section className="py-16 px-8 text-center">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold text-slate-800 mb-4">Ready to automate your HR emails?</h2>
-          <p className="text-slate-500 mb-8">Your GDHR SmartTime Excel + Ollama + HRPulse = attendance emails done in minutes.</p>
+          <p className="text-slate-500 mb-8">Your GDHR SmartTime Excel + Supabase + Vercel = attendance emails done in minutes.</p>
           <button
             onClick={() => navigate('/')}
             className="bg-brand-600 text-white font-semibold px-10 py-3.5 rounded-xl hover:bg-brand-700 transition-colors inline-flex items-center gap-2"
@@ -159,7 +155,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-100 py-6 px-8 text-center text-xs text-slate-400">
-        HRPulse &middot; On-premises AI for UAE & GCC HR teams &middot; Powered by Ollama + llama3.1:8b
+        HRPulse &middot; Attendance email automation for UAE & GCC HR teams &middot; Powered by Supabase + Vercel
       </footer>
     </div>
   );

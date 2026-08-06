@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countStatuses, isFlagged, NON_FLAGGED_STATUSES, FLAGGED_STATUSES } from '../attendanceStatus';
+import { countStatuses, isFlagged, isPayrollDeductibleDate, NON_FLAGGED_STATUSES, FLAGGED_STATUSES } from '../attendanceStatus';
 import { calculateLOP, DEFAULT_HALF_DAY_LOP_WEIGHT } from '../lopService';
 
 const rec = (...statuses: string[]) => statuses.map(status => ({ status }));
@@ -70,6 +70,13 @@ describe('isFlagged', () => {
   it('keeps the exported filter lists mutually exclusive', () => {
     for (const s of FLAGGED_STATUSES) expect(NON_FLAGGED_STATUSES).not.toContain(s);
     for (const s of NON_FLAGGED_STATUSES) expect(isFlagged(s)).toBe(false);
+  });
+});
+
+describe('isPayrollDeductibleDate', () => {
+  it('keeps the 31st in attendance history but excludes it from payroll', () => {
+    expect(isPayrollDeductibleDate('2026-07-31')).toBe(false);
+    expect(isPayrollDeductibleDate('2026-07-30')).toBe(true);
   });
 });
 

@@ -1,0 +1,63 @@
+
+> dev
+> concurrently "npm run dev --workspace=backend" "npm run dev --workspace=frontend"
+
+[0] 
+[0] > @hrpulse/backend@1.0.0 dev
+[0] > ts-node-dev --respawn --transpile-only src/index.ts
+[0] 
+[1] 
+[1] > @hrpulse/frontend@1.0.0 dev
+[1] > vite
+[1] 
+[1] 
+[1]   [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m1891[22m[2m[0m ms[22m
+[1] 
+[1]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[1] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[0] [INFO] 07:56:27 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.9.2, typescript ver. 5.9.3)
+[0] HRPulse backend running on http://localhost:3001
+[0] prisma:error 
+[0] Invalid `prisma.user.count()` invocation in
+[0] C:\Users\hope4\Downloads\HRPulse\backend\src\db\seed.ts:313:39
+[0] 
+[0]   310 const email = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+[0]   311 const password = process.env.ADMIN_PASSWORD;
+[0]   312 
+[0] → 313 const userCount = await prisma.user.count(
+[0] error: Error validating datasource `db`: the URL must start with the protocol `postgresql://` or `postgres://`.
+[0]   -->  schema.prisma:7
+[0]    | 
+[0]  6 |   provider = "postgresql"
+[0]  7 |   url      = env("DATABASE_URL")
+[0]    | 
+[0] 
+[0] Validation Error Count: 1
+[0] PrismaClientInitializationError: 
+[0] Invalid `prisma.user.count()` invocation in
+[0] C:\Users\hope4\Downloads\HRPulse\backend\src\db\seed.ts:313:39
+[0] 
+[0]   310 const email = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+[0]   311 const password = process.env.ADMIN_PASSWORD;
+[0]   312 
+[0] → 313 const userCount = await prisma.user.count(
+[0] error: Error validating datasource `db`: the URL must start with the protocol `postgresql://` or `postgres://`.
+[0]   -->  schema.prisma:7
+[0]    | 
+[0]  6 |   provider = "postgresql"
+[0]  7 |   url      = env("DATABASE_URL")
+[0]    | 
+[0] 
+[0] Validation Error Count: 1
+[0]     at $n.handleRequestError (C:\Users\hope4\Downloads\HRPulse\backend\node_modules\@prisma\client\runtime\library.js:121:7615)
+[0]     at $n.handleAndLogRequestError (C:\Users\hope4\Downloads\HRPulse\backend\node_modules\@prisma\client\runtime\library.js:121:6623)
+[0]     at $n.request (C:\Users\hope4\Downloads\HRPulse\backend\node_modules\@prisma\client\runtime\library.js:121:6307)
+[0]     at l (C:\Users\hope4\Downloads\HRPulse\backend\node_modules\@prisma\client\runtime\library.js:130:9633)
+[0]     at seedAdminUser (C:\Users\hope4\Downloads\HRPulse\backend\src\db\seed.ts:313:21)
+[0]     at seedDatabase (C:\Users\hope4\Downloads\HRPulse\backend\src\db\seed.ts:342:3) {
+[0]   clientVersion: '5.22.0',
+[0]   errorCode: undefined
+[0] }
+[1] [2m1:50:10 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/EmployeesPage.tsx, /src/index.css[22m
+[1] [2m1:50:10 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/EmployeesPage.tsx, /src/index.css[22m
+[1] [2m1:51:28 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/EmployeesPage.tsx, /src/index.css[22m

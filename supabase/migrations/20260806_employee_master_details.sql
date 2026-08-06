@@ -1,0 +1,10 @@
+-- Employee Master profile, shift and eligibility settings.
+ALTER TABLE public.employees
+  ADD COLUMN IF NOT EXISTS mobile TEXT,
+  ADD COLUMN IF NOT EXISTS branch TEXT,
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Active',
+  ADD COLUMN IF NOT EXISTS shift_name TEXT NOT NULL DEFAULT 'General',
+  ADD COLUMN IF NOT EXISTS shift_start_time TIME NOT NULL DEFAULT '09:00',
+  ADD COLUMN IF NOT EXISTS shift_end_time TIME NOT NULL DEFAULT '18:00',
+  ADD COLUMN IF NOT EXISTS eligible_for_paid_leaves BOOLEAN NOT NULL DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS eligible_for_overtime BOOLEAN NOT NULL DEFAULT FALSE;

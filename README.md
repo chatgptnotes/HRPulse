@@ -1,92 +1,79 @@
 # HRPulse
 
-AI-powered HR attendance email dispatcher for UAE & GCC organizations.
+HRPulse is an attendance and HR email dispatcher for UAE/GCC organizations.
+It imports GDHR SmartTime Excel files, identifies attendance issues, calculates
+LOP, creates template-based email drafts, and sends approved emails.
 
-**100% on-premises** — your data never leaves your server. No cloud subscription. Works offline.
+## Deployment
 
-## Features
+The application is designed for:
 
-- **GDHR SmartTime Excel parser** — upload your monthly attendance export, HRPulse handles the rest
-- **Local AI email drafting** — Ollama + llama3.1:8b drafts personalized absence/missed-swipe emails
-- **Loss of Pay calculator** — configurable LOP formula with missed-swipe weight
-- **Bulk SMTP dispatch** — preview, edit, and send to 100+ employees in one click
-- **Analytics** — trend charts, top offenders, monthly comparison (recharts)
-- **Employees** — auto-synced from Excel uploads, editable profiles
-- **Rules engine** — define HR policy rules for automated email triggers
-- **SOPs** — searchable Markdown knowledge base for HR policies
-- **AI Insights** — anomaly detection, risk scoring, report generator, NL Q&A
-- **Email History** — full audit trail with per-employee records
+- **Vercel** for the React frontend and serverless API function.
+- **Supabase** for PostgreSQL and Supabase Auth.
+- An existing **SMTP provider** for sending employee emails.
 
-## Stack
+The API is exposed through `api/[...path].ts`, which adapts the existing
+Express routes to a Vercel function. This keeps the attendance, salary, rules,
+SOP, and email workflows together while removing the separate server process.
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18 + TypeScript + Vite + Tailwind CSS |
-| Backend | Node.js + Express + TypeScript |
-| Database | PostgreSQL via Prisma ORM (Supabase-compatible) |
-| AI | Local Ollama (llama3.1:8b) |
-| Email | Nodemailer SMTP + Ethereal.email test fallback |
-| Excel | SheetJS (xlsx) |
+## Supabase setup
 
-## Quick Start
+1. Create a Supabase project.
+2. Run the Prisma migration SQL from `backend/prisma/migrations` in the
+   Supabase SQL Editor, or run `npx prisma migrate deploy` with the direct
+   Supabase connection string.
+3. Enable Email/Password authentication in Supabase Auth.
+4. Create the first HR user in Supabase Auth. The application creates the
+   matching profile row in `users` on the first authenticated request.
 
-### Prerequisites
-- Node.js 18+
-- PostgreSQL 14+
-- [Ollama](https://ollama.ai) with `llama3.1:8b` pulled
+## Vercel environment variables
 
-### Local Development
+Set these in the Vercel project:
 
-```bash
-git clone https://github.com/chatgptnotes/HRPulse.git
-cd HRPulse
+```text
+DATABASE_URL=your_supabase_database_connection_string
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+AUTH_SECRET=only-needed-for-legacy-login-fallback
+INGEST_API_KEY=optional-biometric-device-key
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.0-flash-lite
+```
 
-# Install all workspaces
+SMTP settings are stored in the Supabase `settings` table and managed from the
+Settings screen. Do not expose SMTP credentials or a Supabase service-role key
+to the browser.
+
+## Local development
+
+```powershell
 npm install
-
-# Configure backend
-cp backend/.env.example backend/.env
-# Edit backend/.env — set DATABASE_URL, SMTP credentials
-
-# Run Prisma migration
-cd backend && npx prisma migrate deploy && cd ..
-
-# Start both servers (frontend :5173 + backend :3001)
 npm run dev
 ```
 
-Open http://localhost:5173
+The Vite development server proxies `/api` to the local Express process. A
+Supabase project and `DATABASE_URL` are still required for database-backed
+features.
 
-### First Run Checklist
+## Build
 
-1. **Settings > Company Info** — set company name
-2. **Settings > Ollama AI** — click "Test Ollama" to confirm llama3.1:8b is detected
-3. **Settings > SMTP Email** — configure your SMTP server (or leave blank for Ethereal test mode)
-4. **Dispatcher** — drop your GDHR SmartTime Excel, click "Process with AI"
+```powershell
+npm run build
+```
 
-## Deployment (Railway)
+AI/Ollama features are intentionally not included in this Supabase + Vercel
+deployment. Email drafts use the editable templates in the application. Gemini
+is used only when an HR user asks it to convert plain-language policy text into
+a draft attendance rule; the HR user must review and save the result.
 
-1. Connect this repo to [Railway](https://railway.app)
-2. Add a PostgreSQL plugin — copy the `DATABASE_URL`
-3. Set environment variables: `DATABASE_URL`, `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `OLLAMA_URL`
-4. Deploy — Railway uses `railway.toml` automatically
+For the backend-removal migration, deploy the Supabase function and set its
+secrets with the Supabase CLI:
 
-> Note: Ollama must be reachable from your Railway service. For production, run Ollama on the same private network or use `OLLAMA_URL` to point to your on-premises instance.
+```powershell
+supabase functions deploy generate-rule
+supabase secrets set GEMINI_API_KEY=your_key GEMINI_MODEL=gemini-2.0-flash-lite
+```
 
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | — | PostgreSQL connection string |
-| `PORT` | `3001` | Backend port |
-| `OLLAMA_URL` | `http://localhost:11434` | Ollama API endpoint |
-| `OLLAMA_MODEL` | `llama3.1:8b` | Model name |
-| `SMTP_HOST` | — | SMTP server hostname |
-| `SMTP_PORT` | `587` | SMTP port |
-| `SMTP_USER` | — | SMTP username |
-| `SMTP_PASS` | — | SMTP password |
-| `COMPANY_NAME` | `Your Company` | Used in email signatures |
-
-## License
-
-MIT
+The frontend uses this function whenever `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_ANON_KEY` are configured. Other workflows still use the
+compatibility API until their matching Edge Functions are migrated.

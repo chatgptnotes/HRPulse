@@ -1,5 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, bearerFromHeader, safeCompare, type TokenPayload } from '../services/authService';
+import { createClient } from '@supabase/supabase-js';
+import prisma from '../db/prisma';
+
+const supabase = process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '')
+  : null;
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -19,19 +25,35 @@ declare global {
  * Applied to every /api route except the explicit exemptions in index.ts, so
  * that a newly added route is protected by default rather than by remembering.
  */
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = bearerFromHeader(req.headers.authorization);
   if (!token) {
     res.status(401).json({ error: 'Authentication required' });
     return;
   }
 
-  const payload = verifyToken(token);
-  if (!payload) {
-    res.status(401).json({ error: 'Invalid or expired token' });
-    return;
+  if (supabase) {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (!error && data.user?.email) {
+      const email = data.user.email.toLowerCase();
+      const metadata = data.user.user_metadata || {};
+      const existing = await prisma.user.findUnique({ where: { email } });
+      const profile = existing || await prisma.user.create({
+        data: {
+          email,
+          name: String(metadata.full_name || metadata.name || email.split('@')[0]),
+          role: metadata.role === 'admin' ? 'admin' : 'hr',
+          passwordHash: 'managed-by-supabase-auth',
+        },
+      });
+      req.user = { sub: profile.id, email: profile.email, role: profile.role };
+      next();
+      return;
+    }
   }
 
+  const payload = verifyToken(token);
+  if (!payload) { res.status(401).json({ error: 'Invalid or expired token' }); return; }
   req.user = payload;
   next();
 }

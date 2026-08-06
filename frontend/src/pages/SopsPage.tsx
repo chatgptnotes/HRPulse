@@ -82,8 +82,8 @@ export default function SopsPage() {
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="w-full min-w-0 p-4 sm:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Standard Operating Procedures</h1>
           <p className="text-slate-500 text-sm mt-1">HR policies, processes, and guidelines in a searchable knowledge base.</p>

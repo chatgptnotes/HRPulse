@@ -1,6 +1,6 @@
 import prisma from '../db/prisma';
 import { calculateLOP, DEFAULT_HALF_DAY_LOP_WEIGHT } from './lopService';
-import { countStatuses, type AttendanceCounts } from './attendanceStatus';
+import { countStatuses, isPayrollDeductibleDate, type AttendanceCounts } from './attendanceStatus';
 import { evaluateRulesForUpload, computeRuleLop, type RuleMatch, type RuleLopBreakdown } from './ruleEngine';
 
 /// Authoritative loss-of-pay calculation for an upload.
@@ -53,7 +53,9 @@ export async function loadDeductionContext(): Promise<DeductionContext> {
   const rows = await prisma.setting.findMany();
   const settings = Object.fromEntries(rows.map(r => [r.key, r.value]));
   return {
-    workingDays: parseFloat(settings['working_days'] || '26'),
+    // Salary deductions always use a fixed 30-day payroll month. A date on the
+    // 31st is retained as attendance history but never contributes to payroll.
+    workingDays: 30,
     missedSwipeWeight: parseFloat(settings['missed_swipe_weight'] || '0.5'),
     halfDayWeight: parseFloat(settings['half_day_lop_weight'] || String(DEFAULT_HALF_DAY_LOP_WEIGHT)),
   };
@@ -78,7 +80,8 @@ export async function computeDeductionsForUpload(uploadId: number): Promise<Empl
 
   // Phase 1 — base LOP from attendance counts.
   const base = employees.map(emp => {
-    const counts = countStatuses(emp.attendanceRecords);
+    const payrollRecords = emp.attendanceRecords.filter(record => isPayrollDeductibleDate(record.recordDate));
+    const counts = countStatuses(payrollRecords);
     const basicSalary = Number(emp.salaryConfigs[0]?.basicSalary ?? 0);
     const { baseLopDays } = calculateLOP({
       basicSalary,

@@ -92,7 +92,7 @@ export default function Dashboard() {
       qc.invalidateQueries({ queryKey: ['uploads'] });
       showToast(`Uploaded: ${data.rowCount} records for ${data.periodMonth}`);
     } catch (err: any) {
-      showToast(err?.response?.data?.error || 'Upload failed', 'err');
+      showToast(err?.response?.data?.error || err?.message || 'Upload failed', 'err');
     } finally {
       setUploading(false);
     }
@@ -109,27 +109,9 @@ export default function Dashboard() {
     setGenerating(true);
     setGenProgress({ completed: 0, total: 0, current: 'Starting...' });
     try {
-      const response = await fetch(`/api/emails/generate/${uploadId}`, { method: 'POST' });
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const ev = JSON.parse(line.slice(6));
-              if (ev.type === 'progress') setGenProgress({ completed: ev.completed, total: ev.total, current: ev.currentEmployee });
-              if (ev.type === 'done') showToast(`Generated ${ev.total} email drafts`);
-              if (ev.type === 'error') showToast(ev.error, 'err');
-            } catch {}
-          }
-        }
-      }
+      setGenProgress({ completed: 0, total: 1, current: 'Creating attendance drafts...' });
+      const { data } = await api.evaluateRules(uploadId, true);
+      showToast(`Created ${data.draftsCreated} email draft${data.draftsCreated !== 1 ? 's' : ''}`);
     } catch (err: any) {
       showToast('Generation failed: ' + String(err), 'err');
     } finally {
@@ -210,14 +192,14 @@ export default function Dashboard() {
   const getDraftForEmployee = (empId: number) => (drafts as any[]).find((d: any) => d.employeeId === empId);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100">
+    <div className="flex h-screen min-w-0 flex-col overflow-hidden bg-slate-100 lg:flex-row">
       {/* Left Panel */}
-      <div className="w-64 bg-white border-r border-slate-200/70 flex flex-col overflow-y-auto shadow-sm">
+      <div className="flex max-h-[46vh] w-full flex-shrink-0 flex-col overflow-y-auto border-b border-slate-200/70 bg-white shadow-sm lg:max-h-none lg:w-64 lg:border-b-0 lg:border-r">
         <div className="px-5 py-5 border-b border-slate-100">
           <h2 className="font-bold text-slate-800 text-sm">Attendance Dispatcher</h2>
           <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-            Powered by local Ollama
+            Template-based email drafting
           </p>
         </div>
 
@@ -406,9 +388,9 @@ export default function Dashboard() {
       </div>
 
       {/* Right Panel */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 bg-white border-b border-slate-200/70 flex items-center justify-between shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-200/70 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <h3 className="font-bold text-slate-800 text-base">Records Preview</h3>
             {uploadId && (
@@ -417,14 +399,14 @@ export default function Dashboard() {
               </p>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="relative">
               <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none">search</span>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search employee..."
-                className="text-sm border border-slate-200 rounded-xl pl-9 pr-4 py-2 w-52 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 bg-slate-50"
+                className="w-full min-w-0 border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 sm:w-52"
               />
             </div>
             {selected.size > 0 && (

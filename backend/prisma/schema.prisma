@@ -58,6 +58,14 @@ model Employee {
   entity       String?
   department   String?
   designation  String?
+  mobile       String?
+  branch       String?
+  status       String    @default("Active")
+  shiftName    String    @default("General") @map("shift_name")
+  shiftStartTime String  @default("09:00") @map("shift_start_time")
+  shiftEndTime String    @default("18:00") @map("shift_end_time")
+  eligibleForPaidLeaves Boolean @default(true) @map("eligible_for_paid_leaves")
+  eligibleForOvertime Boolean @default(false) @map("eligible_for_overtime")
   joiningDate  DateTime? @map("joining_date")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")

@@ -10,14 +10,16 @@ interface Props {
   employeeEmail: string;
   onClose: () => void;
   onSent: () => void;
+  initialTab?: 'draft' | 'records';
+  recordsOnly?: boolean;
 }
 
-export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent }: Props) {
+export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false }: Props) {
   const qc = useQueryClient();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [draftId, setDraftId] = useState<number | null>(null);
-  const [tab, setTab] = useState<'draft' | 'records'>('draft');
+  const [tab, setTab] = useState<'draft' | 'records'>(initialTab);
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -69,6 +71,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
   };
 
   const flaggedRecords = records.filter((r: any) => !['Normal', 'Weekend', 'Holiday'].includes(r.status));
+  const visibleRecords = recordsOnly ? records : flaggedRecords;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -76,7 +79,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between">
           <div>
-            <h3 className="font-semibold text-slate-800">Email Draft Preview</h3>
+            <h3 className="font-semibold text-slate-800">{tab === 'records' ? 'Attendance Details' : 'Email Draft Preview'}</h3>
             <p className="text-sm text-slate-500 mt-0.5">{employeeName} · {employeeEmail}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
@@ -90,7 +93,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
               onClick={() => setTab(t as any)}
               className={`pb-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
             >
-              {t === 'draft' ? 'Email Draft' : `Attendance Records (${flaggedRecords.length})`}
+              {t === 'draft' ? 'Email Draft' : `Attendance Records (${visibleRecords.length})`}
             </button>
           ))}
         </div>
@@ -129,7 +132,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                   </tr>
                 </thead>
                 <tbody>
-                  {flaggedRecords.map((r: any, i: number) => (
+                  {visibleRecords.map((r: any, i: number) => (
                     <tr key={i} className="border-t border-slate-100">
                       <td className="px-3 py-2 text-slate-700">{r.recordDate}</td>
                       <td className="px-3 py-2"><StatusBadge label={r.status} small /></td>
@@ -151,22 +154,16 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
           </div>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium">
-              Cancel
+              {recordsOnly ? 'Close' : 'Cancel'}
             </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 text-sm text-brand-700 bg-brand-50 border border-brand-200 rounded-lg hover:bg-brand-100 font-medium"
-            >
-              {saving ? 'Saving...' : 'Save Draft'}
-            </button>
-            <button
-              onClick={handleSend}
-              disabled={sending || !draftId}
-              className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg font-medium"
-            >
-              {sending ? 'Sending...' : 'Send Email'}
-            </button>
+            {!recordsOnly && <>
+              <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm text-brand-700 bg-brand-50 border border-brand-200 rounded-lg hover:bg-brand-100 font-medium">
+                {saving ? 'Saving...' : 'Save Draft'}
+              </button>
+              <button onClick={handleSend} disabled={sending || !draftId} className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg font-medium">
+                {sending ? 'Sending...' : 'Send Email'}
+              </button>
+            </>}
           </div>
         </div>
       </div>

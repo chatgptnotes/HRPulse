@@ -10,7 +10,6 @@ const links = [
   { to: '/history', label: 'Email History', icon: 'history', end: false },
   { to: '/rules', label: 'Rules', icon: 'rule', end: false },
   { to: '/sops', label: 'SOPs', icon: 'description', end: false },
-  { to: '/ai', label: 'AI Insights', icon: 'psychology', end: false },
 ];
 
 const bottomLinks = [
@@ -29,20 +28,25 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
     <aside
       className={clsx(
         'flex flex-col min-h-screen bg-slate-900 transition-all duration-200 flex-shrink-0',
-        collapsed ? 'w-16' : 'w-60'
+        collapsed ? 'w-16' : 'w-16 sm:w-60'
       )}
     >
       {/* Logo */}
       <div className={clsx('flex items-center h-16 border-b border-slate-800', collapsed ? 'justify-center px-2' : 'px-5 gap-3')}>
         {!collapsed && (
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+          <div className="hidden items-center gap-2.5 flex-1 min-w-0 sm:flex">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
               <span className="material-icons text-white text-base">corporate_fare</span>
             </div>
             <div className="min-w-0">
-              <div className="font-bold text-white text-sm leading-tight">HRPulse</div>
+            <div className="font-bold text-white text-sm leading-tight">HRPulse</div>
               <div className="text-xs text-slate-400">Attendance AI</div>
             </div>
+          </div>
+        )}
+        {!collapsed && (
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 sm:hidden">
+            <span className="material-icons text-white text-base">corporate_fare</span>
           </div>
         )}
         {collapsed && (
@@ -72,7 +76,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       {/* Nav */}
       <nav className="flex-1 py-4 px-3 space-y-0.5">
         {!collapsed && (
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest px-2 pb-2">Menu</p>
+          <p className="hidden text-xs font-semibold text-slate-500 uppercase tracking-widest px-2 pb-2 sm:block">Menu</p>
         )}
         {links.map(l => (
           <NavLink
@@ -93,7 +97,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             {({ isActive }) => (
               <>
                 <span className={clsx('material-icons text-xl flex-shrink-0 transition-transform', isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200')}>{l.icon}</span>
-                {!collapsed && <span className="truncate">{l.label}</span>}
+                {!collapsed && <span className="hidden truncate sm:inline">{l.label}</span>}
               </>
             )}
           </NavLink>
@@ -121,21 +125,21 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             {({ isActive }) => (
               <>
                 <span className={clsx('material-icons text-xl flex-shrink-0', isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200')}>{l.icon}</span>
-                {!collapsed && <span className="truncate">{l.label}</span>}
+                {!collapsed && <span className="hidden truncate sm:inline">{l.label}</span>}
               </>
             )}
           </NavLink>
         ))}
         {!collapsed && (
-          <div className="px-3 pt-3 flex items-center gap-2">
+          <div className="hidden px-3 pt-3 items-center gap-2 sm:flex">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-slate-500">Ollama · On-premises</span>
+            <span className="text-xs text-slate-500">Supabase · Vercel</span>
           </div>
         )}
 
         <div className="mt-auto pt-4 border-t border-slate-800">
           {!collapsed && user && (
-            <div className="px-3 pb-2">
+            <div className="hidden px-3 pb-2 sm:block">
               <p className="truncate text-sm font-medium text-slate-200">{user.name}</p>
               <p className="truncate text-xs text-slate-500">{user.email}</p>
             </div>

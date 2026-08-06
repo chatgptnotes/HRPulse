@@ -13,7 +13,6 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import EmployeesPage from './pages/EmployeesPage';
 import RulesPage from './pages/RulesPage';
 import SopsPage from './pages/SopsPage';
-import AiInsightsPage from './pages/AiInsightsPage';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
 
@@ -32,7 +31,6 @@ function AppShell() {
           <Route path="/employees" element={<EmployeesPage />} />
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/sops" element={<SopsPage />} />
-          <Route path="/ai" element={<AiInsightsPage />} />
         </Routes>
       </main>
     </div>

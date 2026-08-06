@@ -7,11 +7,9 @@ const DEFAULT_SETTINGS: [string, string][] = [
   ['smtp_secure', 'false'],
   ['smtp_user', process.env.SMTP_USER || ''],
   ['smtp_pass', process.env.SMTP_PASS || ''],
-  ['ollama_url', process.env.OLLAMA_URL || 'http://localhost:11434'],
-  ['ollama_model', process.env.OLLAMA_MODEL || 'llama3.1:8b'],
   ['company_name', process.env.COMPANY_NAME || 'Your Company'],
   ['hr_name', process.env.HR_NAME || 'HR Department'],
-  ['working_days', '26'],
+  ['working_days', '30'],
   ['missed_swipe_weight', '0.5'],
   // Fraction of a day's pay lost for a biometric HALF_DAY.
   ['half_day_lop_weight', '0.5'],

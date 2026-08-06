@@ -21,6 +21,15 @@ export const LATE_STATUSES = ['Late Coming', 'LATE'];
 export const EARLY_LEAVING_STATUSES = ['Early Leaving'];
 export const HALF_DAY_STATUSES = ['HALF_DAY'];
 
+/**
+ * Payroll uses a fixed 30-day month. The 31st remains in attendance history,
+ * but is outside the payroll period and must not create LOP or rule penalties.
+ */
+export function isPayrollDeductibleDate(date: Date | string): boolean {
+  const value = typeof date === 'string' ? new Date(date) : date;
+  return !Number.isNaN(value.getTime()) && value.getUTCDate() !== 31;
+}
+
 /** Every exception status, for `in` filters and `includes` checks. */
 export const FLAGGED_STATUSES = [
   ...ABSENT_STATUSES,

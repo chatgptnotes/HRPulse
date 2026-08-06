@@ -1,6 +1,52 @@
 import axios from 'axios';
+import * as XLSX from 'xlsx';
+import { supabase, supabaseConfigured } from '../lib/supabase';
 
 export const api = axios.create({ baseURL: '/api' });
+
+function directClient() {
+  if (!supabaseConfigured || !supabase) throw new Error('Supabase is not configured. Restart the frontend after checking .env.');
+  return supabase;
+}
+
+function directResult<T>(data: T, error: { message: string } | null) {
+  if (error) throw new Error(error.message);
+  return { data };
+}
+
+const SHIFT_LATE_GRACE_MINUTES = 30;
+
+function timeValueToMinutes(value: unknown): number | null {
+  const text = String(value ?? '').trim();
+  const match = text.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const hours = Number(match[1]); const minutes = Number(match[2]);
+  return hours < 24 && minutes < 60 ? hours * 60 + minutes : null;
+}
+function nearestConfiguredShift(timings: any, punchMinutes: number) {
+  return ['Morning', 'Evening', 'Night'].reduce<any | null>((best, shiftName) => {
+    const timing = timings?.[shiftName.toLowerCase()];
+    const start = timeValueToMinutes(timing?.start);
+    const end = timeValueToMinutes(timing?.end);
+    if (start === null || end === null) return best;
+    const difference = Math.min(Math.abs(punchMinutes - start), 1440 - Math.abs(punchMinutes - start));
+    return !best || difference < best.difference ? { shiftName, start, end, difference } : best;
+  }, null);
+}
+
+// Supabase commonly limits one REST response to 1,000 rows. Attendance
+// uploads contain many rows per employee, so read larger result sets in pages.
+async function fetchAllRows<T>(buildQuery: (from: number, to: number) => any): Promise<{ data: T[]; error: any }> {
+  const all: T[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const result = await buildQuery(from, from + pageSize - 1);
+    if (result.error) return { data: all, error: result.error };
+    const page = (result.data || []) as T[];
+    all.push(...page);
+    if (page.length < pageSize) return { data: all, error: null };
+  }
+}
 
 /**
  * Attach or clear the bearer token used by every request.
@@ -31,44 +77,544 @@ api.interceptors.response.use(
 );
 
 // Attendance
-export const uploadAttendance = (file: File) => {
-  const fd = new FormData();
-  fd.append('file', file);
-  return api.post<{ uploadId: number; periodMonth: string; rowCount: number; warnings: string[] }>('/attendance/upload', fd);
+export const uploadAttendance = async (file: File) => {
+  if (!supabaseConfigured || !supabase) return api.post<{ uploadId: number; periodMonth: string; rowCount: number; warnings: string[] }>('/attendance/upload', (() => { const fd = new FormData(); fd.append('file', file); return fd; })());
+  if (!/\.(xls|xlsx)$/i.test(file.name)) throw new Error('Please select an Excel .xls or .xlsx file.');
+
+  const headerMap: Record<string, string> = {
+    'employee number': 'employeeNumber', 'employee no': 'employeeNumber', 'emp no': 'employeeNumber', 'emp number': 'employeeNumber', 'employee code': 'employeeNumber', 'emp code': 'employeeNumber',
+    'employee': 'employeeName', 'employee name': 'employeeName', 'employee full name': 'employeeName', 'emp name': 'employeeName', 'staff name': 'employeeName', 'staff': 'employeeName', name: 'employeeName',
+    'email address': 'email', email: 'email', 'e-mail': 'email', organisation: 'organisation', organization: 'organisation', entity: 'entity', department: 'department',
+    date: 'date', 'date in': 'date', date_in: 'date', 'attendance date': 'date', type: 'status', 'attendance type': 'status', status: 'status',
+    'time in': 'timeIn', 'in time': 'timeIn', 'punch in': 'timeIn', 'time out': 'timeOut', 'out time': 'timeOut', 'punch out': 'timeOut',
+  };
+  const statusMap: Record<string, string> = {
+    normal: 'Normal', weekend: 'Weekend', 'weak end': 'Weekend', holiday: 'Holiday', late: 'Late Coming', 'late coming': 'Late Coming',
+    absent: 'Absent', absence: 'Absent', 'missed swipe': 'Missed Swipe', incomplete: 'Missed Swipe', official: 'Official',
+    'early leaving': 'Early Leaving', 'early leave': 'Early Leaving', 'casual leave': 'Paid Leave', 'paid leave': 'Paid Leave', 'sick leave': 'Paid Leave', leave: 'Paid Leave',
+  };
+  const paidLeaveStatuses = new Set(['Paid Leave', 'Casual Leave', 'Sick Leave']);
+  const normalize = (value: unknown) => {
+    const key = String(value ?? '').toLowerCase().trim().replace(/\s+/g, ' ');
+    return headerMap[key] || key.replace(/\s+/g, '_');
+  };
+  const parseDate = (value: unknown): string | null => {
+    if (typeof value === 'number') { const parsed = XLSX.SSF.parse_date_code(value); return parsed ? `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}` : null; }
+    const text = String(value ?? '').trim();
+    const dmy = text.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+    const iso = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    return iso ? `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}` : null;
+  };
+  const parseTime = (value: unknown): number | null => {
+    if (value === null || value === undefined || value === '') return null;
+    if (typeof value === 'number') return value < 1 ? value * 24 : value;
+    const text = String(value).trim().toLowerCase();
+    const ampm = text.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);
+    const clock = text.match(/^(\d{1,2}):?(\d{2})?$/);
+    if (!ampm && !clock) return null;
+    const hours = ampm ? Number(ampm[1]) % 12 + (ampm[3] === 'pm' ? 12 : 0) : Number(clock![1]);
+    const minutes = Number((ampm ? ampm[2] : clock![2]) || 0);
+    return hours + minutes / 60;
+  };
+  const isIt = (department: string) => /\bit\b|information technology/i.test(department);
+  // Attendance exports sometimes add a harmless label to the same person,
+  // for example "SAHIL JHA" and "sahil jha soft". Keep matching conservative:
+  // only remove known report labels at the end of a name.
+  const employeeNameKey = (value: unknown) => String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+(soft|staff|employee|emp)$/i, '')
+    .replace(/\s+/g, ' ');
+  const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  const sheetRows = workbook.SheetNames.map(name => ({ name, rows: XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[name], { header: 1, defval: '' }) }));
+  const findHeader = (rows: unknown[][]) => rows.findIndex(row => {
+    const text = row.slice(0, 40).map(String).join(' ').toLowerCase();
+    return (/employee|emp\s|staff|name/.test(text) && /date|day/.test(text)) || (/employee|emp\s|staff/.test(text) && /type|status|attendance/.test(text));
+  });
+  const selected = sheetRows.find(candidate => findHeader(candidate.rows) >= 0) || sheetRows[0];
+  const rows = selected?.rows || [];
+  let headerIndex = findHeader(rows);
+  const matrixHeaderIndex = rows.findIndex(row => {
+    const name = String(row[1] ?? '').trim();
+    return /^name$/i.test(name) && row.slice(2, 40).some(value => /^\d{1,2}$/.test(String(value ?? '').trim()));
+  });
+  if (headerIndex < 0 && matrixHeaderIndex >= 0) headerIndex = matrixHeaderIndex;
+  if (headerIndex < 0) headerIndex = 0;
+  const rawHeaders = (rows[headerIndex] || []).map(value => String(value ?? '').trim());
+  const headers = rawHeaders.map(normalize);
+  // GDHR exports vary by report and sometimes use labels such as
+  // "Employee", "Staff", or "Emp Code" instead of the standard headers.
+  if (!headers.includes('employeeName')) {
+    const nameIndex = rawHeaders.findIndex(header => /employee|emp\s*name|staff|full\s*name|^name$/i.test(header));
+    if (nameIndex >= 0) headers[nameIndex] = 'employeeName';
+  }
+  if (!headers.includes('date')) {
+    const dateIndex = rawHeaders.findIndex(header => /date|day/i.test(header));
+    if (dateIndex >= 0) headers[dateIndex] = 'date';
+  }
+  if (!headers.includes('status')) {
+    const statusIndex = rawHeaders.findIndex(header => /type|status|attendance/i.test(header));
+    if (statusIndex >= 0) headers[statusIndex] = 'status';
+  }
+  const warnings: string[] = [];
+  const parsed: Array<Record<string, string | number | null>> = [];
+  const matrixHeader = rawHeaders.length > 2 && /^name$/i.test(rawHeaders[1] || '') && rawHeaders.slice(2).some(value => /^\d{1,2}$/.test(value));
+  const durationText = rows.slice(0, 4).flat().map(value => String(value ?? '')).find(value => /\d{1,2}\/\d{1,2}\/\d{4}\s*~\s*\d{1,2}\/\d{1,2}\/\d{4}/.test(value)) || '';
+  const duration = durationText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*~\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+
+  if (matrixHeader && duration) {
+    if (duration[2] !== duration[5] || duration[3] !== duration[6]) {
+      throw new Error('This attendance report spans more than one month. Please upload one month at a time.');
+    }
+    const year = Number(duration[3]);
+    const monthNumber = Number(duration[2]);
+    const maxDay = Math.min(Number(duration[6] === duration[3] ? duration[4] : 31), rawHeaders.length - 2);
+    for (let index = headerIndex + 2; index < rows.length; index++) {
+      const row = rows[index] || [];
+      // Some exports contain an unassigned block of punch times before the
+      // real employee list. Do not turn those times into fake employees.
+      if (!/^\d+$/.test(String(row[0] ?? '').trim())) continue;
+      const employeeName = String(row[1] ?? '').trim();
+      if (!employeeName) continue;
+      for (let day = 1; day <= maxDay; day++) {
+        const cell = String(row[day + 1] ?? '').trim();
+        const times = cell.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+        const recordDate = `${year}-${String(monthNumber).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        parsed.push({
+          employeeNumber: row[0] ? String(row[0]) : null,
+          employeeName,
+          recordDate,
+          status: times.length === 0 ? 'Absent' : times.length === 1 ? 'Missed Swipe' : 'Normal',
+          timeIn: times[0] || null,
+          timeOut: times.length > 1 ? times[times.length - 1] : null,
+          date: recordDate,
+        });
+      }
+    }
+  } else {
+    for (let index = headerIndex + 1; index < rows.length; index++) {
+      const row = rows[index] || [];
+      const item: Record<string, string | number | null> = {};
+      headers.forEach((key, column) => { item[key] = row[column] as string | number || ''; });
+      if (!String(item.employeeName || '').trim()) continue;
+      const recordDate = parseDate(item.date);
+      if (!recordDate) { warnings.push(`Row ${index + 1}: date could not be read for ${item.employeeName}`); continue; }
+      const statusKey = String(item.status || '').toLowerCase().trim();
+      item.recordDate = recordDate;
+      item.status = statusMap[statusKey] || String(item.status || 'Normal').trim() || 'Normal';
+      parsed.push(item);
+    }
+  }
+  if (!parsed.length) throw new Error(`No attendance rows were found in ${file.name}. Detected columns: ${rawHeaders.filter(Boolean).slice(0, 12).join(', ') || 'none'}. The file needs an employee/name column and a date column.`);
+  const parsedMonths = [...new Set(parsed.map(row => String(row.recordDate || '').slice(0, 7)).filter(Boolean))];
+  if (parsedMonths.length !== 1) throw new Error(`This file contains more than one attendance month (${parsedMonths.join(', ')}). Please upload one month at a time.`);
+  const periodMonth = parsedMonths[0];
+
+  // Keep the last row when an Excel file contains the same employee/date more
+  // than once. This also protects the database upsert from duplicate input.
+  const uniqueRecords = new Map<string, Record<string, string | number | null>>();
+  for (const row of parsed) {
+    const employeeKey = String(row.employeeNumber || row.employeeName || '').trim().toLowerCase();
+    uniqueRecords.set(`${employeeKey}|${String(row.recordDate)}`, row);
+  }
+  parsed.length = 0;
+  parsed.push(...uniqueRecords.values());
+
+  const client = directClient();
+  const employeeRowsByIdentity = new Map<string, { employee_number: string | null; name: string; email: string; organisation: string | null; entity: string | null; department: string | null }>();
+  for (const row of parsed) {
+    const email = String(row.email || `${row.employeeNumber || row.employeeName}@unknown.local`).trim().toLowerCase();
+    const employeeNumber = row.employeeNumber ? String(row.employeeNumber).trim() : null;
+    employeeRowsByIdentity.set(employeeNumber || email, { employee_number: employeeNumber, name: String(row.employeeName), email, organisation: row.organisation ? String(row.organisation) : null, entity: row.entity ? String(row.entity) : null, department: row.department ? String(row.department) : null });
+  }
+  const employeeRows = [...employeeRowsByIdentity.values()];
+  // Match by both identifiers because existing projects may have unique
+  // constraints on email, employee_number, both, or neither.
+  const existingEmployees = await client.from('employees').select('id,email,employee_number,name,department,shift_timings,eligible_for_overtime');
+  if (existingEmployees.error) throw new Error(`Employees could not be checked: ${existingEmployees.error.message}`);
+  const existingEmails = new Set((existingEmployees.data || []).map((row: any) => String(row.email || '').toLowerCase()).filter(Boolean));
+  const existingNumbers = new Set((existingEmployees.data || []).map((row: any) => String(row.employee_number || '')).filter(Boolean));
+  const existingNames = new Set((existingEmployees.data || []).map((row: any) => employeeNameKey(row.name)).filter(Boolean));
+  const missingEmployees = employeeRows.filter(row => !existingEmails.has(row.email) && (!row.employee_number || !existingNumbers.has(row.employee_number)) && !existingNames.has(employeeNameKey(row.name)));
+  if (missingEmployees.length > 0) {
+    const insertedEmployees = await client.from('employees').insert(missingEmployees);
+    if (insertedEmployees.error) throw new Error(`Employees could not be saved: ${insertedEmployees.error.message}`);
+  }
+  const employeesQuery = await client.from('employees').select('id,email,employee_number,name,department,shift_timings,eligible_for_overtime');
+  if (employeesQuery.error) throw new Error(`Employees could not be loaded: ${employeesQuery.error.message}`);
+  const employeeMap = new Map<string, any>();
+  const employeeNumberMap = new Map<string, any>();
+  const employeeNameMap = new Map<string, any>();
+  for (const row of (employeesQuery.data || []) as any[]) {
+    const emailKey = String(row.email || '').toLowerCase();
+    const numberKey = String(row.employee_number || '');
+    if (emailKey) employeeMap.set(emailKey, row);
+    if (numberKey) employeeNumberMap.set(numberKey, row);
+    const nameKey = employeeNameKey(row.name);
+    if (nameKey && !employeeNameMap.has(nameKey)) employeeNameMap.set(nameKey, row);
+  }
+  // Merge uploads for the same month. Existing employees/dates not present in
+  // this file remain; matching employee/date rows are refreshed.
+  const periodStart = `${periodMonth}-01`;
+  const nextMonth = new Date(`${periodStart}T00:00:00Z`);
+  nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+  const periodEnd = nextMonth.toISOString().slice(0, 10);
+  const importResult = await client.from('attendance_imports').insert({ filename: file.name, period_month: periodMonth, row_count: parsed.length, status: 'processed' }).select('id').single();
+  if (importResult.error) throw new Error(`Attendance import could not be created: ${importResult.error.message}`);
+  const records = parsed.map(row => {
+    const email = String(row.email || `${row.employeeNumber || row.employeeName}@unknown.local`).trim().toLowerCase();
+    const employee = employeeMap.get(email) || employeeNumberMap.get(String(row.employeeNumber || '').trim()) || employeeNameMap.get(employeeNameKey(row.employeeName));
+    if (!employee) throw new Error(`Employee could not be matched: ${row.employeeName}`);
+    const department = String(row.department || employee.department || '');
+    const status = String(row.status);
+    const recordDate = String(row.recordDate);
+    const sunday = new Date(`${recordDate}T00:00:00Z`).getUTCDay() === 0;
+    let finalStatus = sunday && isIt(department) && !paidLeaveStatuses.has(status) ? 'Weekend' : status;
+    const timeIn = parseTime(row.timeIn);
+    const timeOut = parseTime(row.timeOut);
+    let workHours = timeIn !== null && timeOut !== null ? Math.max(0, (timeOut < timeIn ? timeOut + 24 : timeOut) - timeIn) : null;
+    let overtimeHours = 0;
+    const detectedShift = timeIn === null ? null : nearestConfiguredShift(employee.shift_timings, Math.round(timeIn * 60));
+    if (detectedShift && timeIn !== null && !['Absent', 'Weekend', 'Holiday', 'Paid Leave'].includes(finalStatus)) {
+      const scheduledEnd = detectedShift.end <= detectedShift.start ? detectedShift.end + 1440 : detectedShift.end;
+      const scheduledMinutes = scheduledEnd - detectedShift.start;
+      const outMinutes = timeOut === null ? null : Math.round(timeOut * 60) + (timeOut < timeIn ? 1440 : 0);
+      const inMinutes = Math.round(timeIn * 60);
+      workHours = outMinutes === null ? null : (outMinutes - inMinutes) / 60;
+      overtimeHours = outMinutes !== null && employee.eligible_for_overtime ? Math.max(0, (outMinutes - inMinutes - scheduledMinutes) / 60) : 0;
+      if (outMinutes === null) finalStatus = 'Missed Swipe';
+      else if (outMinutes - inMinutes < scheduledMinutes / 2) finalStatus = 'HALF_DAY';
+      else if (inMinutes > detectedShift.start + SHIFT_LATE_GRACE_MINUTES) finalStatus = 'Late Coming';
+      else if (outMinutes < scheduledEnd) finalStatus = 'Early Leaving';
+      else finalStatus = 'Normal';
+    }
+    return { import_id: importResult.data.id, employee_id: employee.id, record_date: recordDate, status: finalStatus, time_in_raw: row.timeIn ? String(row.timeIn) : null, time_out_raw: row.timeOut ? String(row.timeOut) : null, work_hours: workHours, overtime_hours: overtimeHours, deduction_days: finalStatus === 'Absent' ? 1 : finalStatus === 'HALF_DAY' ? 0.5 : 0, policy_code: isIt(department) ? 'it' : 'non_it' };
+  });
+  const incomingEmployeeIds = [...new Set(records.map(row => row.employee_id))];
+  const reassignExisting = await client.from('attendance_records')
+    .update({ import_id: importResult.data.id })
+    .gte('record_date', periodStart)
+    .lt('record_date', periodEnd);
+  if (reassignExisting.error) throw new Error(`Existing ${periodMonth} attendance could not be merged: ${reassignExisting.error.message}`);
+  const oldImports = await client.from('attendance_imports').delete().eq('period_month', periodMonth).neq('id', importResult.data.id);
+  if (oldImports.error) throw new Error(`Previous ${periodMonth} imports could not be cleaned up: ${oldImports.error.message}`);
+  const matchingRecords = await client.from('attendance_records')
+    .delete()
+    .gte('record_date', periodStart)
+    .lt('record_date', periodEnd)
+    .in('employee_id', incomingEmployeeIds);
+  if (matchingRecords.error) throw new Error(`Matching ${periodMonth} attendance could not be refreshed: ${matchingRecords.error.message}`);
+  for (let start = 0; start < records.length; start += 500) {
+    const saved = await client.from('attendance_records').insert(records.slice(start, start + 500));
+    if (saved.error) throw new Error(`Attendance records could not be saved: ${saved.error.message}`);
+  }
+  const mergedCount = await client.from('attendance_records').select('id', { count: 'exact', head: true }).eq('import_id', importResult.data.id);
+  if (!mergedCount.error) await client.from('attendance_imports').update({ row_count: mergedCount.count || 0 }).eq('id', importResult.data.id);
+  return { data: { uploadId: importResult.data.id, periodMonth, rowCount: mergedCount.count || parsed.length, warnings } };
 };
-export const getUploads = () => api.get('/attendance/uploads');
-export const getAttendanceSummary = (uploadId: number) => api.get(`/attendance/summary/${uploadId}`);
-export const getAttendanceRecords = (uploadId: number, employeeId: number) => api.get(`/attendance/records/${uploadId}/${employeeId}`);
+export const getUploads = async () => {
+  if (!supabaseConfigured) return api.get('/attendance/uploads');
+  const { data, error } = await directClient().from('attendance_imports').select('*').order('uploaded_at', { ascending: false });
+  return directResult((data || []).map((row: any) => ({ ...row, periodMonth: row.period_month, rowCount: row.row_count, uploadedAt: row.uploaded_at })), error);
+};
+export const getAttendanceSummary = async (uploadId: number) => {
+  if (!supabaseConfigured) return api.get(`/attendance/summary/${uploadId}`);
+  const { data, error } = await fetchAllRows<any>((from, to) => directClient().from('attendance_records').select('*, employees(id,name,email)').eq('import_id', uploadId).range(from, to));
+  if (error) throw new Error(error.message);
+  const grouped = new Map<number, any>();
+  for (const row of data || []) {
+    const employee = row.employees || {};
+    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', absentDays: 0, missedSwipeDays: 0, lateComingDays: 0, earlyLeavingDays: 0, flaggedTotal: 0, lopDays: 0, lopAmount: 0, hasDraft: false, draftStatus: null, draftId: null };
+    const status = String(row.status || '').toLowerCase();
+    if (status.includes('absent')) { item.absentDays++; item.lopDays++; }
+    if (status.includes('missed') || status.includes('incomplete')) item.missedSwipeDays++;
+    if (status.includes('late')) item.lateComingDays++;
+    if (status.includes('early')) item.earlyLeavingDays++;
+    if (status.includes('absent') || status.includes('missed') || status.includes('late') || status.includes('early')) item.flaggedTotal++;
+    grouped.set(row.employee_id, item);
+  }
+  const draftQuery = await directClient().from('email_messages').select('id,employee_id,status').eq('import_id', uploadId);
+  if (!draftQuery.error) for (const draft of draftQuery.data || []) { const item = grouped.get(draft.employee_id); if (item) { item.hasDraft = true; item.draftStatus = draft.status; item.draftId = draft.id; } }
+  return { data: Array.from(grouped.values()) };
+};
+export const getAttendanceRecords = async (uploadId: number, employeeId: number) => {
+  if (!supabaseConfigured) return api.get(`/attendance/records/${uploadId}/${employeeId}`);
+  const { data, error } = await directClient().from('attendance_records').select('*').eq('import_id', uploadId).eq('employee_id', employeeId).order('record_date');
+  return directResult((data || []).map((row: any) => ({ ...row, recordDate: row.record_date, timeIn: row.time_in || row.time_in_raw, timeOut: row.time_out || row.time_out_raw, timeInRaw: row.time_in_raw, timeOutRaw: row.time_out_raw })), error);
+};
 export const deleteUpload = (uploadId: number) => api.delete(`/attendance/uploads/${uploadId}`);
 
 // Emails
-export const getEmailDrafts = (uploadId: number) => api.get(`/emails/drafts/${uploadId}`);
-export const updateDraft = (draftId: number, data: { subject: string; body: string }) => api.patch(`/emails/drafts/${draftId}`, data);
-export const sendEmail = (draftId: number) => api.post(`/emails/send/${draftId}`);
-export const sendBulk = (draftIds: number[]) => api.post('/emails/send-bulk', { draftIds });
-export const getEmailHistory = (month?: string, employeeId?: number) =>
-  api.get('/emails/history', { params: { month, employeeId } });
-export const checkPendingReminders = () =>
-  api.post<{ created: number; checked: number }>('/emails/remind-pending');
+export const getEmailDrafts = async (uploadId: number) => {
+  if (!supabaseConfigured) return api.get(`/emails/drafts/${uploadId}`);
+  const { data, error } = await directClient().from('email_messages').select('*, employees(name,email)').eq('import_id', uploadId).order('created_at', { ascending: false });
+  return directResult((data || []).map((row: any) => ({ ...row, employeeId: row.employee_id, employeeName: row.employees?.name, employeeEmail: row.employees?.email, templateType: row.template_type, isEdited: row.is_edited, sentAt: row.sent_at })), error);
+};
+export const updateDraft = async (draftId: number, data: { subject: string; body: string }) => {
+  if (!supabaseConfigured) return api.patch(`/emails/drafts/${draftId}`, data);
+  const { data: saved, error } = await directClient().from('email_messages').update({ subject: data.subject, body: data.body, is_edited: true }).eq('id', draftId).select().single();
+  return directResult(saved, error);
+};
+export const sendEmail = (draftId: number) => {
+  if (supabaseConfigured) return Promise.reject(new Error('Email sending is disabled in the Supabase draft-only version.'));
+  return api.post(`/emails/send/${draftId}`);
+};
+export const sendBulk = (draftIds: number[]) => {
+  if (supabaseConfigured) return Promise.reject(new Error('Email sending is disabled in the Supabase draft-only version.'));
+  return api.post('/emails/send-bulk', { draftIds });
+};
+export const getEmailHistory = async (month?: string, employeeId?: number) => {
+  if (!supabaseConfigured) return api.get('/emails/history', { params: { month, employeeId } });
+  let query = directClient().from('email_messages').select('*, employees(name,email)').not('sent_at', 'is', null).order('sent_at', { ascending: false });
+  if (employeeId) query = query.eq('employee_id', employeeId);
+  if (month) query = query.gte('sent_at', `${month}-01T00:00:00Z`).lt('sent_at', `${month}-32T00:00:00Z`);
+  const { data, error } = await query;
+  return directResult((data || []).map((row: any) => ({ ...row, employeeName: row.employees?.name, employeeEmail: row.employees?.email, sentAt: row.sent_at })), error);
+};
+export const checkPendingReminders = () => {
+  if (supabaseConfigured) return Promise.resolve({ data: { created: 0, checked: 0 } });
+  return api.post<{ created: number; checked: number }>('/emails/remind-pending');
+};
 
 // Salary
-export const getSalaryConfigs = (month?: string) => api.get('/salary/configs', { params: { month } });
-export const saveSalaryConfig = (data: { employeeId: number; basicSalary: number; effectiveMonth: string }) => api.put('/salary/configs', data);
-export const saveSalaryBulk = (configs: Array<{ employeeId: number; basicSalary: number; effectiveMonth: string }>) => api.put('/salary/configs/bulk', { configs });
-export const getSalaryDeductions = (uploadId: number) => api.get(`/salary/deductions/${uploadId}`);
+export const getSalaryConfigs = async (month?: string) => {
+  if (!supabaseConfigured) return api.get('/salary/configs', { params: { month } });
+  const { data, error } = await directClient().from('salary_configs').select('*').order('effective_month', { ascending: false });
+  const latest = new Map<number, any>();
+  const allRows = data || [];
+  for (const row of allRows) {
+    if (month && String(row.effective_month) > month) continue;
+    if (!latest.has(row.employee_id)) latest.set(row.employee_id, row);
+  }
+  // If the first salary file was imported in August, still show it for July
+  // instead of leaving every salary field blank. Later months continue using
+  // the newest effective salary automatically.
+  if (month) {
+    const earliest = [...allRows].sort((a: any, b: any) => String(a.effective_month).localeCompare(String(b.effective_month)));
+    for (const row of earliest) if (!latest.has(row.employee_id)) latest.set(row.employee_id, row);
+  }
+  return directResult([...latest.values()].map((row: any) => ({ ...row, employeeId: row.employee_id, effectiveMonth: row.effective_month, basicSalary: row.basic_salary })), error);
+};
+export const saveSalaryConfig = async (data: { employeeId: number; basicSalary: number; effectiveMonth: string }) => {
+  if (!supabaseConfigured) return api.put('/salary/configs', data);
+  const { data: saved, error } = await directClient().from('salary_configs').upsert({ employee_id: data.employeeId, basic_salary: data.basicSalary, effective_month: data.effectiveMonth }, { onConflict: 'employee_id,effective_month' }).select().single();
+  return directResult(saved, error);
+};
+export const saveSalaryBulk = async (configs: Array<{ employeeId: number; basicSalary: number; effectiveMonth: string }>) => {
+  if (!supabaseConfigured) return api.put('/salary/configs/bulk', { configs });
+  const { data, error } = await directClient().from('salary_configs').upsert(configs.map(c => ({ employee_id: c.employeeId, basic_salary: c.basicSalary, effective_month: c.effectiveMonth })), { onConflict: 'employee_id,effective_month' });
+  return directResult(data, error);
+};
+export const getSalaryDeductions = async (uploadId: number) => {
+  if (!supabaseConfigured) return api.get(`/salary/deductions/${uploadId}`);
+  const client = directClient();
+  const upload = await client.from('attendance_imports').select('period_month').eq('id', uploadId).single();
+  if (upload.error) throw new Error(upload.error.message);
+  const periodStart = `${upload.data.period_month}-01`;
+  const nextMonth = new Date(`${periodStart}T00:00:00Z`);
+  nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+  const periodEnd = nextMonth.toISOString().slice(0, 10);
+  // Use the month as the source of truth. Imports are merged/replaced during
+  // re-upload, so the newest import ID may not own every valid record.
+  const records = await fetchAllRows<any>((from, to) => client.from('attendance_records').select('employee_id,record_date,status,work_hours,overtime_hours,time_in,policy_code,employees(id,name,email,department,organisation,entity,eligible_for_paid_leaves)').gte('record_date', periodStart).lt('record_date', periodEnd).range(from, to));
+  if (records.error) throw new Error(records.error.message);
+  const rows = records.data || [];
+  // The 31st remains in attendance history, but payroll is always a 30-day
+  // month. Exclude it from every LOP input (absence, half-day, late, etc.).
+  const payrollRows = rows.filter((row: any) => {
+    const date = new Date(`${String(row.record_date).slice(0, 10)}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.getUTCDate() !== 31;
+  });
+  const ids = [...new Set(rows.map((row: any) => row.employee_id))];
+  if (!ids.length) return { data: [] };
+  const salaries = await client.from('salary_configs').select('*').in('employee_id', ids).order('effective_month', { ascending: false });
+  if (salaries.error) throw new Error(salaries.error.message);
+  const salaryMap = new Map<number, any>();
+  const salaryRows = salaries.data || [];
+  for (const row of salaryRows) {
+    if (String(row.effective_month) <= upload.data.period_month && !salaryMap.has(row.employee_id)) salaryMap.set(row.employee_id, row);
+  }
+  const earliestSalaryRows = [...salaryRows].sort((a: any, b: any) => String(a.effective_month).localeCompare(String(b.effective_month)));
+  for (const row of earliestSalaryRows) if (!salaryMap.has(row.employee_id)) salaryMap.set(row.employee_id, row);
+  const [{ data: activeRules, error: rulesError }, { data: settings, error: settingsError }] = await Promise.all([
+    client.from('attendance_rules').select('rule_type,conditions,actions,description,name').eq('is_active', true),
+    client.from('settings').select('key,value'),
+  ]);
+  if (rulesError || settingsError) throw new Error(rulesError?.message || settingsError?.message);
+  const policyText = JSON.stringify(activeRules || []).toLowerCase();
+  const settingMap = new Map((settings || []).map((row: any) => [row.key, row.value]));
+  let lateAfterMinutes = Number(settingMap.get('late_after_minutes') || 570);
+  let lateEvery = Number(settingMap.get('late_occurrences_for_deduction') || 3);
+  let halfDayHours = Number(settingMap.get('half_day_threshold_hours') || 4);
+  const lateTime = policyText.match(/(?:after|greater than|more than)\D{0,20}(\d{1,2})\s*:\s*(\d{2})/);
+  if (lateTime) lateAfterMinutes = Number(lateTime[1]) * 60 + Number(lateTime[2]);
+  const lateCount = policyText.match(/(?:every|set of|divide|÷|\/|by)\D{0,12}(\d+)\s*(?:late|occurrence|day)?/);
+  if (lateCount) lateEvery = Math.max(1, Number(lateCount[1]));
+  const halfDay = policyText.match(/(?:less than|under|below)\D{0,12}(\d+(?:\.\d+)?)\s*hours?/);
+  if (halfDay) halfDayHours = Number(halfDay[1]);
+  const timeInMinutes = (value: unknown) => {
+    const text = String(value || '');
+    const match = text.match(/(?:T|\s)(\d{1,2}):(\d{2})/);
+    if (match) return Number(match[1]) * 60 + Number(match[2]);
+    const parsed = new Date(text);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.getHours() * 60 + parsed.getMinutes();
+  };
+  const grouped = new Map<number, any>();
+  for (const row of payrollRows as any[]) {
+    const employee = row.employees || {};
+    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, absentDays: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, overtimeEligibleDays: 0, itRecords: 0 };
+    if (String(row.policy_code || '').toLowerCase() === 'it') item.itRecords++;
+    const status = String(row.status || '').toLowerCase();
+    // Present days show actual attendance only: full days for normal/late/early
+    // attendance and half a day when the employee worked a half shift. Paid
+    // leave, weekly offs, holidays, absences and missed swipes are not present.
+    if (['normal', 'present', 'late', 'late coming', 'early leaving'].includes(status)) item.presentDays++;
+    if (status === 'half_day' || status === 'half day') item.presentDays += 0.5;
+    if (status === 'absent') item.absentDays++;
+    if (status.includes('missed') || status.includes('incomplete')) item.missedSwipeDays++;
+    const checkInMinutes = timeInMinutes(row.time_in);
+    if (status.includes('late') || (checkInMinutes !== null && checkInMinutes > lateAfterMinutes)) item.lateOccurrences++;
+    if (status.includes('paid leave') || status.includes('casual leave') || status.includes('sick leave')) item.paidLeaveUsed++;
+    const overtimeHours = Number(row.overtime_hours || 0);
+    item.overtimeHours += overtimeHours;
+    // OT is a fixed daily allowance, earned only after more than two hours
+    // beyond the employee's scheduled shift on that attendance date.
+    if (overtimeHours > 2) item.overtimeEligibleDays++;
+    if (row.work_hours !== null && row.work_hours !== undefined && Number(row.work_hours) < halfDayHours && !['absent', 'weekend', 'holiday', 'paid leave'].includes(status)) item.halfDays++;
+    grouped.set(row.employee_id, item);
+  }
+  const result = [...grouped.values()].map(item => {
+    const salaryConfig = salaryMap.get(item.employeeId);
+    const basicSalary = Number(salaryConfig?.basic_salary || 0);
+    const dailySalary = basicSalary / 30;
+    const isIt = item.itRecords > 0 || /\bit\b|information technology/i.test(`${item.department} ${item.organisation} ${item.entity}`);
+    // Non-IT staff work on Sundays and receive four paid leaves per month.
+    // IT staff receive Sundays as weekly offs; the Paid Leave Yes/No setting
+    // grants the selected IT employee two additional paid leaves per month.
+    const leaveLimit = isIt ? (item.eligibleForPaidLeaves ? 2 : 0) : 4;
+    const protectedAbsentDays = Math.min(item.absentDays, Math.max(0, leaveLimit - item.paidLeaveUsed));
+    const chargeableAbsentDays = Math.max(0, item.absentDays - protectedAbsentDays);
+    // chargeableAbsentDays already excludes the paid-leave allowance. Do not
+    // add absence beyond that allowance a second time.
+    const excessPaidLeave = Math.max(0, item.paidLeaveUsed - leaveLimit);
+    const lateDeductionCount = Math.floor(item.lateOccurrences / lateEvery);
+    const absenceDeduction = chargeableAbsentDays * dailySalary;
+    const halfDayDeduction = item.halfDays * dailySalary * 0.5;
+    const lateDeduction = lateDeductionCount * dailySalary;
+    const excessLeaveDeduction = excessPaidLeave * dailySalary;
+    const totalLopAmount = absenceDeduction + halfDayDeduction + lateDeduction + excessLeaveDeduction;
+    const lopDays = chargeableAbsentDays + item.halfDays * 0.5 + lateDeductionCount + excessPaidLeave;
+    const overtimeAmount = item.overtimeEligibleDays * dailySalary * 0.5;
+    const displayedPaidLeave = item.paidLeaveUsed + protectedAbsentDays;
+    return { ...item, isIt, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, overtimeAmount, netPayable: Math.max(0, basicSalary - totalLopAmount + overtimeAmount), dailySalary, totalLopAmount, basicSalary };
+  });
+  for (const item of result) {
+    const salaryConfig = salaryMap.get(item.employeeId);
+    if (salaryConfig) await client.from('salary_configs').update({ late_deduction: item.lateDeductionCount * item.dailySalary, absence_deduction: item.chargeableAbsentDays * item.dailySalary, half_day_deduction: item.halfDayDeduction, overtime_amount: item.overtimeAmount, total_lop_amount: item.totalLopAmount }).eq('id', salaryConfig.id);
+  }
+  return { data: result };
+};
 
 // Settings
-export const getSettings = () => api.get('/settings');
-export const saveSettings = (data: Record<string, string>) => api.put('/settings', data);
-export const getTemplates = () => api.get('/settings/templates');
-export const saveTemplate = (type: string, data: { subject: string; body: string }) => api.put(`/settings/templates/${type}`, data);
+export const getSettings = async () => {
+  if (!supabaseConfigured) return api.get('/settings');
+  const { data, error } = await directClient().from('settings').select('key,value');
+  return directResult(Object.fromEntries((data || []).map((row: any) => [row.key, row.value])), error);
+};
+export const saveSettings = async (data: Record<string, string>) => {
+  if (!supabaseConfigured) return api.put('/settings', data);
+  const { data: saved, error } = await directClient().from('settings').upsert(Object.entries(data).map(([key, value]) => ({ key, value })));
+  return directResult(saved, error);
+};
+export const getTemplates = async () => {
+  if (!supabaseConfigured) return api.get('/settings/templates');
+  const { data, error } = await directClient().from('email_templates').select('*').order('type');
+  return directResult(data || [], error);
+};
+export const saveTemplate = async (type: string, data: { subject: string; body: string }) => {
+  if (!supabaseConfigured) return api.put(`/settings/templates/${type}`, data);
+  const { data: saved, error } = await directClient().from('email_templates').upsert({ type, subject: data.subject, body: data.body }, { onConflict: 'type' }).select().single();
+  return directResult(saved, error);
+};
 export const testSmtp = () => api.post('/settings/test-smtp');
-export const testOllama = () => api.post('/settings/test-ollama');
 
 // Employees
-export const getEmployees = () => api.get('/employees');
-export const getEmployee = (id: number) => api.get(`/employees/${id}`);
-export const updateEmployee = (id: number, data: { name?: string; email?: string; department?: string }) => api.patch(`/employees/${id}`, data);
+export const getEmployees = async () => {
+  if (!supabaseConfigured) return api.get('/employees');
+  const client = directClient();
+  const [{ data, error }, { data: salaryRows, error: salaryError }] = await Promise.all([
+    client.from('employees').select('*').order('name'),
+    client.from('salary_configs').select('employee_id,basic_salary,effective_month').order('effective_month', { ascending: false }),
+  ]);
+  if (error || salaryError) return directResult(null, error || salaryError);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const latestSalary = new Map<number, any>();
+  const earliestSalary = new Map<number, any>();
+  for (const row of salaryRows || []) {
+    if (!earliestSalary.has(row.employee_id)) earliestSalary.set(row.employee_id, row);
+    if (String(row.effective_month) <= currentMonth && !latestSalary.has(row.employee_id)) latestSalary.set(row.employee_id, row);
+  }
+  return directResult((data || []).map((row: any) => {
+    const salary = latestSalary.get(row.id) || earliestSalary.get(row.id);
+    return { ...row, employeeId: row.employee_number, photoUrl: row.photo_url, createdAt: row.created_at, actualDesignation: row.designation, designation: row.biometric_name || row.designation, biometricName: row.biometric_name, basicSalary: salary ? Number(salary.basic_salary) : null, shiftTimings: row.shift_timings || {}, eligibleForPaidLeaves: row.eligible_for_paid_leaves, eligibleForOvertime: row.eligible_for_overtime };
+  }), null);
+};
+export const getEmployee = (id: number) => supabaseConfigured ? directClient().from('employees').select('*').eq('id', id).single() : api.get(`/employees/${id}`);
+export const mergeEmployees = async (keepId: number, mergeId: number) => {
+  if (!supabaseConfigured) return api.post('/employees/merge', { keepId, mergeId });
+  const client = directClient();
+  const [keep, merge] = await Promise.all([
+    client.from('employees').select('id,name').eq('id', keepId).single(),
+    client.from('employees').select('id,name').eq('id', mergeId).single(),
+  ]);
+  if (keep.error || merge.error) throw new Error(keep.error?.message || merge.error?.message);
+
+  // Avoid the unique employee/date conflict before moving the remaining rows.
+  const [keepRecords, mergeRecords] = await Promise.all([
+    client.from('attendance_records').select('id,record_date').eq('employee_id', keepId),
+    client.from('attendance_records').select('id,record_date').eq('employee_id', mergeId),
+  ]);
+  if (keepRecords.error || mergeRecords.error) throw new Error(keepRecords.error?.message || mergeRecords.error?.message);
+  const keepDates = new Set((keepRecords.data || []).map((row: any) => String(row.record_date)));
+  const duplicateRecordIds = (mergeRecords.data || []).filter((row: any) => keepDates.has(String(row.record_date))).map((row: any) => row.id);
+  if (duplicateRecordIds.length) {
+    const deleted = await client.from('attendance_records').delete().in('id', duplicateRecordIds);
+    if (deleted.error) throw new Error(deleted.error.message);
+  }
+  const movedRecords = await client.from('attendance_records').update({ employee_id: keepId }).eq('employee_id', mergeId);
+  if (movedRecords.error) throw new Error(movedRecords.error.message);
+
+  const [keepSalary, mergeSalary] = await Promise.all([
+    client.from('salary_configs').select('id,effective_month').eq('employee_id', keepId),
+    client.from('salary_configs').select('id,effective_month').eq('employee_id', mergeId),
+  ]);
+  if (keepSalary.error || mergeSalary.error) throw new Error(keepSalary.error?.message || mergeSalary.error?.message);
+  const keepMonths = new Set((keepSalary.data || []).map((row: any) => String(row.effective_month)));
+  const duplicateSalaryIds = (mergeSalary.data || []).filter((row: any) => keepMonths.has(String(row.effective_month))).map((row: any) => row.id);
+  if (duplicateSalaryIds.length) {
+    const deleted = await client.from('salary_configs').delete().in('id', duplicateSalaryIds);
+    if (deleted.error) throw new Error(deleted.error.message);
+  }
+  const movedSalary = await client.from('salary_configs').update({ employee_id: keepId }).eq('employee_id', mergeId);
+  if (movedSalary.error) throw new Error(movedSalary.error.message);
+  const movedMessages = await client.from('email_messages').update({ employee_id: keepId }).eq('employee_id', mergeId);
+  if (movedMessages.error) throw new Error(movedMessages.error.message);
+  const removed = await client.from('employees').delete().eq('id', mergeId);
+  if (removed.error) throw new Error(removed.error.message);
+  return { data: { kept: keep.data.name, removed: merge.data.name } };
+};
+export const updateEmployee = async (id: number, data: { name?: string; email?: string; department?: string; employeeNumber?: string; mobile?: string; designation?: string; biometricName?: string; branch?: string; status?: string; shiftTimings?: Record<string, { start: string; end: string }>; eligibleForPaidLeaves?: boolean; eligibleForOvertime?: boolean }) => {
+  if (!supabaseConfigured) return api.patch(`/employees/${id}`, data);
+  const { data: saved, error } = await directClient().from('employees').update({
+    name: data.name, email: data.email, department: data.department, designation: data.designation, biometric_name: data.biometricName,
+    employee_number: data.employeeNumber, mobile: data.mobile, branch: data.branch, status: data.status,
+    shift_timings: data.shiftTimings,
+    eligible_for_paid_leaves: data.eligibleForPaidLeaves, eligible_for_overtime: data.eligibleForOvertime,
+  }).eq('id', id).select().single();
+  return directResult(saved, error);
+};
 export const uploadEmployeePhoto = (id: number, file: File) => {
   const fd = new FormData();
   fd.append('photo', file);
@@ -84,22 +630,84 @@ export const updateSop = (id: number, data: { title: string; category: string; c
 export const deleteSop = (id: number) => api.delete(`/sops/${id}`);
 
 // Rules
-export const getRules = () => api.get('/rules');
-export const createRule = (data: { name: string; description: string; ruleType: string; conditions: object; actions: object; priority?: number }) => api.post('/rules', data);
-export const updateRule = (id: number, data: object) => api.put(`/rules/${id}`, data);
-export const deleteRule = (id: number) => api.delete(`/rules/${id}`);
-export const toggleRule = (id: number) => api.patch(`/rules/${id}/toggle`);
-export const evaluateRules = (uploadId: number, autoCreateDrafts = true) =>
-  api.post<{ matches: any[]; draftsCreated: number; employeesEvaluated: number }>(`/rules/evaluate/${uploadId}`, { autoCreateDrafts });
+export const getRules = async () => {
+  if (!supabaseConfigured) return api.get('/rules');
+  const { data, error } = await directClient().from('attendance_rules').select('*').order('priority').order('created_at');
+  return directResult((data || []).map((row: any) => ({ ...row, ruleType: row.rule_type, isActive: row.is_active, createdAt: row.created_at })), error);
+};
+export const generateRule = (policy: string) => api.post<{
+  name: string; description: string; ruleType: string; conditions: object; actions: object; priority: number;
+}>('/rules/generate', { policy });
+export const createRule = async (data: { name: string; description: string; ruleType: string; conditions: object; actions: object; priority?: number }) => {
+  if (!supabaseConfigured) return api.post('/rules', data);
+  const { data: saved, error } = await directClient().from('attendance_rules').insert({ name: data.name, description: data.description, rule_type: data.ruleType, conditions: data.conditions, actions: data.actions, priority: data.priority ?? 0 }).select().single();
+  return directResult(saved, error);
+};
+export const updateRule = async (id: number, data: any) => {
+  if (!supabaseConfigured) return api.put(`/rules/${id}`, data);
+  const mapped = { ...data, rule_type: data.ruleType, is_active: data.isActive };
+  delete mapped.ruleType; delete mapped.isActive;
+  const { data: saved, error } = await directClient().from('attendance_rules').update(mapped).eq('id', id).select().single();
+  return directResult(saved, error);
+};
+export const deleteRule = async (id: number) => {
+  if (!supabaseConfigured) return api.delete(`/rules/${id}`);
+  const { data, error } = await directClient().from('attendance_rules').delete().eq('id', id);
+  return directResult(data, error);
+};
+export const toggleRule = async (id: number) => {
+  if (!supabaseConfigured) return api.patch(`/rules/${id}/toggle`);
+  const current = await directClient().from('attendance_rules').select('is_active').eq('id', id).single();
+  if (current.error) throw new Error(current.error.message);
+  const { data, error } = await directClient().from('attendance_rules').update({ is_active: !current.data.is_active }).eq('id', id).select().single();
+  return directResult(data, error);
+};
+export const evaluateRules = async (uploadId: number, autoCreateDrafts = true) => {
+  if (!supabaseConfigured) return api.post<{ matches: any[]; draftsCreated: number; employeesEvaluated: number }>(`/rules/evaluate/${uploadId}`, { autoCreateDrafts });
+  const client = directClient();
+  const [{ data: records, error: recordsError }, { data: rules, error: rulesError }] = await Promise.all([
+    client.from('attendance_records').select('*, employees(id,name,email)').eq('import_id', uploadId),
+    client.from('attendance_rules').select('*').eq('is_active', true),
+  ]);
+  if (recordsError || rulesError) throw new Error(recordsError?.message || rulesError?.message);
+  const matches = (records || []).filter((row: any) => !['normal', 'weekend', 'holiday', 'official'].includes(String(row.status).toLowerCase()));
+  let draftsCreated = 0;
+  if (autoCreateDrafts && matches.length) {
+    const existing = await client.from('email_messages').select('employee_id').eq('import_id', uploadId);
+    const existingIds = new Set((existing.data || []).map((row: any) => row.employee_id));
+    const drafts = matches.filter((row: any) => !existingIds.has(row.employee_id)).map((row: any) => ({
+      import_id: uploadId, employee_id: row.employee_id, template_type: 'initial',
+      subject: 'Attendance clarification required', body: `Please clarify the attendance record dated ${row.record_date} marked as ${row.status}.`, status: 'draft',
+    }));
+    if (drafts.length) { const saved = await client.from('email_messages').insert(drafts); if (saved.error) throw new Error(saved.error.message); draftsCreated = drafts.length; }
+  }
+  return { data: { matches, draftsCreated, employeesEvaluated: new Set(matches.map((row: any) => row.employee_id)).size } };
+};
 
 // Analytics
-export const getAnalyticsOverview = () => api.get('/analytics/overview');
-export const getAnalyticsTrends = (uploadId: number) => api.get(`/analytics/trends/${uploadId}`);
-export const getMonthlyComparison = () => api.get('/analytics/monthly-comparison');
-
-// AI
-export const askAi = (question: string, uploadId?: number) => api.post('/ai/ask', { question, uploadId });
-export const analyzeUpload = (uploadId: number) => api.post(`/ai/analyze/${uploadId}`);
-export const getAiInsights = (uploadId: number) => api.get(`/ai/insights/${uploadId}`);
-export const predictRisk = () => api.post('/ai/predict');
-export const generateReport = (uploadId: number) => api.post(`/ai/generate-report/${uploadId}`);
+export const getAnalyticsOverview = async () => {
+  if (!supabaseConfigured) return api.get('/analytics/overview');
+  const client = directClient();
+  const [employees, imports, messages, sent] = await Promise.all([
+    client.from('employees').select('id', { count: 'exact', head: true }),
+    client.from('attendance_imports').select('id', { count: 'exact', head: true }),
+    client.from('email_messages').select('id', { count: 'exact', head: true }),
+    client.from('email_messages').select('id', { count: 'exact', head: true }).eq('status', 'sent'),
+  ]);
+  const error = employees.error || imports.error || messages.error || sent.error;
+  return directResult({ totalEmployees: employees.count || 0, totalUploads: imports.count || 0, totalEmails: messages.count || 0, totalSent: sent.count || 0 }, error);
+};
+export const getMonthlyComparison = async () => {
+  if (!supabaseConfigured) return api.get('/analytics/monthly-comparison');
+  const { data, error } = await directClient().from('attendance_imports').select('period_month,row_count').order('period_month');
+  return directResult((data || []).map((row: any) => ({ month: row.period_month, flagged: row.row_count, sent: 0 })), error);
+};
+export const getAnalyticsTrends = async (uploadId: number) => {
+  if (!supabaseConfigured) return api.get(`/analytics/trends/${uploadId}`);
+  const { data, error } = await directClient().from('attendance_records').select('status,record_date').eq('import_id', uploadId);
+  if (error) throw new Error(error.message);
+  const byStatus: Record<string, number> = {};
+  const byDate: Record<string, number> = {};
+  for (const row of data || []) { byStatus[row.status] = (byStatus[row.status] || 0) + 1; byDate[row.record_date] = (byDate[row.record_date] || 0) + 1; }
+  return { data: { byStatus, byDate: Object.entries(byDate).map(([date, count]) => ({ date, count })) } };
+};

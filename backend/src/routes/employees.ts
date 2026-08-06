@@ -27,10 +27,10 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 router.patch('/:id', async (req: Request, res: Response) => {
-  const { name, email, department, designation } = req.body;
+  const { name, email, department, designation, employeeNumber, mobile, branch, status, shiftName, shiftStartTime, shiftEndTime, eligibleForPaidLeaves, eligibleForOvertime } = req.body;
   const emp = await prisma.employee.update({
     where: { id: parseInt(req.params.id) },
-    data: { ...(name && { name }), ...(email && { email }), ...(department && { department }), ...(designation && { designation }) },
+    data: { ...(name && { name }), ...(email && { email }), ...(department && { department }), ...(designation && { designation }), ...(employeeNumber !== undefined && { employeeNumber }), ...(mobile !== undefined && { mobile }), ...(branch !== undefined && { branch }), ...(status && { status }), ...(shiftName && { shiftName }), ...(shiftStartTime && { shiftStartTime }), ...(shiftEndTime && { shiftEndTime }), ...(eligibleForPaidLeaves !== undefined && { eligibleForPaidLeaves }), ...(eligibleForOvertime !== undefined && { eligibleForOvertime }) },
   });
   res.json(emp);
 });
