@@ -68,6 +68,11 @@ export default function SalaryPage() {
     });
   }, [employees, deductions, configs]);
 
+  // No attendance for this month means every row would fail the default
+  // "With attendance" filter and the whole payroll list would look empty.
+  // Fall back to showing everyone so salaries stay visible.
+  const noAttendanceData = rows.length > 0 && rows.every(row => !row.hasAttendance);
+
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     const normalizedQuery = query.replace(/[^a-z0-9]+/g, '');
@@ -79,14 +84,14 @@ export default function SalaryPage() {
       const normalizedSearchable = searchable.replace(/[^a-z0-9]+/g, '');
       if (query && !searchable.includes(query) && !normalizedSearchable.includes(normalizedQuery)) return false;
       if (companyFilter !== 'All' && companyOf(row.emp) !== companyFilter) return false;
-      if (filter === 'attendance') return row.hasAttendance;
+      if (filter === 'attendance') return noAttendanceData ? true : row.hasAttendance;
       if (filter === 'missing-attendance') return !row.hasAttendance;
       if (filter === 'lop') return row.hasLop;
       if (filter === 'missing-salary') return !row.hasSalary;
       if (filter === 'payable') return row.hasSalary;
       return true;
     }).sort((a, b) => Number(b.hasSalary) - Number(a.hasSalary));
-  }, [rows, search, filter, companyFilter]);
+  }, [rows, search, filter, companyFilter, noAttendanceData]);
 
   const hasActiveFilters = Boolean(search.trim()) || filter !== 'attendance' || companyFilter !== 'All';
   const clearFilters = () => { setSearch(''); setFilter('attendance'); setCompanyFilter('All'); };
@@ -173,6 +178,12 @@ export default function SalaryPage() {
             ))}
           </div>
         </div>
+        {noAttendanceData && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-amber-100 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+            <span className="material-icons text-sm">info</span>
+            <span>No attendance records for {month}. Showing salary only — import an attendance file to calculate LOP, overtime and net payable.</span>
+          </div>
+        )}
         {hasActiveFilters && (
           <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-white px-3 py-2 text-[11px] text-slate-500">
             <span className="font-semibold text-slate-600">Showing:</span>
@@ -218,9 +229,6 @@ export default function SalaryPage() {
                   </td>
                   <td className="whitespace-nowrap px-2 py-2.5">
                     <p className="font-medium text-slate-700">{currentSalary > 0 ? formatINR(currentSalary) : '—'}</p>
-                    {cfg?.effectiveMonth && cfg.effectiveMonth !== month && (
-                      <p className="mt-1 text-[11px] text-slate-400">Carried from {cfg.effectiveMonth}</p>
-                    )}
                     {!hasSalary && <p className="mt-1 text-[10px] font-medium text-amber-600">Missing salary</p>}
                   </td>
                   <td className="px-0.5 py-2.5 text-center font-medium text-emerald-700"><button type="button" onClick={() => openAttendance(emp)} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View attendance dates">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>

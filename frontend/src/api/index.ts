@@ -136,7 +136,7 @@ async function importStaffMaster(files: File[], effectiveMonth: string) {
     let employee = employees.find(row => staffNamesMatch(row.name, staff.name));
     if (!employee) {
       const key = staffNameKey(staff.name).replace(/\s+/g, '_');
-      const created = await client.from('employees').insert({ name: staff.name, email: `staff_${key}@unknown.local`, organisation: staff.organisation || null, designation: staff.designation || null }).select('id,email,name,employee_number').single();
+      const created = await client.from('employees').insert({ name: staff.name, email: `staff_${key}@unknown.local`, organisation: staff.organisation || null, designation: staff.designation || null, monthly_salary: staff.basicSalary > 0 ? staff.basicSalary : null }).select('id,email,name,employee_number').single();
       if (created.error) throw new Error(`Staff employee could not be created: ${created.error.message}`);
       employee = created.data;
       employees.push(employee);
@@ -145,18 +145,14 @@ async function importStaffMaster(files: File[], effectiveMonth: string) {
         name: employee.name.length >= staff.name.length ? employee.name : staff.name,
         organisation: staff.organisation || undefined,
         designation: staff.designation || undefined,
+        monthly_salary: staff.basicSalary > 0 ? staff.basicSalary : undefined,
       }).eq('id', employee.id).select('id,email,name,employee_number').single();
       if (updated.error) throw new Error(`Staff employee could not be updated: ${updated.error.message}`);
       employee = updated.data;
     }
-    if (staff.basicSalary > 0) {
-      salaryRows.set(`${employee.id}|${effectiveMonth}`, { employee_id: employee.id, basic_salary: staff.basicSalary, effective_month: effectiveMonth });
-    }
+    if (staff.basicSalary > 0) salaryRows.set(String(employee.id), employee.id);
   }
-  if (salaryRows.size) {
-    const saved = await client.from('salary_configs').upsert([...salaryRows.values()], { onConflict: 'employee_id,effective_month' });
-    if (saved.error) throw new Error(`Staff salaries could not be saved: ${saved.error.message}`);
-  }
+  if (salaryRows.size) warnings.push(`${salaryRows.size} staff salaries were updated for ${effectiveMonth}.`);
   return { warnings };
 }
 
@@ -385,18 +381,55 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
     if (exact) return exact;
     return [...employeeNameMap.values()].find(row => employeeNamesMatch(name, row.name));
   };
+  const rowEmail = (row: Record<string, string | number | null>) =>
+    String(row.email || `${row.employeeNumber || row.employeeName}@unknown.local`).trim().toLowerCase();
+  const resolveEmployee = (row: Record<string, string | number | null>) =>
+    employeeMap.get(rowEmail(row)) || employeeNumberMap.get(String(row.employeeNumber || '').trim()) || findEmployeeByName(row.employeeName);
+  const indexEmployees = (list: any[]) => {
+    for (const row of list) {
+      const emailKey = String(row.email || '').toLowerCase();
+      const numberKey = String(row.employee_number || '');
+      if (emailKey) employeeMap.set(emailKey, row);
+      if (numberKey) employeeNumberMap.set(numberKey, row);
+      const nameKey = employeeNameKey(row.name);
+      if (nameKey && !employeeNameMap.has(nameKey)) employeeNameMap.set(nameKey, row);
+    }
+  };
+
+  // Every identity in the file must resolve before any row is written. The
+  // creation pass above works on name-collapsed rows, so identities the
+  // collapse dropped would previously reach the mapping step unresolved and
+  // abort the import — after the import row had already been committed.
+  const unresolvedRows = new Map<string, { employee_number: string | null; name: string; email: string }>();
+  for (const row of parsed) {
+    if (resolveEmployee(row)) continue;
+    const employeeNumber = row.employeeNumber ? String(row.employeeNumber).trim() : null;
+    unresolvedRows.set(employeeNumber || rowEmail(row), { employee_number: employeeNumber, name: String(row.employeeName), email: rowEmail(row) });
+  }
+  if (unresolvedRows.size) {
+    const created = await client.from('employees').insert([...unresolvedRows.values()]).select('id,email,employee_number,name,department,shift_timings,eligible_for_overtime');
+    if (created.error) throw new Error(`New employees from ${file.name} could not be created: ${created.error.message}`);
+    indexEmployees(created.data || []);
+    warnings.push(`${unresolvedRows.size} employees in ${file.name} were not on record and have been added. Use Merge names to combine any duplicates.`);
+  }
+  const skipped: string[] = [];
+
   // Merge uploads for the same month. Existing employees/dates not present in
   // this file remain; matching employee/date rows are refreshed.
   const periodStart = `${periodMonth}-01`;
   const nextMonth = new Date(`${periodStart}T00:00:00Z`);
   nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
   const periodEnd = nextMonth.toISOString().slice(0, 10);
-  const importResult = await client.from('attendance_imports').insert({ filename: file.name, period_month: periodMonth, row_count: parsed.length, status: 'processed' }).select('id').single();
+  // row_count stays 0 and status stays 'pending' until records are actually
+  // stored, so a half-finished import can never look like a successful one.
+  const importResult = await client.from('attendance_imports').insert({ filename: file.name, period_month: periodMonth, row_count: 0, status: 'pending' }).select('id').single();
   if (importResult.error) throw new Error(`Attendance import could not be created: ${importResult.error.message}`);
-  const mappedRecords = parsed.map(row => {
-    const email = String(row.email || `${row.employeeNumber || row.employeeName}@unknown.local`).trim().toLowerCase();
-    const employee = employeeMap.get(email) || employeeNumberMap.get(String(row.employeeNumber || '').trim()) || findEmployeeByName(row.employeeName);
-    if (!employee) throw new Error(`Employee could not be matched: ${row.employeeName}`);
+  try {
+  const mappedRecords = parsed.flatMap(row => {
+    const employee = resolveEmployee(row);
+    // Skip and report rather than abort: one unmatchable name must not cost
+    // the entire upload.
+    if (!employee) { skipped.push(String(row.employeeName)); return []; }
     const department = String(row.department || employee.department || '');
     const status = String(row.status);
     const recordDate = String(row.recordDate);
@@ -420,7 +453,7 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
       else if (outMinutes < scheduledEnd) finalStatus = 'Early Leaving';
       else finalStatus = 'Normal';
     }
-    return { import_id: importResult.data.id, employee_id: employee.id, record_date: recordDate, status: finalStatus, time_in_raw: row.timeIn ? String(row.timeIn) : null, time_out_raw: row.timeOut ? String(row.timeOut) : null, work_hours: workHours, overtime_hours: overtimeHours, deduction_days: finalStatus === 'Absent' ? 1 : finalStatus === 'HALF_DAY' ? 0.5 : 0, policy_code: isIt(department) ? 'it' : 'non_it' };
+    return [{ import_id: importResult.data.id, employee_id: employee.id, record_date: recordDate, status: finalStatus, time_in_raw: row.timeIn ? String(row.timeIn) : null, time_out_raw: row.timeOut ? String(row.timeOut) : null, work_hours: workHours, overtime_hours: overtimeHours, deduction_days: finalStatus === 'Absent' ? 1 : finalStatus === 'HALF_DAY' ? 0.5 : 0, policy_code: isIt(department) ? 'it' : 'non_it' }];
   });
   // Different source employee numbers can still resolve to the same canonical
   // employee (for example SAHIL / sahil jha soft). Deduplicate only after
@@ -433,7 +466,16 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
     if (!current || score(record) >= score(current)) uniqueMappedRecords.set(key, record);
   }
   const records = [...uniqueMappedRecords.values()];
-  const incomingEmployeeIds = [...new Set(records.map(row => row.employee_id))];
+  // Upsert on the (employee_id, record_date) unique key. The previous version
+  // deleted the period's records first, so any failure in the insert loop
+  // destroyed the existing month and left nothing in its place.
+  for (let start = 0; start < records.length; start += 500) {
+    const saved = await client.from('attendance_records')
+      .upsert(records.slice(start, start + 500), { onConflict: 'employee_id,record_date' });
+    if (saved.error) throw new Error(`Attendance records could not be saved: ${saved.error.message}`);
+  }
+  // Only once the records are stored: adopt the rest of the month and retire
+  // the superseded import rows.
   const reassignExisting = await client.from('attendance_records')
     .update({ import_id: importResult.data.id })
     .gte('record_date', periodStart)
@@ -441,19 +483,23 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
   if (reassignExisting.error) throw new Error(`Existing ${periodMonth} attendance could not be merged: ${reassignExisting.error.message}`);
   const oldImports = await client.from('attendance_imports').delete().eq('period_month', periodMonth).neq('id', importResult.data.id);
   if (oldImports.error) throw new Error(`Previous ${periodMonth} imports could not be cleaned up: ${oldImports.error.message}`);
-  const matchingRecords = await client.from('attendance_records')
-    .delete()
-    .gte('record_date', periodStart)
-    .lt('record_date', periodEnd)
-    .in('employee_id', incomingEmployeeIds);
-  if (matchingRecords.error) throw new Error(`Matching ${periodMonth} attendance could not be refreshed: ${matchingRecords.error.message}`);
-  for (let start = 0; start < records.length; start += 500) {
-    const saved = await client.from('attendance_records').insert(records.slice(start, start + 500));
-    if (saved.error) throw new Error(`Attendance records could not be saved: ${saved.error.message}`);
-  }
+
   const mergedCount = await client.from('attendance_records').select('id', { count: 'exact', head: true }).eq('import_id', importResult.data.id);
-  if (!mergedCount.error) await client.from('attendance_imports').update({ row_count: mergedCount.count || 0 }).eq('id', importResult.data.id);
-  return { data: { uploadId: importResult.data.id, periodMonth, rowCount: mergedCount.count || parsed.length, warnings } };
+  const storedCount = mergedCount.error ? records.length : (mergedCount.count || 0);
+  const finalise = await client.from('attendance_imports').update({ row_count: storedCount, status: 'processed' }).eq('id', importResult.data.id);
+  if (finalise.error) throw new Error(`Attendance import could not be completed: ${finalise.error.message}`);
+  if (skipped.length) {
+    const distinct = [...new Set(skipped)];
+    warnings.push(`${skipped.length} rows were skipped because these names could not be matched: ${distinct.slice(0, 10).join(', ')}${distinct.length > 10 ? `, +${distinct.length - 10} more` : ''}.`);
+  }
+  return { data: { uploadId: importResult.data.id, periodMonth, rowCount: storedCount, warnings } };
+  } catch (error) {
+    // Leave a truthful record instead of an import row that claims success.
+    await client.from('attendance_imports')
+      .update({ status: 'failed', row_count: 0 })
+      .eq('id', importResult.data.id);
+    throw error;
+  }
 };
 export const getUploads = async () => {
   if (!supabaseConfigured) return api.get('/attendance/uploads');
@@ -520,33 +566,14 @@ export const checkPendingReminders = () => {
 };
 
 // Salary
+// Salary lives on employees.monthly_salary — one current salary per employee,
+// maintained from the Employee Master screen and the staff-master import. The
+// `month` argument is accepted so callers can keep passing the viewed month,
+// but there is no per-month salary history to select from.
 export const getSalaryConfigs = async (month?: string) => {
   if (!supabaseConfigured) return api.get('/salary/configs', { params: { month } });
-  const { data, error } = await directClient().from('salary_configs').select('*').order('effective_month', { ascending: false });
-  const latest = new Map<number, any>();
-  const allRows = data || [];
-  for (const row of allRows) {
-    if (month && String(row.effective_month) > month) continue;
-    if (!latest.has(row.employee_id)) latest.set(row.employee_id, row);
-  }
-  // If the first salary file was imported in August, still show it for July
-  // instead of leaving every salary field blank. Later months continue using
-  // the newest effective salary automatically.
-  if (month) {
-    const earliest = [...allRows].sort((a: any, b: any) => String(a.effective_month).localeCompare(String(b.effective_month)));
-    for (const row of earliest) if (!latest.has(row.employee_id)) latest.set(row.employee_id, row);
-  }
-  return directResult([...latest.values()].map((row: any) => ({ ...row, employeeId: row.employee_id, effectiveMonth: row.effective_month, basicSalary: row.basic_salary })), error);
-};
-export const saveSalaryConfig = async (data: { employeeId: number; basicSalary: number; effectiveMonth: string }) => {
-  if (!supabaseConfigured) return api.put('/salary/configs', data);
-  const { data: saved, error } = await directClient().from('salary_configs').upsert({ employee_id: data.employeeId, basic_salary: data.basicSalary, effective_month: data.effectiveMonth }, { onConflict: 'employee_id,effective_month' }).select().single();
-  return directResult(saved, error);
-};
-export const saveSalaryBulk = async (configs: Array<{ employeeId: number; basicSalary: number; effectiveMonth: string }>) => {
-  if (!supabaseConfigured) return api.put('/salary/configs/bulk', { configs });
-  const { data, error } = await directClient().from('salary_configs').upsert(configs.map(c => ({ employee_id: c.employeeId, basic_salary: c.basicSalary, effective_month: c.effectiveMonth })), { onConflict: 'employee_id,effective_month' });
-  return directResult(data, error);
+  const { data, error } = await directClient().from('employees').select('id,monthly_salary');
+  return directResult((data || []).map((row: any) => ({ employeeId: row.id, basicSalary: row.monthly_salary == null ? null : Number(row.monthly_salary) })), error);
 };
 export const getSalaryDeductions = async (uploadId: number) => {
   if (!supabaseConfigured) return api.get(`/salary/deductions/${uploadId}`);
@@ -570,15 +597,10 @@ export const getSalaryDeductions = async (uploadId: number) => {
   });
   const ids = [...new Set(rows.map((row: any) => row.employee_id))];
   if (!ids.length) return { data: [] };
-  const salaries = await client.from('salary_configs').select('*').in('employee_id', ids).order('effective_month', { ascending: false });
+  const salaries = await client.from('employees').select('id,monthly_salary').in('id', ids);
   if (salaries.error) throw new Error(salaries.error.message);
-  const salaryMap = new Map<number, any>();
-  const salaryRows = salaries.data || [];
-  for (const row of salaryRows) {
-    if (String(row.effective_month) <= upload.data.period_month && !salaryMap.has(row.employee_id)) salaryMap.set(row.employee_id, row);
-  }
-  const earliestSalaryRows = [...salaryRows].sort((a: any, b: any) => String(a.effective_month).localeCompare(String(b.effective_month)));
-  for (const row of earliestSalaryRows) if (!salaryMap.has(row.employee_id)) salaryMap.set(row.employee_id, row);
+  const salaryMap = new Map<number, number>();
+  for (const row of salaries.data || []) salaryMap.set(row.id, Number(row.monthly_salary || 0));
   const [{ data: activeRules, error: rulesError }, { data: settings, error: settingsError }] = await Promise.all([
     client.from('attendance_rules').select('rule_type,conditions,actions,description,name').eq('is_active', true),
     client.from('settings').select('key,value'),
@@ -627,8 +649,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
     grouped.set(row.employee_id, item);
   }
   const result = [...grouped.values()].map(item => {
-    const salaryConfig = salaryMap.get(item.employeeId);
-    const basicSalary = Number(salaryConfig?.basic_salary || 0);
+    const basicSalary = salaryMap.get(item.employeeId) || 0;
     const dailySalary = basicSalary / 30;
     const isIt = item.itRecords > 0 || /\bit\b|information technology/i.test(`${item.department} ${item.organisation} ${item.entity}`);
     // Non-IT staff work on Sundays and receive four paid leaves per month.
@@ -651,10 +672,9 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const displayedPaidLeave = item.paidLeaveUsed + protectedAbsentDays;
     return { ...item, isIt, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, overtimeAmount, netPayable: Math.max(0, basicSalary - totalLopAmount + overtimeAmount), dailySalary, totalLopAmount, basicSalary };
   });
-  for (const item of result) {
-    const salaryConfig = salaryMap.get(item.employeeId);
-    if (salaryConfig) await client.from('salary_configs').update({ late_deduction: item.lateDeductionCount * item.dailySalary, absence_deduction: item.chargeableAbsentDays * item.dailySalary, half_day_deduction: item.halfDayDeduction, overtime_amount: item.overtimeAmount, total_lop_amount: item.totalLopAmount }).eq('id', salaryConfig.id);
-  }
+  // Deductions are derived on every read, so there is nothing to cache back to
+  // the database. The previous write-back also stored an undefined
+  // half_day_deduction, because that value never made it onto the result rows.
   return { data: result };
 };
 
@@ -684,31 +704,22 @@ export const testSmtp = () => api.post('/settings/test-smtp');
 // Employees
 export const getEmployees = async () => {
   if (!supabaseConfigured) return api.get('/employees');
-  const client = directClient();
-  const [{ data, error }, { data: salaryRows, error: salaryError }] = await Promise.all([
-    client.from('employees').select('*').order('name'),
-    client.from('salary_configs').select('employee_id,basic_salary,effective_month').order('effective_month', { ascending: false }),
-  ]);
-  if (error || salaryError) return directResult(null, error || salaryError);
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const latestSalary = new Map<number, any>();
-  const earliestSalary = new Map<number, any>();
-  for (const row of salaryRows || []) {
-    if (!earliestSalary.has(row.employee_id)) earliestSalary.set(row.employee_id, row);
-    if (String(row.effective_month) <= currentMonth && !latestSalary.has(row.employee_id)) latestSalary.set(row.employee_id, row);
-  }
-  return directResult((data || []).map((row: any) => {
-    const salary = latestSalary.get(row.id) || earliestSalary.get(row.id);
-    return { ...row, employeeId: row.employee_number, photoUrl: row.photo_url, createdAt: row.created_at, actualDesignation: row.designation, designation: row.biometric_name || row.designation, biometricName: row.biometric_name, basicSalary: salary ? Number(salary.basic_salary) : null, shiftTimings: row.shift_timings || {}, eligibleForPaidLeaves: row.eligible_for_paid_leaves, eligibleForOvertime: row.eligible_for_overtime };
-  }), null);
+  const { data, error } = await directClient().from('employees').select('*').order('name');
+  if (error) return directResult(null, error);
+  return directResult((data || []).map((row: any) => ({
+    ...row, employeeId: row.employee_number, photoUrl: row.photo_url, createdAt: row.created_at,
+    actualDesignation: row.designation, designation: row.biometric_name || row.designation, biometricName: row.biometric_name,
+    basicSalary: row.monthly_salary == null ? null : Number(row.monthly_salary),
+    shiftTimings: row.shift_timings || {}, eligibleForPaidLeaves: row.eligible_for_paid_leaves, eligibleForOvertime: row.eligible_for_overtime,
+  })), null);
 };
 export const getEmployee = (id: number) => supabaseConfigured ? directClient().from('employees').select('*').eq('id', id).single() : api.get(`/employees/${id}`);
 export const mergeEmployees = async (keepId: number, mergeId: number) => {
   if (!supabaseConfigured) return api.post('/employees/merge', { keepId, mergeId });
   const client = directClient();
   const [keep, merge] = await Promise.all([
-    client.from('employees').select('id,name').eq('id', keepId).single(),
-    client.from('employees').select('id,name').eq('id', mergeId).single(),
+    client.from('employees').select('id,name,monthly_salary').eq('id', keepId).single(),
+    client.from('employees').select('id,name,monthly_salary').eq('id', mergeId).single(),
   ]);
   if (keep.error || merge.error) throw new Error(keep.error?.message || merge.error?.message);
 
@@ -727,30 +738,24 @@ export const mergeEmployees = async (keepId: number, mergeId: number) => {
   const movedRecords = await client.from('attendance_records').update({ employee_id: keepId }).eq('employee_id', mergeId);
   if (movedRecords.error) throw new Error(movedRecords.error.message);
 
-  const [keepSalary, mergeSalary] = await Promise.all([
-    client.from('salary_configs').select('id,effective_month').eq('employee_id', keepId),
-    client.from('salary_configs').select('id,effective_month').eq('employee_id', mergeId),
-  ]);
-  if (keepSalary.error || mergeSalary.error) throw new Error(keepSalary.error?.message || mergeSalary.error?.message);
-  const keepMonths = new Set((keepSalary.data || []).map((row: any) => String(row.effective_month)));
-  const duplicateSalaryIds = (mergeSalary.data || []).filter((row: any) => keepMonths.has(String(row.effective_month))).map((row: any) => row.id);
-  if (duplicateSalaryIds.length) {
-    const deleted = await client.from('salary_configs').delete().in('id', duplicateSalaryIds);
-    if (deleted.error) throw new Error(deleted.error.message);
+  // Salary lives on the employee row. Keep the surviving employee's salary and
+  // only inherit the merged one when the survivor has none recorded.
+  if (!Number(keep.data.monthly_salary || 0) && Number(merge.data.monthly_salary || 0)) {
+    const movedSalary = await client.from('employees').update({ monthly_salary: merge.data.monthly_salary }).eq('id', keepId);
+    if (movedSalary.error) throw new Error(movedSalary.error.message);
   }
-  const movedSalary = await client.from('salary_configs').update({ employee_id: keepId }).eq('employee_id', mergeId);
-  if (movedSalary.error) throw new Error(movedSalary.error.message);
   const movedMessages = await client.from('email_messages').update({ employee_id: keepId }).eq('employee_id', mergeId);
   if (movedMessages.error) throw new Error(movedMessages.error.message);
   const removed = await client.from('employees').delete().eq('id', mergeId);
   if (removed.error) throw new Error(removed.error.message);
   return { data: { kept: keep.data.name, removed: merge.data.name } };
 };
-export const updateEmployee = async (id: number, data: { name?: string; email?: string; department?: string; employeeNumber?: string; mobile?: string; designation?: string; biometricName?: string; branch?: string; status?: string; shiftTimings?: Record<string, { start: string; end: string }>; eligibleForPaidLeaves?: boolean; eligibleForOvertime?: boolean }) => {
+export const updateEmployee = async (id: number, data: { name?: string; email?: string; department?: string; employeeNumber?: string; mobile?: string; designation?: string; biometricName?: string; branch?: string; status?: string; monthlySalary?: number | null; shiftTimings?: Record<string, { start: string; end: string }>; eligibleForPaidLeaves?: boolean; eligibleForOvertime?: boolean }) => {
   if (!supabaseConfigured) return api.patch(`/employees/${id}`, data);
   const { data: saved, error } = await directClient().from('employees').update({
     name: data.name, email: data.email, department: data.department, designation: data.designation, biometric_name: data.biometricName,
     employee_number: data.employeeNumber, mobile: data.mobile, branch: data.branch, status: data.status,
+    monthly_salary: data.monthlySalary,
     shift_timings: data.shiftTimings,
     eligible_for_paid_leaves: data.eligibleForPaidLeaves, eligible_for_overtime: data.eligibleForOvertime,
   }).eq('id', id).select().single();

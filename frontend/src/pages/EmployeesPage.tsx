@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getEmployees, updateEmployee, uploadEmployeePhoto, mergeEmployees, saveSalaryConfig, getShiftOptions, getEmployeeShiftAssignments, saveEmployeeShiftAssignment, type EmployeeShiftAssignment, type ShiftOption } from '../api';
+import { getEmployees, updateEmployee, uploadEmployeePhoto, mergeEmployees, getShiftOptions, getEmployeeShiftAssignments, saveEmployeeShiftAssignment, type EmployeeShiftAssignment, type ShiftOption } from '../api';
 
 interface Employee {
   id: number;
@@ -91,8 +91,7 @@ export default function EmployeesPage() {
   const mutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: EditForm }) => {
       const { basicSalary, ...employeeData } = data;
-      await updateEmployee(id, employeeData);
-      if (basicSalary.trim()) await saveSalaryConfig({ employeeId: id, basicSalary: Number(basicSalary), effectiveMonth: new Date().toISOString().slice(0, 7) });
+      await updateEmployee(id, { ...employeeData, monthlySalary: basicSalary.trim() ? Number(basicSalary) : null });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['employees'] }); setEditing(null); },
   });
