@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getEmployees, updateEmployee, uploadEmployeePhoto, mergeEmployees, saveSalaryConfig } from '../api';
+import { getEmployees, updateEmployee, uploadEmployeePhoto, mergeEmployees, saveSalaryConfig, getShiftOptions, getEmployeeShiftAssignments, saveEmployeeShiftAssignment, type EmployeeShiftAssignment, type ShiftOption } from '../api';
 
 interface Employee {
   id: number;
@@ -40,6 +40,18 @@ interface EditForm {
   eligibleForOvertime: boolean;
 }
 
+interface WorkTimeForm {
+  shiftId: string;
+  name: string;
+  roleTarget: string;
+  startTime: string;
+  endTime: string;
+  graceMinutes: string;
+  isOvernight: boolean;
+  effectiveFrom: string;
+  effectiveTo: string;
+}
+
 const AVATAR_COLORS = [
   'from-indigo-400 to-purple-500',
   'from-emerald-400 to-teal-500',
@@ -63,6 +75,13 @@ export default function EmployeesPage() {
   const [page, setPage] = useState(1);
   const [openActionMenu, setOpenActionMenu] = useState<number | null>(null);
   const pageSize = 25;
+  const [workTimeEmployee, setWorkTimeEmployee] = useState<Employee | null>(null);
+  const [workTimeMode, setWorkTimeMode] = useState<'existing' | 'custom'>('existing');
+  const [workTimeError, setWorkTimeError] = useState('');
+  const [workTimeForm, setWorkTimeForm] = useState<WorkTimeForm>({ shiftId: '', name: '', roleTarget: 'GENERAL', startTime: '09:00', endTime: '18:00', graceMinutes: '15', isOvernight: false, effectiveFrom: new Date().toISOString().slice(0, 10), effectiveTo: '' });
+
+  const { data: shiftOptions = [] } = useQuery<ShiftOption[]>({ queryKey: ['shift-options'], queryFn: () => getShiftOptions().then(r => r.data), enabled: !!workTimeEmployee });
+  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<EmployeeShiftAssignment[]>({ queryKey: ['employee-shifts', workTimeEmployee?.id], queryFn: () => getEmployeeShiftAssignments(workTimeEmployee!.id).then(r => r.data), enabled: !!workTimeEmployee });
 
   const { data: employees = [], isLoading } = useQuery<Employee[]>({
     queryKey: ['employees'],
@@ -102,11 +121,28 @@ export default function EmployeesPage() {
     },
     onError: (error: any) => setMergeError(error.message || 'Employees could not be merged.'),
   });
+  const workTimeMutation = useMutation({
+    mutationFn: () => {
+      if (!workTimeEmployee) throw new Error('Employee not selected');
+      if (workTimeMode === 'existing' && !workTimeForm.shiftId) throw new Error('Select a shift');
+      if (workTimeMode === 'custom' && !workTimeForm.name.trim()) throw new Error('Custom shift name is required');
+      if (workTimeForm.effectiveTo && workTimeForm.effectiveTo < workTimeForm.effectiveFrom) throw new Error('End date must be on or after start date');
+      return saveEmployeeShiftAssignment(workTimeEmployee.id, {
+        shiftId: workTimeMode === 'existing' ? workTimeForm.shiftId : undefined,
+        effectiveFrom: workTimeForm.effectiveFrom,
+        effectiveTo: workTimeForm.effectiveTo || undefined,
+        customShift: workTimeMode === 'custom' ? { name: workTimeForm.name.trim(), roleTarget: workTimeForm.roleTarget.trim().toUpperCase() || 'GENERAL', startTime: workTimeForm.startTime, endTime: workTimeForm.endTime, graceMinutes: Number(workTimeForm.graceMinutes), isOvernight: workTimeForm.isOvernight } : undefined,
+      });
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['employee-shifts', workTimeEmployee?.id] }); setWorkTimeError(''); setWorkTimeMode('existing'); },
+    onError: (error: any) => setWorkTimeError(error.message || 'Work time could not be saved.'),
+  });
 
   function employeeType(emp: Employee) {
     const value = `${emp.organisation || ''} ${emp.entity || ''} ${emp.department || ''}`.toLowerCase();
     if (value.includes('ayushman')) return { label: 'Ayushman', className: 'bg-violet-50 text-violet-700 border-violet-100' };
     if (value.includes('hope')) return { label: 'Hope', className: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
+    if (value.includes('rafttar')) return { label: 'Rafttar', className: 'bg-amber-50 text-amber-700 border-amber-100' };
     if (/(^|[^a-z])it([^a-z]|$)|information technology/.test(value)) return { label: 'IT', className: 'bg-sky-50 text-sky-700 border-sky-100' };
     return { label: 'Unassigned', className: 'bg-slate-50 text-slate-500 border-slate-200' };
   }
@@ -120,6 +156,13 @@ export default function EmployeesPage() {
       basicSalary: emp.basicSalary ? String(emp.basicSalary) : '', shiftTimings: { morning: { start: emp.shiftTimings?.morning?.start || '', end: emp.shiftTimings?.morning?.end || '' }, evening: { start: emp.shiftTimings?.evening?.start || '', end: emp.shiftTimings?.evening?.end || '' }, night: { start: emp.shiftTimings?.night?.start || '', end: emp.shiftTimings?.night?.end || '' } },
       eligibleForPaidLeaves: emp.eligibleForPaidLeaves !== false, eligibleForOvertime: emp.eligibleForOvertime === true,
     });
+  }
+
+  function openWorkTimes(emp: Employee) {
+    setWorkTimeEmployee(emp);
+    setWorkTimeError('');
+    setWorkTimeMode('existing');
+    setWorkTimeForm({ shiftId: '', name: `${emp.name} custom`, roleTarget: 'GENERAL', startTime: '09:00', endTime: '18:00', graceMinutes: '15', isOvernight: false, effectiveFrom: new Date().toISOString().slice(0, 10), effectiveTo: '' });
   }
 
   async function handlePhotoUpload(empId: number, file: File) {
@@ -179,6 +222,81 @@ export default function EmployeesPage() {
             </div>
             {mergeError && <p className="mt-3 rounded-lg bg-red-50 p-2 text-sm text-red-600">{mergeError}</p>}
             <div className="mt-5 flex justify-end gap-2"><button onClick={() => { setMergeKeepId(null); setMergeError(''); }} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600">Cancel</button><button onClick={() => mergeMutation.mutate()} disabled={mergeMutation.isPending} className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{mergeMutation.isPending ? 'Merging...' : 'Merge'}</button></div>
+          </div>
+        </div>
+      )}
+
+      {mergeKeepId !== null && selectedIds.length === 2 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-800">Merge employee names</h3>
+            <p className="mt-1 text-sm text-slate-500">Choose the name to keep. Attendance and salary data from the other employee will be moved here.</p>
+            <div className="mt-4 space-y-2">
+              {selectedIds.map(id => {
+                const employee = employees.find(item => item.id === id);
+                return <label key={id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50"><input type="radio" name="mergeKeep" checked={mergeKeepId === id} onChange={() => setMergeKeepId(id)} /><span className="font-medium text-slate-700">{employee?.name}</span></label>;
+              })}
+            </div>
+            {mergeError && <p className="mt-3 rounded-lg bg-red-50 p-2 text-sm text-red-600">{mergeError}</p>}
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => { setMergeKeepId(null); setMergeError(''); }} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600">Cancel</button><button onClick={() => mergeMutation.mutate()} disabled={mergeMutation.isPending} className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{mergeMutation.isPending ? 'Merging...' : 'Merge'}</button></div>
+          </div>
+        </div>
+      )}
+
+      {workTimeEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Employee schedule</p>
+                <h3 className="mt-1 text-lg font-bold text-slate-800">Customize {workTimeEmployee.name}</h3>
+                <p className="mt-1 text-xs text-slate-400">New assignments apply from the effective date.</p>
+              </div>
+              <button onClick={() => setWorkTimeEmployee(null)} className="rounded-lg p-1.5 hover:bg-slate-100"><span className="material-icons text-xl text-slate-400">close</span></button>
+            </div>
+            <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
+              <div className="flex gap-2 rounded-xl bg-slate-100 p-1">
+                {([['existing', 'Use saved shift'], ['custom', 'Create custom time']] as const).map(([value, label]) => (
+                  <button key={value} onClick={() => setWorkTimeMode(value)} className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors active:scale-[0.98] ${workTimeMode === value ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>{label}</button>
+                ))}
+              </div>
+
+              {workTimeMode === 'existing' ? (
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium text-slate-700">Shift</span>
+                  <select value={workTimeForm.shiftId} onChange={e => setWorkTimeForm(prev => ({ ...prev, shiftId: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20">
+                    <option value="">Select a shift</option>
+                    {shiftOptions.map(shift => <option key={shift.id} value={shift.id}>{shift.name} · {shift.startTime}–{shift.endTime}</option>)}
+                  </select>
+                  {!shiftOptions.length && <span className="mt-1 block text-xs text-amber-600">No saved shifts are available. Create a custom time instead.</span>}
+                </label>
+              ) : (
+                <div className="space-y-4">
+                  <label className="block"><span className="mb-1.5 block text-sm font-medium text-slate-700">Shift name</span><input value={workTimeForm.name} onChange={e => setWorkTimeForm(prev => ({ ...prev, name: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400" placeholder="e.g. Front desk morning" /></label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Start time</span><input type="time" value={workTimeForm.startTime} onChange={e => setWorkTimeForm(prev => ({ ...prev, startTime: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
+                    <label><span className="mb-1.5 block text-sm font-medium text-slate-700">End time</span><input type="time" value={workTimeForm.endTime} onChange={e => setWorkTimeForm(prev => ({ ...prev, endTime: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Role target</span><input value={workTimeForm.roleTarget} onChange={e => setWorkTimeForm(prev => ({ ...prev, roleTarget: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
+                    <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Grace minutes</span><input type="number" min="0" max="240" value={workTimeForm.graceMinutes} onChange={e => setWorkTimeForm(prev => ({ ...prev, graceMinutes: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={workTimeForm.isOvernight} onChange={e => setWorkTimeForm(prev => ({ ...prev, isOvernight: e.target.checked }))} className="h-4 w-4 accent-emerald-600" /> Overnight shift</label>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Effective from</span><input type="date" value={workTimeForm.effectiveFrom} onChange={e => setWorkTimeForm(prev => ({ ...prev, effectiveFrom: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
+                <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Effective to <span className="font-normal text-slate-400">(optional)</span></span><input type="date" value={workTimeForm.effectiveTo} onChange={e => setWorkTimeForm(prev => ({ ...prev, effectiveTo: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
+              </div>
+
+              <div className="border-t border-slate-100 pt-4">
+                <div className="mb-2 flex items-center justify-between"><p className="text-sm font-semibold text-slate-700">Schedule history</p>{assignmentsLoading && <span className="text-xs text-slate-400">Loading...</span>}</div>
+                {assignments.length ? <div className="space-y-2">{assignments.map(assignment => <div key={assignment.assignmentId} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5"><div><p className="text-xs font-semibold text-slate-700">{assignment.name}</p><p className="text-[11px] text-slate-400">{assignment.startTime}–{assignment.endTime} · from {assignment.effectiveFrom}{assignment.effectiveTo ? ` to ${assignment.effectiveTo}` : ' · current'}</p></div><span className="material-icons text-base text-emerald-500">schedule</span></div>)}</div> : <p className="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-center text-xs text-slate-400">No schedule assigned yet.</p>}
+              </div>
+              {workTimeError && <p className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-600">{workTimeError}</p>}
+            </div>
+            <div className="flex gap-3 border-t border-slate-100 px-6 py-4"><button onClick={() => setWorkTimeEmployee(null)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-600">Close</button><button onClick={() => workTimeMutation.mutate()} disabled={workTimeMutation.isPending} className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-60">{workTimeMutation.isPending ? 'Saving...' : 'Save work time'}</button></div>
           </div>
         </div>
       )}

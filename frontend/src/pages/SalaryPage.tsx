@@ -13,6 +13,7 @@ export default function SalaryPage() {
   const [toast, setToast] = useState('');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('attendance');
+  const [companyFilter, setCompanyFilter] = useState('All');
   const [showPrintOptions, setShowPrintOptions] = useState(false);
   const [attendanceEmployee, setAttendanceEmployee] = useState<any | null>(null);
   // Which attendance statuses the details modal should list. null = all records.
@@ -45,6 +46,15 @@ export default function SalaryPage() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
+  const companyOf = (emp: any) => {
+    const value = [emp.organisation, emp.organisation_name, emp.organization, emp.company, emp.entity, emp.department].filter(Boolean).join(' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+    if (value.includes('ayushman')) return 'Ayushman';
+    if (value.includes('hope')) return 'Hope';
+    if (value.includes('rafttar')) return 'Rafttar';
+    if (/(^|[^a-z])it([^a-z]|$)|information technology/.test(value)) return 'IT';
+    return 'Other';
+  };
+
   const rows = useMemo(() => {
     const deductionMap = new Map((deductions as any[]).map(d => [d.employeeId, d]));
     const configMap = new Map((configs as any[]).map(c => [c.employeeId, c]));
@@ -60,9 +70,15 @@ export default function SalaryPage() {
 
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
+    const normalizedQuery = query.replace(/[^a-z0-9]+/g, '');
     return rows.filter(row => {
-      const searchable = `${String(row.emp.name || '')} ${String(row.emp.email || '')} ${String(row.emp.employeeNumber || row.emp.employee_number || '')}`.toLowerCase();
-      if (query && !searchable.includes(query)) return false;
+      const searchable = [row.emp.name, row.emp.email, row.emp.employeeNumber, row.emp.employee_number, row.emp.employeeId, row.emp.id]
+        .filter(value => value !== null && value !== undefined)
+        .map(value => String(value).toLowerCase())
+        .join(' ');
+      const normalizedSearchable = searchable.replace(/[^a-z0-9]+/g, '');
+      if (query && !searchable.includes(query) && !normalizedSearchable.includes(normalizedQuery)) return false;
+      if (companyFilter !== 'All' && companyOf(row.emp) !== companyFilter) return false;
       if (filter === 'attendance') return row.hasAttendance;
       if (filter === 'missing-attendance') return !row.hasAttendance;
       if (filter === 'lop') return row.hasLop;
@@ -70,7 +86,10 @@ export default function SalaryPage() {
       if (filter === 'payable') return row.hasSalary;
       return true;
     }).sort((a, b) => Number(b.hasSalary) - Number(a.hasSalary));
-  }, [rows, search, filter]);
+  }, [rows, search, filter, companyFilter]);
+
+  const hasActiveFilters = Boolean(search.trim()) || filter !== 'attendance' || companyFilter !== 'All';
+  const clearFilters = () => { setSearch(''); setFilter('attendance'); setCompanyFilter('All'); };
 
   const summary = useMemo(() => ({
     total: rows.length,
@@ -78,14 +97,6 @@ export default function SalaryPage() {
     lop: rows.filter(row => row.hasLop).length,
     missingSalary: rows.filter(row => !row.hasSalary).length,
   }), [rows]);
-
-  const companyOf = (emp: any) => {
-    const value = `${emp.organisation || emp.organisation_name || ''} ${emp.entity || ''} ${emp.department || ''}`.toLowerCase();
-    if (value.includes('ayushman')) return 'Ayushman';
-    if (value.includes('hope')) return 'Hope';
-    if (/(^|[^a-z])it([^a-z]|$)|information technology/.test(value)) return 'IT';
-    return 'Other';
-  };
 
   const printSalarySheet = (company: string) => {
     const printable = rows.filter(row => row.hasSalary && (company === 'All' || companyOf(row.emp) === company));
@@ -154,7 +165,23 @@ export default function SalaryPage() {
               </button>
             ))}
           </div>
+          <div className="flex flex-wrap gap-1.5 border-t border-slate-200 pt-2 sm:border-t-0 sm:pt-0">
+              {['All', 'Ayushman', 'Hope', 'Rafttar', 'IT', 'Other'].map(company => (
+              <button key={company} onClick={() => setCompanyFilter(company)} className={`rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors ${companyFilter === company ? 'bg-slate-700 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-100'}`}>
+                {company === 'All' ? 'All companies' : company}
+              </button>
+            ))}
+          </div>
         </div>
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-white px-3 py-2 text-[11px] text-slate-500">
+            <span className="font-semibold text-slate-600">Showing:</span>
+            {search.trim() && <span className="rounded-md bg-indigo-50 px-2 py-1 text-indigo-700">Search “{search.trim()}”</span>}
+            {companyFilter !== 'All' && <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-700">Company: {companyFilter}</span>}
+            {filter !== 'attendance' && <span className="rounded-md bg-emerald-50 px-2 py-1 text-emerald-700">Status: {filter === 'missing-attendance' ? 'Missing attendance' : filter === 'missing-salary' ? 'Missing salary' : filter === 'lop' ? 'Has LOP' : filter === 'payable' ? 'Net payable' : 'All'}</span>}
+            <button onClick={clearFilters} className="ml-auto font-semibold text-indigo-600 hover:text-indigo-800">Clear filters</button>
+          </div>
+        )}
         <div className="w-full overflow-x-auto pb-2">
         <table className="w-full min-w-[1180px] table-auto text-[11px]">
           <thead>
@@ -228,7 +255,8 @@ export default function SalaryPage() {
         </div>
         {filteredRows.length === 0 && (
           <div className="text-center py-12 text-slate-400">
-            <p>{rows.length === 0 ? 'No employees found. Upload an attendance file first.' : 'No employees match this search or filter.'}</p>
+            <p>{rows.length === 0 ? 'No employees found. Upload an attendance file first.' : hasActiveFilters ? 'No employees match all selected filters. Try clearing one filter.' : 'No employees match this search or filter.'}</p>
+            {hasActiveFilters && rows.length > 0 && <button onClick={clearFilters} className="mt-3 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100">Clear filters</button>}
           </div>
         )}
       </div>
@@ -245,7 +273,7 @@ export default function SalaryPage() {
             <h2 className="text-lg font-bold text-slate-800">Print salary sheet</h2>
             <p className="mt-1 text-sm text-slate-500">Only employees with salary and Net Payable will be printed.</p>
             <div className="mt-4 space-y-2">
-              {['All', 'Ayushman', 'Hope', 'IT', 'Other'].map(company => (
+              {['All', 'Ayushman', 'Hope', 'Rafttar', 'IT', 'Other'].map(company => (
                 <button key={company} onClick={() => printSalarySheet(company)} className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:border-brand-300 hover:bg-brand-50">
                   {company === 'All' ? 'All companies' : company}
                   <span className="material-icons text-base text-slate-400">print</span>

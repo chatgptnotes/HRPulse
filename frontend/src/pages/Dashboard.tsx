@@ -85,7 +85,7 @@ export default function Dashboard() {
     setUploading(true);
     setUploadWarnings([]);
     try {
-      const { data } = await api.uploadAttendance(files[0]);
+      const { data } = await api.uploadAttendance(files);
       setUploadId(data.uploadId);
       setPeriodMonth(data.periodMonth);
       setUploadWarnings(data.warnings || []);
@@ -101,7 +101,7 @@ export default function Dashboard() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'], 'application/vnd.ms-excel': ['.xls'] },
-    multiple: false,
+    multiple: true,
   });
 
   const handleGenerate = async () => {
@@ -230,7 +230,7 @@ export default function Dashboard() {
                   <span className="material-icons text-emerald-600 text-xl">check_circle</span>
                 </div>
                 <p className="text-xs font-semibold text-emerald-700">{periodMonth}</p>
-                <p className="text-xs text-slate-400 mt-0.5">Drop to replace</p>
+                <p className="text-xs text-slate-400 mt-0.5">Drop one or more files to import</p>
               </>
             ) : (
               <>
@@ -238,7 +238,7 @@ export default function Dashboard() {
                   <span className="material-icons text-slate-400 text-xl">upload_file</span>
                 </div>
                 <p className="text-xs font-semibold text-slate-600">Upload Attendance File</p>
-                <p className="text-xs text-slate-400 mt-0.5">Drop Excel (.xlsx) here</p>
+                <p className="text-xs text-slate-400 mt-0.5">Drop one or more Excel files (.xls/.xlsx) here</p>
               </>
             )}
           </div>

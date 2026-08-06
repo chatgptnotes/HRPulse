@@ -77,8 +77,113 @@ api.interceptors.response.use(
 );
 
 // Attendance
-export const uploadAttendance = async (file: File) => {
-  if (!supabaseConfigured || !supabase) return api.post<{ uploadId: number; periodMonth: string; rowCount: number; warnings: string[] }>('/attendance/upload', (() => { const fd = new FormData(); fd.append('file', file); return fd; })());
+const staffNameKey = (value: unknown) => String(value || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim()
+  .replace(/\s+(soft|staff|employee|emp)$/i, '')
+  .replace(/\s+/g, ' ');
+
+const staffNamesMatch = (left: unknown, right: unknown) => {
+  const a = staffNameKey(left).split(' ').filter(Boolean);
+  const b = staffNameKey(right).split(' ').filter(Boolean);
+  if (!a.length || !b.length) return false;
+  if (a.join(' ') === b.join(' ')) return true;
+  const short = a.length === 1 ? a : b.length === 1 ? b : null;
+  const long = a.length === 1 ? b : b.length === 1 ? a : null;
+  return !!short && !!long && short[0] === long[0] && long.length <= 3;
+};
+
+async function importStaffMaster(files: File[], effectiveMonth: string) {
+  const client = directClient();
+  const warnings: string[] = [];
+  const staffRows: Array<{ name: string; designation: string; basicSalary: number; organisation: string }> = [];
+  for (const file of files) {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: '' });
+    const headerIndex = rows.findIndex(row => {
+      const text = row.map(value => String(value ?? '').toLowerCase()).join(' ');
+      return /name/.test(text) && /basic\s*salary/.test(text);
+    });
+    if (headerIndex < 0) {
+      warnings.push(`${file.name}: staff columns were not detected`);
+      continue;
+    }
+    const headers = rows[headerIndex].map(value => String(value ?? '').toLowerCase().trim());
+    const nameIndex = headers.findIndex(value => /^name$|employee|staff/.test(value));
+    const designationIndex = headers.findIndex(value => /designation|desingation|role/.test(value));
+    const salaryIndex = headers.findIndex(value => /basic\s*salary|salary/.test(value));
+    const organisationIndex = headers.findIndex(value => /organisation|organization|company/.test(value));
+    for (const row of rows.slice(headerIndex + 1)) {
+      const name = String(row[nameIndex] ?? '').trim();
+      if (!name) continue;
+      const basicSalary = Number(String(row[salaryIndex] ?? '').replace(/[^0-9.]/g, ''));
+      staffRows.push({
+        name,
+        designation: String(row[designationIndex] ?? '').trim(),
+        basicSalary: Number.isFinite(basicSalary) ? basicSalary : 0,
+        organisation: String(row[organisationIndex] ?? '').trim(),
+      });
+    }
+  }
+  if (!staffRows.length) return { warnings };
+
+  const employeesQuery = await client.from('employees').select('id,email,name,employee_number');
+  if (employeesQuery.error) throw new Error(`Employees could not be loaded: ${employeesQuery.error.message}`);
+  const employees = (employeesQuery.data || []) as any[];
+  const salaryRows = new Map<string, any>();
+  for (const staff of staffRows) {
+    let employee = employees.find(row => staffNamesMatch(row.name, staff.name));
+    if (!employee) {
+      const key = staffNameKey(staff.name).replace(/\s+/g, '_');
+      const created = await client.from('employees').insert({ name: staff.name, email: `staff_${key}@unknown.local`, organisation: staff.organisation || null, designation: staff.designation || null }).select('id,email,name,employee_number').single();
+      if (created.error) throw new Error(`Staff employee could not be created: ${created.error.message}`);
+      employee = created.data;
+      employees.push(employee);
+    } else {
+      const updated = await client.from('employees').update({
+        name: employee.name.length >= staff.name.length ? employee.name : staff.name,
+        organisation: staff.organisation || undefined,
+        designation: staff.designation || undefined,
+      }).eq('id', employee.id).select('id,email,name,employee_number').single();
+      if (updated.error) throw new Error(`Staff employee could not be updated: ${updated.error.message}`);
+      employee = updated.data;
+    }
+    if (staff.basicSalary > 0) {
+      salaryRows.set(`${employee.id}|${effectiveMonth}`, { employee_id: employee.id, basic_salary: staff.basicSalary, effective_month: effectiveMonth });
+    }
+  }
+  if (salaryRows.size) {
+    const saved = await client.from('salary_configs').upsert([...salaryRows.values()], { onConflict: 'employee_id,effective_month' });
+    if (saved.error) throw new Error(`Staff salaries could not be saved: ${saved.error.message}`);
+  }
+  return { warnings };
+}
+
+export const uploadAttendance = async (fileInput: File | File[]) => {
+  const files = Array.isArray(fileInput) ? fileInput : [fileInput];
+  if (!files.length) throw new Error('Please select at least one Excel file.');
+  const classifyFile = async (file: File) => {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', sheetRows: 5 });
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: '' });
+    const headerText = rows.flat().map(value => String(value ?? '').toLowerCase().trim()).join(' ');
+    return /basic salary/.test(headerText) && /organisation|organization/.test(headerText) ? 'staff' : 'attendance';
+  };
+  const classified = await Promise.all(files.map(async file => ({ file, kind: await classifyFile(file) })));
+  const attendanceFiles = classified.filter(item => item.kind === 'attendance').map(item => item.file);
+  const staffFiles = classified.filter(item => item.kind === 'staff').map(item => item.file);
+  if (!attendanceFiles.length) throw new Error('Please include at least one attendance file.');
+  if (!supabaseConfigured || !supabase) return api.post<{ uploadId: number; periodMonth: string; rowCount: number; warnings: string[] }>('/attendance/upload', (() => { const fd = new FormData(); files.forEach(file => fd.append('file', file)); return fd; })());
+  if (attendanceFiles.length > 1 || staffFiles.length > 0) {
+    let result: any;
+    for (const file of attendanceFiles) result = await uploadAttendance(file);
+    if (staffFiles.length) {
+      const staffResult = await importStaffMaster(staffFiles, result.data.periodMonth);
+      result.data.warnings = [...(result.data.warnings || []), ...(staffResult.warnings || [])];
+    }
+    return result;
+  }
+  const file = attendanceFiles[0];
   if (!/\.(xls|xlsx)$/i.test(file.name)) throw new Error('Please select an Excel .xls or .xlsx file.');
 
   const headerMap: Record<string, string> = {
@@ -127,6 +232,15 @@ export const uploadAttendance = async (file: File) => {
     .trim()
     .replace(/\s+(soft|staff|employee|emp)$/i, '')
     .replace(/\s+/g, ' ');
+  const employeeNamesMatch = (left: unknown, right: unknown) => {
+    const a = employeeNameKey(left).split(' ').filter(Boolean);
+    const b = employeeNameKey(right).split(' ').filter(Boolean);
+    if (!a.length || !b.length) return false;
+    if (a.join(' ') === b.join(' ')) return true;
+    const short = a.length === 1 ? a : b.length === 1 ? b : null;
+    const long = a.length === 1 ? b : b.length === 1 ? a : null;
+    return !!short && !!long && short[0] === long[0] && long.length <= 3;
+  };
   const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
   const sheetRows = workbook.SheetNames.map(name => ({ name, rows: XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[name], { header: 1, defval: '' }) }));
   const findHeader = (rows: unknown[][]) => rows.findIndex(row => {
@@ -230,14 +344,25 @@ export const uploadAttendance = async (file: File) => {
     employeeRowsByIdentity.set(employeeNumber || email, { employee_number: employeeNumber, name: String(row.employeeName), email, organisation: row.organisation ? String(row.organisation) : null, entity: row.entity ? String(row.entity) : null, department: row.department ? String(row.department) : null });
   }
   const employeeRows = [...employeeRowsByIdentity.values()];
+  const dedupedEmployeeRows: typeof employeeRows = [];
+  for (const row of employeeRows) {
+    const duplicateIndex = dedupedEmployeeRows.findIndex(existing => employeeNamesMatch(existing.name, row.name));
+    if (duplicateIndex < 0) dedupedEmployeeRows.push(row);
+    else if (row.name.length > dedupedEmployeeRows[duplicateIndex].name.length) {
+      dedupedEmployeeRows[duplicateIndex] = {
+        ...row,
+        employee_number: dedupedEmployeeRows[duplicateIndex].employee_number || row.employee_number,
+      };
+    }
+  }
   // Match by both identifiers because existing projects may have unique
   // constraints on email, employee_number, both, or neither.
   const existingEmployees = await client.from('employees').select('id,email,employee_number,name,department,shift_timings,eligible_for_overtime');
   if (existingEmployees.error) throw new Error(`Employees could not be checked: ${existingEmployees.error.message}`);
   const existingEmails = new Set((existingEmployees.data || []).map((row: any) => String(row.email || '').toLowerCase()).filter(Boolean));
   const existingNumbers = new Set((existingEmployees.data || []).map((row: any) => String(row.employee_number || '')).filter(Boolean));
-  const existingNames = new Set((existingEmployees.data || []).map((row: any) => employeeNameKey(row.name)).filter(Boolean));
-  const missingEmployees = employeeRows.filter(row => !existingEmails.has(row.email) && (!row.employee_number || !existingNumbers.has(row.employee_number)) && !existingNames.has(employeeNameKey(row.name)));
+  const existingNames = (existingEmployees.data || []).map((row: any) => String(row.name || '')).filter(Boolean);
+  const missingEmployees = dedupedEmployeeRows.filter(row => !existingEmails.has(row.email) && (!row.employee_number || !existingNumbers.has(row.employee_number)) && !existingNames.some(name => employeeNamesMatch(row.name, name)));
   if (missingEmployees.length > 0) {
     const insertedEmployees = await client.from('employees').insert(missingEmployees);
     if (insertedEmployees.error) throw new Error(`Employees could not be saved: ${insertedEmployees.error.message}`);
@@ -255,6 +380,11 @@ export const uploadAttendance = async (file: File) => {
     const nameKey = employeeNameKey(row.name);
     if (nameKey && !employeeNameMap.has(nameKey)) employeeNameMap.set(nameKey, row);
   }
+  const findEmployeeByName = (name: unknown) => {
+    const exact = employeeNameMap.get(employeeNameKey(name));
+    if (exact) return exact;
+    return [...employeeNameMap.values()].find(row => employeeNamesMatch(name, row.name));
+  };
   // Merge uploads for the same month. Existing employees/dates not present in
   // this file remain; matching employee/date rows are refreshed.
   const periodStart = `${periodMonth}-01`;
@@ -263,9 +393,9 @@ export const uploadAttendance = async (file: File) => {
   const periodEnd = nextMonth.toISOString().slice(0, 10);
   const importResult = await client.from('attendance_imports').insert({ filename: file.name, period_month: periodMonth, row_count: parsed.length, status: 'processed' }).select('id').single();
   if (importResult.error) throw new Error(`Attendance import could not be created: ${importResult.error.message}`);
-  const records = parsed.map(row => {
+  const mappedRecords = parsed.map(row => {
     const email = String(row.email || `${row.employeeNumber || row.employeeName}@unknown.local`).trim().toLowerCase();
-    const employee = employeeMap.get(email) || employeeNumberMap.get(String(row.employeeNumber || '').trim()) || employeeNameMap.get(employeeNameKey(row.employeeName));
+    const employee = employeeMap.get(email) || employeeNumberMap.get(String(row.employeeNumber || '').trim()) || findEmployeeByName(row.employeeName);
     if (!employee) throw new Error(`Employee could not be matched: ${row.employeeName}`);
     const department = String(row.department || employee.department || '');
     const status = String(row.status);
@@ -292,6 +422,17 @@ export const uploadAttendance = async (file: File) => {
     }
     return { import_id: importResult.data.id, employee_id: employee.id, record_date: recordDate, status: finalStatus, time_in_raw: row.timeIn ? String(row.timeIn) : null, time_out_raw: row.timeOut ? String(row.timeOut) : null, work_hours: workHours, overtime_hours: overtimeHours, deduction_days: finalStatus === 'Absent' ? 1 : finalStatus === 'HALF_DAY' ? 0.5 : 0, policy_code: isIt(department) ? 'it' : 'non_it' };
   });
+  // Different source employee numbers can still resolve to the same canonical
+  // employee (for example SAHIL / sahil jha soft). Deduplicate only after
+  // resolving the employee ID, which is the database uniqueness key.
+  const uniqueMappedRecords = new Map<string, typeof mappedRecords[number]>();
+  for (const record of mappedRecords) {
+    const key = `${record.employee_id}|${record.record_date}`;
+    const current = uniqueMappedRecords.get(key);
+    const score = (value: typeof record) => Number(Boolean(value.time_in_raw)) + Number(Boolean(value.time_out_raw)) + Number(!['Absent', 'Missed Swipe'].includes(value.status));
+    if (!current || score(record) >= score(current)) uniqueMappedRecords.set(key, record);
+  }
+  const records = [...uniqueMappedRecords.values()];
   const incomingEmployeeIds = [...new Set(records.map(row => row.employee_id))];
   const reassignExisting = await client.from('attendance_records')
     .update({ import_id: importResult.data.id })
@@ -615,6 +756,78 @@ export const updateEmployee = async (id: number, data: { name?: string; email?: 
   }).eq('id', id).select().single();
   return directResult(saved, error);
 };
+export interface ShiftOption {
+  id: string;
+  name: string;
+  roleTarget: string;
+  startTime: string;
+  endTime: string;
+  graceMinutes: number;
+  isOvernight: boolean;
+}
+
+export interface EmployeeShiftAssignment extends ShiftOption {
+  assignmentId: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+}
+
+const mapShift = (row: any): ShiftOption => ({
+  id: row.id,
+  name: row.name,
+  roleTarget: row.roleTarget ?? row.role_target ?? 'GENERAL',
+  startTime: row.startTime ?? row.start_time,
+  endTime: row.endTime ?? row.end_time,
+  graceMinutes: Number(row.graceMinutes ?? row.grace_minutes ?? 15),
+  isOvernight: Boolean(row.isOvernight ?? row.is_overnight),
+});
+
+const mapAssignment = (row: any): EmployeeShiftAssignment => ({
+  ...mapShift(row.shift || row),
+  assignmentId: row.assignmentId ?? row.id,
+  effectiveFrom: row.effectiveFrom ?? row.effective_from,
+  effectiveTo: row.effectiveTo ?? row.effective_to ?? null,
+});
+
+export const getShiftOptions = async () => {
+  if (!supabaseConfigured) return api.get<ShiftOption[]>('/shifts').then(response => ({ data: response.data.map(mapShift) }));
+  const { data, error } = await directClient().from('shifts').select('*').eq('is_active', true).order('role_target').order('start_time');
+  return directResult((data || []).map(mapShift), error);
+};
+
+export const getEmployeeShiftAssignments = async (employeeId: number) => {
+  if (!supabaseConfigured) return api.get<EmployeeShiftAssignment[]>(`/shifts/employees/${employeeId}`).then(response => ({ data: response.data.map(mapAssignment) }));
+  const { data, error } = await directClient().from('employee_shifts').select('id,effective_from,effective_to,shift:shifts(*)').eq('employee_id', employeeId).order('effective_from', { ascending: false });
+  return directResult((data || []).map(mapAssignment), error);
+};
+
+export interface SaveEmployeeShiftInput {
+  shiftId?: string;
+  effectiveFrom: string;
+  effectiveTo?: string;
+  customShift?: { name: string; roleTarget: string; startTime: string; endTime: string; graceMinutes: number; isOvernight: boolean };
+}
+
+export const saveEmployeeShiftAssignment = async (employeeId: number, input: SaveEmployeeShiftInput) => {
+  if (!supabaseConfigured) return api.post<EmployeeShiftAssignment>(`/shifts/employees/${employeeId}`, input).then(response => ({ data: mapAssignment(response.data) }));
+  const client = directClient();
+  let shiftId = input.shiftId;
+  if (input.customShift) {
+    const created = await client.from('shifts').insert({
+      name: input.customShift.name,
+      role_target: input.customShift.roleTarget,
+      start_time: input.customShift.startTime,
+      end_time: input.customShift.endTime,
+      grace_minutes: input.customShift.graceMinutes,
+      is_overnight: input.customShift.isOvernight,
+    }).select('*').single();
+    if (created.error) throw new Error(created.error.message);
+    shiftId = created.data.id;
+  }
+  if (!shiftId) throw new Error('Select a shift or provide custom times');
+  const saved = await client.from('employee_shifts').insert({ employee_id: employeeId, shift_id: shiftId, effective_from: input.effectiveFrom, effective_to: input.effectiveTo || null }).select('id,effective_from,effective_to,shift:shifts(*)').single();
+  return directResult(saved.data ? mapAssignment(saved.data) : saved.data, saved.error);
+};
 export const uploadEmployeePhoto = (id: number, file: File) => {
   const fd = new FormData();
   fd.append('photo', file);
@@ -670,7 +883,7 @@ export const evaluateRules = async (uploadId: number, autoCreateDrafts = true) =
     client.from('attendance_rules').select('*').eq('is_active', true),
   ]);
   if (recordsError || rulesError) throw new Error(recordsError?.message || rulesError?.message);
-  const matches = (records || []).filter((row: any) => !['normal', 'weekend', 'holiday', 'official'].includes(String(row.status).toLowerCase()));
+  const matches = (records || []).filter((row: any) => !['normal', 'weekend', 'holiday', 'official', 'present'].includes(String(row.status).toLowerCase()));
   let draftsCreated = 0;
   if (autoCreateDrafts && matches.length) {
     // One draft per EMPLOYEE listing all of their flagged dates. Creating one
@@ -729,12 +942,22 @@ export const getAnalyticsOverview = async () => {
 };
 export const getMonthlyComparison = async () => {
   if (!supabaseConfigured) return api.get('/analytics/monthly-comparison');
-  const { data, error } = await directClient().from('attendance_imports').select('period_month,row_count').order('period_month');
-  return directResult((data || []).map((row: any) => ({ month: row.period_month, flagged: row.row_count, sent: 0 })), error);
+  const client = directClient();
+  const { data: imports, error: importsError } = await client.from('attendance_imports').select('id,period_month').order('period_month');
+  if (importsError) throw new Error(importsError.message);
+  const result = await Promise.all((imports || []).map(async (row: any) => {
+    const { count, error } = await client.from('attendance_records')
+      .select('id', { count: 'exact', head: true })
+      .eq('import_id', row.id)
+      .in('status', ['Absent', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'Half Day', 'HALF_DAY', 'LATE', 'ABSENT']);
+    if (error) throw new Error(error.message);
+    return { month: row.period_month, flagged: count || 0, sent: 0 };
+  }));
+  return { data: result };
 };
 export const getAnalyticsTrends = async (uploadId: number) => {
   if (!supabaseConfigured) return api.get(`/analytics/trends/${uploadId}`);
-  const { data, error } = await directClient().from('attendance_records').select('status,record_date').eq('import_id', uploadId);
+  const { data, error } = await directClient().from('attendance_records').select('status,record_date').eq('import_id', uploadId).in('status', ['Absent', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'Half Day', 'HALF_DAY', 'LATE', 'ABSENT']);
   if (error) throw new Error(error.message);
   const byStatus: Record<string, number> = {};
   const byDate: Record<string, number> = {};
