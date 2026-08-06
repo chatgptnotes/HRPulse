@@ -7,7 +7,6 @@
     "frontend"
   ],
   "scripts": {
-    "postinstall": "npm run prisma:generate --workspace=backend",
     "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
     "build": "npm run build --workspace=backend && npm run build --workspace=frontend"
   },
