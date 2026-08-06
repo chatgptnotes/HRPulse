@@ -821,6 +821,81 @@ export const getShiftOptions = async () => {
   return directResult((data || []).map(mapShift), error);
 };
 
+export interface ShiftWindow { start: string; end: string; days: number }
+export type DerivedTimings = Record<'morning' | 'evening' | 'night', ShiftWindow | undefined>;
+
+const minutesToClock = (value: number) => {
+  const wrapped = ((Math.round(value) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(wrapped / 60)).padStart(2, '0')}:${String(wrapped % 60).padStart(2, '0')}`;
+};
+const median = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor((sorted.length - 1) / 2)];
+};
+
+// Nobody has shift timings on record, so the only real source is what people
+// actually punched. Group each employee's days into morning/evening/night by
+// punch-in and take the median of each — a median so one stray 02:00 punch
+// cannot drag a whole shift. Read-only: nothing is written back to employees,
+// which would switch on the importer's shift detection.
+export const getDerivedShiftTimings = async () => {
+  if (!supabaseConfigured) return { data: new Map<number, DerivedTimings>() };
+  const client = directClient();
+  const records = await fetchAllRows<any>((from, to) => client.from('attendance_records')
+    .select('employee_id,time_in_raw,time_out_raw')
+    .not('time_in_raw', 'is', null)
+    .not('time_out_raw', 'is', null)
+    .range(from, to));
+  if (records.error) throw new Error(records.error.message);
+
+  const buckets = new Map<number, Record<string, { in: number[]; out: number[] }>>();
+  for (const row of records.data || []) {
+    const start = timeValueToMinutes(row.time_in_raw);
+    const end = timeValueToMinutes(row.time_out_raw);
+    if (start === null || end === null) continue;
+    const name = start < 12 * 60 ? 'morning' : start < 18 * 60 ? 'evening' : 'night';
+    const perEmployee = buckets.get(row.employee_id) || {};
+    const bucket = perEmployee[name] || { in: [], out: [] };
+    bucket.in.push(start);
+    // Keep overnight spans monotonic so the median is not pulled backwards.
+    bucket.out.push(end < start ? end + 1440 : end);
+    perEmployee[name] = bucket;
+    buckets.set(row.employee_id, perEmployee);
+  }
+
+  const derived = new Map<number, DerivedTimings>();
+  for (const [employeeId, perEmployee] of buckets) {
+    const timings: DerivedTimings = { morning: undefined, evening: undefined, night: undefined };
+    let any = false;
+    for (const name of ['morning', 'evening', 'night'] as const) {
+      const bucket = perEmployee[name];
+      // Three days is the floor for calling something a pattern rather than a one-off.
+      if (!bucket || bucket.in.length < 3) continue;
+      timings[name] = { start: minutesToClock(median(bucket.in)), end: minutesToClock(median(bucket.out)), days: bucket.in.length };
+      any = true;
+    }
+    if (any) derived.set(employeeId, timings);
+  }
+  return { data: derived };
+};
+
+// One query for the whole table so the employee list does not fire a request
+// per row. Empty until shifts are assigned from the M / E / N modal.
+export const getAllShiftAssignments = async () => {
+  if (!supabaseConfigured) return { data: new Map<number, EmployeeShiftAssignment>() };
+  const { data, error } = await directClient().from('employee_shifts')
+    .select('id,employee_id,effective_from,effective_to,shift:shifts(*)')
+    .order('effective_from', { ascending: false });
+  if (error) throw new Error(error.message);
+  const latest = new Map<number, EmployeeShiftAssignment>();
+  const today = new Date().toISOString().slice(0, 10);
+  for (const row of data || []) {
+    if (row.effective_to && String(row.effective_to) < today) continue;
+    if (!latest.has(row.employee_id)) latest.set(row.employee_id, mapAssignment(row));
+  }
+  return { data: latest };
+};
+
 export const getEmployeeShiftAssignments = async (employeeId: number) => {
   if (!supabaseConfigured) return api.get<EmployeeShiftAssignment[]>(`/shifts/employees/${employeeId}`).then(response => ({ data: response.data.map(mapAssignment) }));
   const { data, error } = await directClient().from('employee_shifts').select('id,effective_from,effective_to,shift:shifts(*)').eq('employee_id', employeeId).order('effective_from', { ascending: false });

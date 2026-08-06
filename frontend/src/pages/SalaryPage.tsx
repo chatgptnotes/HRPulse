@@ -63,7 +63,9 @@ export default function SalaryPage() {
     return (employees as any[]).map(emp => {
       const deduction = deductionMap.get(emp.id);
       const config = configMap.get(emp.id);
-      const hasAttendance = !!deduction;
+      // An employee with only absent rows still gets a deductions entry, so
+      // "has attendance" means at least one day actually worked.
+      const hasAttendance = !!deduction && Number(deduction.presentDays || 0) > 0;
       const hasSalary = Number(config?.basicSalary || 0) > 0;
       const hasLop = Number(deduction?.lopAmount || 0) > 0;
       return { emp, deduction, config, hasAttendance, hasSalary, hasLop };
@@ -106,7 +108,7 @@ export default function SalaryPage() {
   }), [rows]);
 
   const printSalarySheet = (company: string) => {
-    const printable = rows.filter(row => row.hasSalary && (company === 'All' || companyOf(row.emp) === company));
+    const printable = rows.filter(row => row.hasSalary && row.hasAttendance && (company === 'All' || companyOf(row.emp) === company));
     const money = (value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
     const body = printable.map(({ emp, config: cfg, deduction: ded }) => {
       const salary = Number(cfg?.basicSalary || 0);
