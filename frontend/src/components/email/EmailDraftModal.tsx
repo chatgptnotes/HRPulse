@@ -10,14 +10,16 @@ interface Props {
   employeeEmail: string;
   onClose: () => void;
   onSent: () => void;
+  initialTab?: 'draft' | 'records';
+  recordsOnly?: boolean;
 }
 
-export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent }: Props) {
+export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false }: Props) {
   const qc = useQueryClient();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [draftId, setDraftId] = useState<number | null>(null);
-  const [tab, setTab] = useState<'draft' | 'records'>('draft');
+  const [tab, setTab] = useState<'draft' | 'records'>(initialTab);
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -76,7 +78,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between">
           <div>
-            <h3 className="font-semibold text-slate-800">Email Draft Preview</h3>
+            <h3 className="font-semibold text-slate-800">{tab === 'records' ? 'Attendance Details' : 'Email Draft Preview'}</h3>
             <p className="text-sm text-slate-500 mt-0.5">{employeeName} · {employeeEmail}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
@@ -151,22 +153,16 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
           </div>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium">
-              Cancel
+              {recordsOnly ? 'Close' : 'Cancel'}
             </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 text-sm text-brand-700 bg-brand-50 border border-brand-200 rounded-lg hover:bg-brand-100 font-medium"
-            >
-              {saving ? 'Saving...' : 'Save Draft'}
-            </button>
-            <button
-              onClick={handleSend}
-              disabled={sending || !draftId}
-              className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg font-medium"
-            >
-              {sending ? 'Sending...' : 'Send Email'}
-            </button>
+            {!recordsOnly && <>
+              <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm text-brand-700 bg-brand-50 border border-brand-200 rounded-lg hover:bg-brand-100 font-medium">
+                {saving ? 'Saving...' : 'Save Draft'}
+              </button>
+              <button onClick={handleSend} disabled={sending || !draftId} className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg font-medium">
+                {sending ? 'Sending...' : 'Send Email'}
+              </button>
+            </>}
           </div>
         </div>
       </div>

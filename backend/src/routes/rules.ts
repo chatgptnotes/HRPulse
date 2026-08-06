@@ -4,11 +4,27 @@ import { evaluateRulesForUpload } from '../services/ruleEngine';
 import { computeDeductionsForUpload } from '../services/deductionService';
 import { FLAGGED_STATUSES } from '../services/attendanceStatus';
 import { toDateOnly } from '../utils/date';
+import { generateRuleFromPolicy } from '../services/geminiService';
 
 const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
   res.json(await prisma.attendanceRule.findMany({ orderBy: [{ priority: 'asc' }, { createdAt: 'desc' }] }));
+});
+
+router.post('/generate', async (req: Request, res: Response) => {
+  const policy = typeof req.body?.policy === 'string' ? req.body.policy.trim() : '';
+  if (policy.length < 10 || policy.length > 5000) {
+    res.status(400).json({ error: 'Describe the policy in 10 to 5000 characters' });
+    return;
+  }
+  try {
+    res.json(await generateRuleFromPolicy(policy));
+  } catch (error) {
+    console.error('Gemini rule generation failed:', error);
+    const message = error instanceof Error ? error.message : 'Unable to generate rule';
+    res.status(message.includes('not configured') ? 503 : 502).json({ error: message });
+  }
 });
 
 router.post('/', async (req: Request, res: Response) => {

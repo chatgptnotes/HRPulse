@@ -19,13 +19,13 @@ export default function HistoryPage() {
   );
 
   return (
-    <div className="p-6 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="w-full min-w-0 p-4 sm:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Email History</h1>
           <p className="text-sm text-slate-500 mt-0.5">Track all dispatched attendance emails</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -42,7 +42,8 @@ export default function HistoryPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="text-left px-4 py-3 font-semibold text-slate-600">Employee</th>
@@ -78,6 +79,7 @@ export default function HistoryPage() {
             ))}
           </tbody>
         </table>
+        </div>
         {filtered.length === 0 && (
           <div className="text-center py-12 text-slate-400">
             No email history found for {month}

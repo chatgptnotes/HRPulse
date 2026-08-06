@@ -4,7 +4,7 @@ import * as api from '../api';
 
 export default function SettingsPage() {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<'smtp' | 'ollama' | 'templates' | 'company'>('smtp');
+  const [tab, setTab] = useState<'smtp' | 'templates' | 'company'>('smtp');
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [templates, setTemplates] = useState<any[]>([]);
   const [editTemplate, setEditTemplate] = useState<Record<string, { subject: string; body: string }>>({});
@@ -54,30 +54,19 @@ export default function SettingsPage() {
     } finally { setTesting(false); }
   };
 
-  const testOllama = async () => {
-    setTesting(true);
-    await saveSettings();
-    try {
-      const { data } = await api.testOllama();
-      const d = data as any;
-      showToast(d.ok ? `Ollama OK — models: ${d.models?.join(', ') || 'none'}` : `Ollama error: ${d.error}`, d.ok ? 'ok' : 'err');
-    } finally { setTesting(false); }
-  };
-
   const TABS = [
     { key: 'smtp', label: 'SMTP Email' },
-    { key: 'ollama', label: 'Ollama AI' },
     { key: 'templates', label: 'Email Templates' },
     { key: 'company', label: 'Company Info' },
   ];
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="w-full min-w-0 max-w-4xl p-4 sm:p-6">
       <h1 className="text-xl font-bold text-slate-800 mb-1">Settings</h1>
-      <p className="text-sm text-slate-500 mb-6">Configure SMTP, Ollama, email templates and company info</p>
+      <p className="text-sm text-slate-500 mb-6">Configure email, templates and company information</p>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-slate-100 rounded-xl p-1 w-fit">
+      <div className="flex flex-wrap gap-1 mb-6 bg-slate-100 rounded-xl p-1 w-fit max-w-full">
         {TABS.map(t => (
           <button
             key={t.key}
@@ -145,31 +134,6 @@ export default function SettingsPage() {
               <button onClick={saveSettings} className="bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-brand-700">Save</button>
               <button onClick={testSMTP} disabled={testing} className="border border-slate-200 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-50 disabled:opacity-50">
                 {testing ? 'Testing...' : 'Test Connection'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {tab === 'ollama' && (
-          <div className="space-y-4">
-            <h2 className="font-semibold text-slate-700">Ollama AI Configuration</h2>
-            <Field label="Ollama URL" value={settings['ollama_url'] || 'http://localhost:11434'} onChange={v => set('ollama_url', v)} />
-            <Field label="Model Name" value={settings['ollama_model'] || 'llama3.1:8b'} onChange={v => set('ollama_model', v)} placeholder="llama3.1:8b" />
-            <Field label="Working Days per Month" value={settings['working_days'] || '26'} onChange={v => set('working_days', v)} placeholder="26" />
-            <div>
-              <label className="text-sm text-slate-600 block mb-1">Missed Swipe counts as (fraction of a day)</label>
-              <input
-                type="number" step="0.1" min="0" max="1"
-                value={settings['missed_swipe_weight'] || '0.5'}
-                onChange={e => set('missed_swipe_weight', e.target.value)}
-                className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-              />
-              <span className="text-xs text-slate-400 ml-2">0.5 = half day, 1 = full day</span>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button onClick={saveSettings} className="bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-brand-700">Save</button>
-              <button onClick={testOllama} disabled={testing} className="border border-slate-200 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-50 disabled:opacity-50">
-                {testing ? 'Testing...' : 'Test Ollama'}
               </button>
             </div>
           </div>

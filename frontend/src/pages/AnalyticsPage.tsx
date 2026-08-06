@@ -46,7 +46,7 @@ export default function AnalyticsPage() {
     : [];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="w-full min-w-0 p-4 sm:p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Analytics</h1>
         <p className="text-slate-500 text-sm mt-1">Attendance trends, patterns, and insights across all periods.</p>
@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* Upload selector for drill-down */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm font-medium text-slate-700">Drill down by upload:</label>
         <select
           className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white"

@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
-import { generateEmailDraft } from '../services/ollamaService';
 import { sendEmail } from '../services/emailService';
 import { computeDeductionsForUpload } from '../services/deductionService';
 import { NON_FLAGGED_STATUSES } from '../services/attendanceStatus';
@@ -8,6 +7,10 @@ import { format, subMonths, parseISO } from 'date-fns';
 import { toDateOnly } from '../utils/date';
 
 const router = Router();
+
+function renderTemplate(template: string, values: Record<string, string>): string {
+  return template.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_match, key: string) => values[key] ?? '');
+}
 
 async function getSettings() {
   const rows = await prisma.setting.findMany();
@@ -71,11 +74,20 @@ router.post('/generate/:uploadId', async (req: Request, res: Response) => {
       const lopAmount = deductionByEmployee.get(emp.id)?.lopAmount ?? 0;
 
       try {
-        const { subject, body } = await generateEmailDraft(
-          emp.name, emp.email, periodMonth,
-          records.map(r => ({ recordDate: toDateOnly(r.recordDate), status: r.status })),
-          template.subject, template.body, lopAmount
-        );
+        const recordsTable = records
+          .map(r => `${toDateOnly(r.recordDate)} — ${r.status}`)
+          .join('\n');
+        const values = {
+          employee_name: emp.name,
+          period_month: periodMonth,
+          flagged_count: String(records.length),
+          records_table: recordsTable,
+          lop_amount: lopAmount.toFixed(2),
+          company_name: settings.company_name || 'Your Company',
+          hr_name: settings.hr_name || 'HR Department',
+        };
+        const subject = renderTemplate(template.subject, values);
+        const body = renderTemplate(template.body, values);
 
         await prisma.emailDraft.upsert({
           where: { uploadId_employeeId: { uploadId, employeeId: emp.id } },

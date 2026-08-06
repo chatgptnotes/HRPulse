@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
 import { toDateOnly } from '../utils/date';
-import { NON_FLAGGED_STATUSES } from '../services/attendanceStatus';
+import { FLAGGED_STATUSES } from '../services/attendanceStatus';
 
 const router = Router();
 
@@ -18,7 +18,7 @@ router.get('/overview', async (_req: Request, res: Response) => {
 router.get('/trends/:uploadId', async (req: Request, res: Response) => {
   const uploadId = parseInt(req.params.uploadId);
   const records = await prisma.attendanceRecord.findMany({
-    where: { uploadId, status: { notIn: NON_FLAGGED_STATUSES } },
+    where: { uploadId, status: { in: FLAGGED_STATUSES } },
     include: { employee: { select: { name: true } } },
   });
 
@@ -37,7 +37,7 @@ router.get('/trends/:uploadId', async (req: Request, res: Response) => {
 
   const topOffenders = await prisma.attendanceRecord.groupBy({
     by: ['employeeId'],
-    where: { uploadId, status: { notIn: NON_FLAGGED_STATUSES } },
+    where: { uploadId, status: { in: FLAGGED_STATUSES } },
     _count: { id: true },
     orderBy: { _count: { id: 'desc' } },
     take: 10,
@@ -56,7 +56,7 @@ router.get('/trends/:uploadId', async (req: Request, res: Response) => {
 router.get('/monthly-comparison', async (_req: Request, res: Response) => {
   const uploads = await prisma.attendanceUpload.findMany({ orderBy: { uploadedAt: 'desc' }, take: 6 });
   const result = await Promise.all(uploads.map(async u => {
-    const flagged = await prisma.attendanceRecord.count({ where: { uploadId: u.id, status: { notIn: NON_FLAGGED_STATUSES } } });
+    const flagged = await prisma.attendanceRecord.count({ where: { uploadId: u.id, status: { in: FLAGGED_STATUSES } } });
     const sent = await prisma.emailHistory.count({ where: { uploadId: u.id, status: 'sent' } });
     return { month: u.periodMonth, flagged, sent, employees: u.rowCount };
   }));

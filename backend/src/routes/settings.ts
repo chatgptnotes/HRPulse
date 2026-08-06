@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
 import { testSmtp } from '../services/emailService';
-import { testOllamaConnection } from '../services/ollamaService';
 
 const router = Router();
 
@@ -34,10 +33,6 @@ router.put('/templates/:type', async (req: Request, res: Response) => {
 
 router.post('/test-smtp', async (_req: Request, res: Response) => {
   res.json(await testSmtp());
-});
-
-router.post('/test-ollama', async (_req: Request, res: Response) => {
-  res.json(await testOllamaConnection());
 });
 
 export default router;

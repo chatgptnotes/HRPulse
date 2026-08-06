@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -14,11 +16,21 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await login(email, password);
+      navigate('/', { replace: true });
     } catch (err: unknown) {
-      // Show the server's message when it is a string; never render an object
-      // (React throws on that) and never expose an unexpected shape.
-      const detail = (err as { response?: { data?: { error?: unknown } } })?.response?.data?.error;
-      setError(typeof detail === 'string' ? detail : 'Unable to sign in. Please try again.');
+      // Show a safe, useful message from Supabase or the compatibility API.
+      // Do not render an unknown object directly because React cannot render it.
+      const value = err as {
+        message?: unknown;
+        response?: { data?: { error?: unknown } };
+      };
+      const detail = value?.response?.data?.error;
+      const message = typeof detail === 'string'
+        ? detail
+        : typeof value?.message === 'string'
+          ? value.message
+          : 'Unable to sign in. Please check the email and password.';
+      setError(message);
     } finally {
       setBusy(false);
     }
