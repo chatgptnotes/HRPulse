@@ -673,12 +673,42 @@ export const evaluateRules = async (uploadId: number, autoCreateDrafts = true) =
   const matches = (records || []).filter((row: any) => !['normal', 'weekend', 'holiday', 'official'].includes(String(row.status).toLowerCase()));
   let draftsCreated = 0;
   if (autoCreateDrafts && matches.length) {
-    const existing = await client.from('email_messages').select('employee_id').eq('import_id', uploadId);
+    // One draft per EMPLOYEE listing all of their flagged dates. Creating one
+    // per flagged record produced dozens of near-identical emails per person
+    // (93 for a single employee at worst).
+    const byEmployee = new Map<number, { date: string; status: string }[]>();
+    for (const row of matches) {
+      if (!row.employee_id) continue;
+      const list = byEmployee.get(row.employee_id) || [];
+      list.push({ date: row.record_date, status: row.status });
+      byEmployee.set(row.employee_id, list);
+    }
+    // Dedupe against drafts already queued for this employee — including
+    // orphans (import_id NULL) left behind when an earlier upload was deleted,
+    // which an import-scoped check silently missed and re-created every run.
+    const existing = await client
+      .from('email_messages')
+      .select('employee_id')
+      .in('employee_id', [...byEmployee.keys()])
+      .is('sent_at', null)
+      .eq('status', 'draft');
+    if (existing.error) throw new Error(existing.error.message);
     const existingIds = new Set((existing.data || []).map((row: any) => row.employee_id));
-    const drafts = matches.filter((row: any) => !existingIds.has(row.employee_id)).map((row: any) => ({
-      import_id: uploadId, employee_id: row.employee_id, template_type: 'initial',
-      subject: 'Attendance clarification required', body: `Please clarify the attendance record dated ${row.record_date} marked as ${row.status}.`, status: 'draft',
-    }));
+
+    const drafts = [...byEmployee.entries()]
+      .filter(([employeeId]) => !existingIds.has(employeeId))
+      .map(([employeeId, items]) => {
+        const sorted = [...items].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        const lines = sorted.map(i => `  • ${i.date} — ${i.status}`).join('\n');
+        return {
+          import_id: uploadId,
+          employee_id: employeeId,
+          template_type: 'initial',
+          subject: 'Attendance clarification required',
+          body: `Please clarify the following ${sorted.length} attendance record${sorted.length !== 1 ? 's' : ''}:\n\n${lines}`,
+          status: 'draft',
+        };
+      });
     if (drafts.length) { const saved = await client.from('email_messages').insert(drafts); if (saved.error) throw new Error(saved.error.message); draftsCreated = drafts.length; }
   }
   return { data: { matches, draftsCreated, employeesEvaluated: new Set(matches.map((row: any) => row.employee_id)).size } };

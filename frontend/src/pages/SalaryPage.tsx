@@ -15,6 +15,14 @@ export default function SalaryPage() {
   const [filter, setFilter] = useState('attendance');
   const [showPrintOptions, setShowPrintOptions] = useState(false);
   const [attendanceEmployee, setAttendanceEmployee] = useState<any | null>(null);
+  // Which attendance statuses the details modal should list. null = all records.
+  const [attendanceFilter, setAttendanceFilter] = useState<{ statuses: string[]; label: string } | null>(null);
+
+  const openAttendance = (emp: any, filter: { statuses: string[]; label: string } | null = null) => {
+    if (!latestUpload?.id) return;
+    setAttendanceFilter(filter);
+    setAttendanceEmployee(emp);
+  };
 
   const { data: employees = [] } = useQuery({ queryKey: ['employees'], queryFn: () => api.getEmployees().then(r => r.data as any[]) });
   const { data: configs = [] } = useQuery({ queryKey: ['salary-configs', month], queryFn: () => api.getSalaryConfigs(month).then(r => r.data as any[]) });
@@ -173,7 +181,7 @@ export default function SalaryPage() {
               return (
                 <tr key={emp.id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="sticky left-0 z-[1] max-w-0 overflow-hidden bg-white px-1.5 py-2.5 shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
-                    <button type="button" onClick={() => latestUpload?.id && setAttendanceEmployee(emp)} className="w-full text-left" title="Open attendance details">
+                    <button type="button" onClick={() => openAttendance(emp)} className="w-full text-left" title="Open attendance details">
                       <p className="break-words font-medium leading-tight text-slate-800 hover:text-brand-600" title={emp.name}>{emp.name}</p>
                       {emp.email && <p className="break-all text-[10px] leading-tight text-slate-400" title={emp.email}>{emp.email}</p>}
                       <span className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${!hasAttendance ? 'bg-slate-100 text-slate-500' : ded?.lopAmount ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
@@ -188,8 +196,19 @@ export default function SalaryPage() {
                     )}
                     {!hasSalary && <p className="mt-1 text-[10px] font-medium text-amber-600">Missing salary</p>}
                   </td>
-                  <td className="px-0.5 py-2.5 text-center font-medium text-emerald-700"><button type="button" onClick={() => latestUpload?.id && setAttendanceEmployee(emp)} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View attendance dates">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
-                  <td className="px-0.5 py-2.5 text-center text-slate-600">{ded?.absentDays ?? '—'}</td>
+                  <td className="px-0.5 py-2.5 text-center font-medium text-emerald-700"><button type="button" onClick={() => openAttendance(emp)} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View attendance dates">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
+                  <td className="px-0.5 py-2.5 text-center text-slate-600">
+                    {ded && Number(ded.absentDays || 0) > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => openAttendance(emp, { statuses: ['Absent'], label: 'Absent Dates' })}
+                        className="rounded px-1.5 py-0.5 font-medium text-red-600 hover:bg-red-50 hover:underline"
+                        title="View the dates this employee was absent"
+                      >
+                        {ded.absentDays}
+                      </button>
+                    ) : (ded?.absentDays ?? '—')}
+                  </td>
                   <td className="px-0.5 py-2.5 text-center text-slate-600">{ded?.halfDays ?? '—'}</td>
                   <td className="px-0.5 py-2.5 text-center text-slate-600">{ded?.lateOccurrences ?? '—'}</td>
                   <td className="px-0.5 py-2.5 text-center font-medium text-indigo-600">{ded?.overtimeEligibleDays || '—'}</td>
@@ -246,8 +265,10 @@ export default function SalaryPage() {
           employeeEmail={attendanceEmployee.email || ''}
           initialTab="records"
           recordsOnly
-          onClose={() => setAttendanceEmployee(null)}
-          onSent={() => setAttendanceEmployee(null)}
+          filterStatuses={attendanceFilter?.statuses}
+          filterLabel={attendanceFilter?.label}
+          onClose={() => { setAttendanceEmployee(null); setAttendanceFilter(null); }}
+          onSent={() => { setAttendanceEmployee(null); setAttendanceFilter(null); }}
         />
       )}
     </div>

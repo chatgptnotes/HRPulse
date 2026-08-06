@@ -12,9 +12,13 @@ interface Props {
   onSent: () => void;
   initialTab?: 'draft' | 'records';
   recordsOnly?: boolean;
+  /** Show only records whose status matches one of these (case-insensitive). */
+  filterStatuses?: string[];
+  /** Heading shown in place of "Attendance Details" when filtering. */
+  filterLabel?: string;
 }
 
-export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false }: Props) {
+export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false, filterStatuses, filterLabel }: Props) {
   const qc = useQueryClient();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -71,7 +75,13 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
   };
 
   const flaggedRecords = records.filter((r: any) => !['Normal', 'Weekend', 'Holiday'].includes(r.status));
-  const visibleRecords = recordsOnly ? records : flaggedRecords;
+  const baseRecords = recordsOnly ? records : flaggedRecords;
+  // When a specific column is clicked (e.g. Absent Days) show only the dates
+  // behind that number, so the count and the listed dates always agree.
+  const wanted = filterStatuses?.map(s => s.toLowerCase());
+  const visibleRecords = wanted
+    ? baseRecords.filter((r: any) => wanted.includes(String(r.status || '').trim().toLowerCase()))
+    : baseRecords;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -79,7 +89,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between">
           <div>
-            <h3 className="font-semibold text-slate-800">{tab === 'records' ? 'Attendance Details' : 'Email Draft Preview'}</h3>
+            <h3 className="font-semibold text-slate-800">{tab === 'records' ? (filterLabel || 'Attendance Details') : 'Email Draft Preview'}</h3>
             <p className="text-sm text-slate-500 mt-0.5">{employeeName} · {employeeEmail}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
@@ -93,7 +103,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
               onClick={() => setTab(t as any)}
               className={`pb-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
             >
-              {t === 'draft' ? 'Email Draft' : `Attendance Records (${visibleRecords.length})`}
+              {t === 'draft' ? 'Email Draft' : `${filterLabel || 'Attendance Records'} (${visibleRecords.length})`}
             </button>
           ))}
         </div>
@@ -142,6 +152,9 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                   ))}
                 </tbody>
               </table>
+              {visibleRecords.length === 0 && (
+                <p className="py-8 text-center text-sm text-slate-400">No matching attendance dates for this employee.</p>
+              )}
             </div>
           )}
         </div>
