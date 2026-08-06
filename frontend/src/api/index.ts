@@ -634,6 +634,18 @@ export const getSalaryDeductions = async (uploadId: number) => {
     // ladder. Matched here rather than by organisation alone because the IT
     // team is recorded as "Rafttar/Hope".
     const rafttarStaff = /rafttar/i.test(`${employee.organisation || ''} ${employee.entity || ''} ${employee.department || ''}`);
+
+    // Sunday is a paid weekly off for Rafttar, and an ordinary working day for
+    // hospital staff. Taken from the calendar rather than the imported status,
+    // because the importer only ever stamped Weekend on the one employee whose
+    // department literally read "IT". One paid day whether or not they punched.
+    const isSunday = new Date(`${String(row.record_date).slice(0, 10)}T00:00:00Z`).getUTCDay() === 0;
+    if (rafttarStaff && isSunday) {
+      item.presentDays++;
+      grouped.set(row.employee_id, item);
+      continue;
+    }
+
     const workingDay = !['absent', 'weekend', 'holiday', 'paid leave'].includes(status);
     const hours = row.work_hours === null || row.work_hours === undefined ? null : Number(row.work_hours);
 
