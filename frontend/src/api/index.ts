@@ -685,13 +685,11 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const excessLeaveDeduction = excessPaidLeave * dailySalary;
     const totalLopAmount = absenceDeduction + halfDayDeduction + lateDeduction + excessLeaveDeduction;
     const lopDays = chargeableAbsentDays + item.halfDays * 0.5 + lateDeductionCount + excessPaidLeave;
-    // Hospital staff are paid for the extra shift credit earned above one day.
-    // Rafttar overtime is pro-rata on the hours beyond eight, where eight hours
-    // is a full day, so the hourly rate is a thirtieth of salary over eight.
-    const extraDayAmount = item.extraDays * dailySalary;
-    const overtimeAmount = item.overtimeHours * (dailySalary / 8);
+    // Extra shifts and overtime are measured but not paid: net pay is salary
+    // less LOP and nothing else. extraDays and overtimeHours stay on the result
+    // so the measurement survives if a rate is ever agreed.
     const displayedPaidLeave = item.paidLeaveUsed + protectedAbsentDays;
-    return { ...item, isIt, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, extraDayAmount, overtimeAmount, netPayable: Math.max(0, basicSalary - totalLopAmount + extraDayAmount + overtimeAmount), dailySalary, totalLopAmount, basicSalary };
+    return { ...item, isIt, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, netPayable: Math.max(0, basicSalary - totalLopAmount), dailySalary, totalLopAmount, basicSalary };
   });
   // Deductions are derived on every read, so there is nothing to cache back to
   // the database. The previous write-back also stored an undefined
