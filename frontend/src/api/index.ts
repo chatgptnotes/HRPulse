@@ -627,25 +627,42 @@ export const getSalaryDeductions = async (uploadId: number) => {
   const grouped = new Map<number, any>();
   for (const row of payrollRows as any[]) {
     const employee = row.employees || {};
-    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, absentDays: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, overtimeEligibleDays: 0, itRecords: 0 };
+    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, absentDays: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, extraDays: 0, overtimeEligibleDays: 0, itRecords: 0 };
     if (String(row.policy_code || '').toLowerCase() === 'it') item.itRecords++;
     const status = String(row.status || '').toLowerCase();
-    // Present days show actual attendance only: full days for normal/late/early
-    // attendance and half a day when the employee worked a half shift. Paid
-    // leave, weekly offs, holidays, absences and missed swipes are not present.
-    if (['normal', 'present', 'late', 'late coming', 'early leaving'].includes(status)) item.presentDays++;
+    // Rafttar is the exception; every other entity follows the hospital shift
+    // ladder. Matched here rather than by organisation alone because the IT
+    // team is recorded as "Rafttar/Hope".
+    const rafttarStaff = /rafttar/i.test(`${employee.organisation || ''} ${employee.entity || ''} ${employee.department || ''}`);
+    const workingDay = !['absent', 'weekend', 'holiday', 'paid leave'].includes(status);
+    const hours = row.work_hours === null || row.work_hours === undefined ? null : Number(row.work_hours);
+
+    if (workingDay && hours !== null) {
+      if (rafttarStaff) {
+        // Standard 09:00-18:00 day. Overtime is earned only once the excess
+        // beyond eight hours passes two hours; anything less is one shift.
+        item.presentDays++;
+        if (hours - 8 > 2) item.overtimeHours += hours - 8;
+        if (hours < halfDayHours) item.halfDays++;
+      } else {
+        // Hospital ladder: under 7h is half a day, 7-10h is a full day, beyond
+        // 10h earns half a shift extra and 12h or more counts as two shifts.
+        // The 7h floor is a grace band for staff who fall minutes short.
+        const credit = hours >= 12 ? 2 : hours > 10 ? 1.5 : hours >= 7 ? 1 : 0.5;
+        item.presentDays += credit;
+        if (credit > 1) item.extraDays += credit - 1;
+        if (credit === 0.5) item.halfDays++;
+      }
+    } else if (['normal', 'present', 'late', 'late coming', 'early leaving'].includes(status)) {
+      // A working day with no usable punch span still counts as attendance.
+      item.presentDays++;
+    }
     if (status === 'half_day' || status === 'half day') item.presentDays += 0.5;
     if (status === 'absent') item.absentDays++;
     if (status.includes('missed') || status.includes('incomplete')) item.missedSwipeDays++;
     const checkInMinutes = timeInMinutes(row.time_in);
     if (status.includes('late') || (checkInMinutes !== null && checkInMinutes > lateAfterMinutes)) item.lateOccurrences++;
     if (status.includes('paid leave') || status.includes('casual leave') || status.includes('sick leave')) item.paidLeaveUsed++;
-    const overtimeHours = Number(row.overtime_hours || 0);
-    item.overtimeHours += overtimeHours;
-    // OT is a fixed daily allowance, earned only after more than two hours
-    // beyond the employee's scheduled shift on that attendance date.
-    if (overtimeHours > 2) item.overtimeEligibleDays++;
-    if (row.work_hours !== null && row.work_hours !== undefined && Number(row.work_hours) < halfDayHours && !['absent', 'weekend', 'holiday', 'paid leave'].includes(status)) item.halfDays++;
     grouped.set(row.employee_id, item);
   }
   const result = [...grouped.values()].map(item => {
@@ -668,9 +685,13 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const excessLeaveDeduction = excessPaidLeave * dailySalary;
     const totalLopAmount = absenceDeduction + halfDayDeduction + lateDeduction + excessLeaveDeduction;
     const lopDays = chargeableAbsentDays + item.halfDays * 0.5 + lateDeductionCount + excessPaidLeave;
-    const overtimeAmount = item.overtimeEligibleDays * dailySalary * 0.5;
+    // Hospital staff are paid for the extra shift credit earned above one day.
+    // Rafttar overtime is pro-rata on the hours beyond eight, where eight hours
+    // is a full day, so the hourly rate is a thirtieth of salary over eight.
+    const extraDayAmount = item.extraDays * dailySalary;
+    const overtimeAmount = item.overtimeHours * (dailySalary / 8);
     const displayedPaidLeave = item.paidLeaveUsed + protectedAbsentDays;
-    return { ...item, isIt, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, overtimeAmount, netPayable: Math.max(0, basicSalary - totalLopAmount + overtimeAmount), dailySalary, totalLopAmount, basicSalary };
+    return { ...item, isIt, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, extraDayAmount, overtimeAmount, netPayable: Math.max(0, basicSalary - totalLopAmount + extraDayAmount + overtimeAmount), dailySalary, totalLopAmount, basicSalary };
   });
   // Deductions are derived on every read, so there is nothing to cache back to
   // the database. The previous write-back also stored an undefined

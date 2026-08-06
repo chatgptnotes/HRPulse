@@ -48,9 +48,11 @@ export default function SalaryPage() {
 
   const companyOf = (emp: any) => {
     const value = [emp.organisation, emp.organisation_name, emp.organization, emp.company, emp.entity, emp.department].filter(Boolean).join(' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+    // Rafttar first: the IT team is recorded as "Rafttar/Hope", and matching
+    // Hope first would file them under the hospital.
+    if (value.includes('rafttar')) return 'Rafttar';
     if (value.includes('ayushman')) return 'Ayushman';
     if (value.includes('hope')) return 'Hope';
-    if (value.includes('rafttar')) return 'Rafttar';
     if (/(^|[^a-z])it([^a-z]|$)|information technology/.test(value)) return 'IT';
     return 'Other';
   };
@@ -109,13 +111,13 @@ export default function SalaryPage() {
     const body = printable.map(({ emp, config: cfg, deduction: ded }) => {
       const salary = Number(cfg?.basicSalary || 0);
       const lop = Number(ded?.lopAmount || 0);
-      const overtime = Number(ded?.overtimeAmount || 0);
+      const overtime = Number(ded?.overtimeAmount || 0) + Number(ded?.extraDayAmount || 0);
       const net = Math.max(0, salary - lop + overtime);
-      return `<tr><td>${emp.name || ''}</td><td>${companyOf(emp)}</td><td>${money(salary)}</td><td>${ded?.overtimeEligibleDays ?? 0}</td><td>${money(overtime)}</td><td>${ded?.lopDays ?? 0}</td><td>${money(lop)}</td><td>${money(net)}</td></tr>`;
+      return `<tr><td>${emp.name || ''}</td><td>${companyOf(emp)}</td><td>${money(salary)}</td><td>${Number(ded?.extraDays || 0) || Number(ded?.overtimeHours || 0).toFixed(1)}</td><td>${money(overtime)}</td><td>${ded?.lopDays ?? 0}</td><td>${money(lop)}</td><td>${money(net)}</td></tr>`;
     }).join('');
     const popup = window.open('', '_blank', 'width=1100,height=750');
     if (!popup) return;
-    popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+3),th:nth-child(n+3){text-align:right}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick="window.print()">Print</button><table><thead><tr><th>Employee</th><th>Company</th><th>Salary (₹)</th><th>OT Hours</th><th>LOP Days</th><th>LOP Amount (₹)</th><th>Net Payable (₹)</th></tr></thead><tbody>${body || '<tr><td colspan="7">No salaried employees found</td></tr>'}</tbody></table></body></html>`);
+    popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+3),th:nth-child(n+3){text-align:right}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick="window.print()">Print</button><table><thead><tr><th>Employee</th><th>Company</th><th>Salary (₹)</th><th>Extra / OT</th><th>Extra Pay (₹)</th><th>LOP Days</th><th>LOP Amount (₹)</th><th>Net Payable (₹)</th></tr></thead><tbody>${body || '<tr><td colspan="8">No salaried employees found</td></tr>'}</tbody></table></body></html>`);
     popup.document.close();
     popup.focus();
     setShowPrintOptions(false);
@@ -203,7 +205,7 @@ export default function SalaryPage() {
               <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">Absent<br />Days</th>
               <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">Half<br />Days</th>
               <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">Late<br />Count</th>
-              <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">OT<br />Days</th>
+              <th className="px-0.5 py-2.5 text-center font-semibold text-indigo-600">Extra<br />/ OT</th>
               <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">Paid<br />Leave</th>
               <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">LOP<br />Days</th>
               <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">LOP<br />Amount</th>
@@ -246,7 +248,7 @@ export default function SalaryPage() {
                   </td>
                   <td className="px-0.5 py-2.5 text-center text-slate-600">{ded?.halfDays ?? '—'}</td>
                   <td className="px-0.5 py-2.5 text-center text-slate-600">{ded?.lateOccurrences ?? '—'}</td>
-                  <td className="px-0.5 py-2.5 text-center font-medium text-indigo-600">{ded?.overtimeEligibleDays || '—'}</td>
+                  <td className="px-0.5 py-2.5 text-center font-medium text-indigo-600" title="Extra shift credit for hospital staff, overtime hours for Rafttar">{ded?.extraDays ? `+${Number(ded.extraDays).toFixed(Number(ded.extraDays) % 1 ? 1 : 0)}d` : ded?.overtimeHours ? `${Number(ded.overtimeHours).toFixed(1)}h` : '—'}</td>
                   <td className="px-0.5 py-2.5 text-center text-slate-600">{ded ? `${ded.paidLeaveUsed}/${ded.leaveLimit}` : '—'}</td>
                   <td className="px-0.5 py-2.5 text-center text-slate-600">{ded?.lopDays ? ded.lopDays.toFixed(1) : '—'}</td>
                   <td className="whitespace-nowrap px-2 py-2.5 text-center font-medium text-red-600">
