@@ -589,12 +589,16 @@ export const getSalaryDeductions = async (uploadId: number) => {
   const records = await fetchAllRows<any>((from, to) => client.from('attendance_records').select('employee_id,record_date,status,work_hours,overtime_hours,time_in,policy_code,employees(id,name,email,department,organisation,entity,eligible_for_paid_leaves)').gte('record_date', periodStart).lt('record_date', periodEnd).range(from, to));
   if (records.error) throw new Error(records.error.message);
   const rows = records.data || [];
-  // The 31st remains in attendance history, but payroll is always a 30-day
-  // month. Exclude it from every LOP input (absence, half-day, late, etc.).
-  const payrollRows = rows.filter((row: any) => {
-    const date = new Date(`${String(row.record_date).slice(0, 10)}T00:00:00Z`);
-    return !Number.isNaN(date.getTime()) && date.getUTCDate() !== 31;
-  });
+  // Payroll covers the real calendar month. A day's pay is still salary over
+  // thirty, but the 31st is a working day like any other and is no longer
+  // discarded.
+  const payrollRows = rows.filter((row: any) => !Number.isNaN(new Date(`${String(row.record_date).slice(0, 10)}T00:00:00Z`).getTime()));
+  // Hospital staff are allowed as many non-Sunday paid leaves as the month has
+  // Sundays, so this is counted from the calendar rather than fixed at four.
+  let sundaysInMonth = 0;
+  for (const cursor = new Date(`${periodStart}T00:00:00Z`); cursor.toISOString().slice(0, 10) < periodEnd; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+    if (cursor.getUTCDay() === 0) sundaysInMonth++;
+  }
   const ids = [...new Set(rows.map((row: any) => row.employee_id))];
   if (!ids.length) return { data: [] };
   const salaries = await client.from('employees').select('id,monthly_salary').in('id', ids);
@@ -627,7 +631,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
   const grouped = new Map<number, any>();
   for (const row of payrollRows as any[]) {
     const employee = row.employees || {};
-    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, absentDays: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, extraDays: 0, overtimeEligibleDays: 0, itRecords: 0 };
+    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, absentDays: 0, absentSunday: 0, absentNonSunday: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, extraDays: 0, overtimeEligibleDays: 0, itRecords: 0 };
     if (String(row.policy_code || '').toLowerCase() === 'it') item.itRecords++;
     const status = String(row.status || '').toLowerCase();
     // Rafttar is the exception; every other entity follows the hospital shift
@@ -670,7 +674,12 @@ export const getSalaryDeductions = async (uploadId: number) => {
       item.presentDays++;
     }
     if (status === 'half_day' || status === 'half day') item.presentDays += 0.5;
-    if (status === 'absent') item.absentDays++;
+    if (status === 'absent') {
+      item.absentDays++;
+      // A hospital Sunday absence is always chargeable; the monthly
+      // allowance only ever covers non-Sunday absences.
+      if (isSunday) item.absentSunday++; else item.absentNonSunday++;
+    }
     if (status.includes('missed') || status.includes('incomplete')) item.missedSwipeDays++;
     const checkInMinutes = timeInMinutes(row.time_in);
     if (status.includes('late') || (checkInMinutes !== null && checkInMinutes > lateAfterMinutes)) item.lateOccurrences++;
@@ -681,14 +690,15 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const basicSalary = salaryMap.get(item.employeeId) || 0;
     const dailySalary = basicSalary / 30;
     const isIt = item.itRecords > 0 || /\bit\b|information technology/i.test(`${item.department} ${item.organisation} ${item.entity}`);
-    // Non-IT staff work on Sundays and receive four paid leaves per month.
-    // IT staff receive Sundays as weekly offs; the Paid Leave Yes/No setting
-    // grants the selected IT employee two additional paid leaves per month.
-    const leaveLimit = isIt ? (item.eligibleForPaidLeaves ? 2 : 0) : 4;
-    const protectedAbsentDays = Math.min(item.absentDays, Math.max(0, leaveLimit - item.paidLeaveUsed));
-    const chargeableAbsentDays = Math.max(0, item.absentDays - protectedAbsentDays);
-    // chargeableAbsentDays already excludes the paid-leave allowance. Do not
-    // add absence beyond that allowance a second time.
+    const rafttarStaff = /rafttar/i.test(`${item.organisation} ${item.entity} ${item.department}`);
+    // Rafttar already has every Sunday off and gets two further paid leaves.
+    // Hospital staff work Sundays, and are allowed as many non-Sunday paid
+    // leaves as the month has Sundays.
+    const leaveLimit = rafttarStaff ? 2 : sundaysInMonth;
+    const protectedAbsentDays = Math.min(item.absentNonSunday, Math.max(0, leaveLimit - item.paidLeaveUsed));
+    // The allowance covers non-Sunday absence only. A Sunday taken off is
+    // deducted however few non-Sunday leaves have been used.
+    const chargeableAbsentDays = Math.max(0, item.absentNonSunday - protectedAbsentDays) + item.absentSunday;
     const excessPaidLeave = Math.max(0, item.paidLeaveUsed - leaveLimit);
     const lateDeductionCount = Math.floor(item.lateOccurrences / lateEvery);
     const absenceDeduction = chargeableAbsentDays * dailySalary;
