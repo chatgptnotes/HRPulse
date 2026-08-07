@@ -74,7 +74,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
     }
   };
 
-  const flaggedRecords = records.filter((r: any) => !['Normal', 'Weekend', 'Holiday'].includes(r.status));
+  const flaggedRecords = records.filter((r: any) => !['normal', 'weekend', 'holiday'].includes(String(r.status || '').trim().toLowerCase()));
   const baseRecords = recordsOnly ? records : flaggedRecords;
   // When a specific column is clicked (e.g. Absent Days) show only the dates
   // behind that number, so the count and the listed dates always agree.

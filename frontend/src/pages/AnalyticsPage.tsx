@@ -13,6 +13,15 @@ const STATUS_COLORS: Record<string, string> = {
   'Late Coming': '#3b82f6',
   'Early Leaving': '#f97316',
   Incomplete: '#8b5cf6',
+  HALF_DAY: '#fb923c',
+  'Paid Leave': '#14b8a6',
+  Normal: '#22c55e',
+};
+
+const statusColor = (status: string) => {
+  const key = String(status ?? '').toLowerCase().replace(/[_-]+/g, ' ').trim();
+  const hit = Object.entries(STATUS_COLORS).find(([k]) => k.toLowerCase().replace(/[_-]+/g, ' ').trim() === key);
+  return hit?.[1] || '#94a3b8';
 };
 
 function StatCard({ label, value, icon, color }: { label: string; value: number | string; icon: string; color: string }) {
@@ -103,7 +112,7 @@ export default function AnalyticsPage() {
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={false}>
                     {pieData.map(entry => (
-                      <Cell key={entry.name} fill={STATUS_COLORS[entry.name] || '#94a3b8'} />
+                      <Cell key={entry.name} fill={statusColor(entry.name)} />
                     ))}
                   </Pie>
                   <Tooltip />

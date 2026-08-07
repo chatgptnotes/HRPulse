@@ -16,6 +16,43 @@ function directResult<T>(data: T, error: { message: string } | null) {
 
 const SHIFT_LATE_GRACE_MINUTES = 30;
 
+// Attendance exports spell a status however they like — ABSENT, "Absent (LOP)",
+// half day, HALF_DAY, WEEKEND/OFF, "LATE COMING". Everything is folded to one
+// vocabulary here, at the point of parsing, so that nothing downstream has to
+// guess at casing or punctuation. Order matters: "early leave" must be settled
+// before the general leave rule, and "weekly off" before anything else.
+const STATUS_PATTERNS: Array<[RegExp, string]> = [
+  [/\bweek\s*end\b|\bweak\s*end\b|\bweekly\s*off\b|\bweek\s*off\b/, 'Weekend'],
+  [/\bholiday\b/, 'Holiday'],
+  [/\bhalf\s*day\b|\bhalf\b/, 'HALF_DAY'],
+  [/\bmissed?\s*swipe\b|\bincomplete\b|\bmissing\s*punch\b/, 'Missed Swipe'],
+  [/\bearly\s*(leaving|leave|going|out)\b/, 'Early Leaving'],
+  [/\blate\b/, 'Late Coming'],
+  [/\b(casual|sick|paid|earned|privilege)\s*leave\b|\bleave\b|\bcl\b|\bsl\b|\bpl\b/, 'Paid Leave'],
+  [/\babsent\b|\babsence\b/, 'Absent'],
+  [/\bofficial\b|\bon\s*duty\b|\bod\b/, 'Official'],
+  [/\bnormal\b|\bpresent\b/, 'Normal'],
+];
+
+/** Fold a spreadsheet status to the canonical vocabulary. Unrecognised text is
+ *  returned trimmed rather than discarded, so nothing is silently lost. */
+export const canonicalStatus = (value: unknown): string => {
+  const text = String(value ?? '').toLowerCase().replace(/[_\-/(),.]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  for (const [pattern, canonical] of STATUS_PATTERNS) if (pattern.test(text)) return canonical;
+  return String(value ?? '').trim();
+};
+
+/** Case-insensitive membership test for statuses that may predate canonicalisation. */
+const statusIsOneOf = (value: unknown, list: string[]) => {
+  const canonical = canonicalStatus(value).toLowerCase();
+  const raw = String(value ?? '').trim().toLowerCase();
+  return list.some(item => { const l = item.toLowerCase(); return canonical === l || raw === l; });
+};
+
+/** Employee numbers are compared folded, so EMP-001 and emp-001 are one person. */
+const employeeNumberKey = (value: unknown) => String(value ?? '').trim().toLowerCase();
+
 function timeValueToMinutes(value: unknown): number | null {
   const text = String(value ?? '').trim();
   const match = text.match(/^(\d{1,2}):(\d{2})/);
@@ -171,13 +208,36 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
   if (!attendanceFiles.length) throw new Error('Please include at least one attendance file.');
   if (!supabaseConfigured || !supabase) return api.post<{ uploadId: number; periodMonth: string; rowCount: number; warnings: string[] }>('/attendance/upload', (() => { const fd = new FormData(); files.forEach(file => fd.append('file', file)); return fd; })());
   if (attendanceFiles.length > 1 || staffFiles.length > 0) {
-    let result: any;
-    for (const file of attendanceFiles) result = await uploadAttendance(file);
-    if (staffFiles.length) {
-      const staffResult = await importStaffMaster(staffFiles, result.data.periodMonth);
-      result.data.warnings = [...(result.data.warnings || []), ...(staffResult.warnings || [])];
+    // Import each file on its own and keep every outcome. The previous version
+    // reassigned a single `result` per pass, so only the last file was ever
+    // reported and every earlier warning — including rows skipped for unmatched
+    // employees — was thrown away. A failure now costs that one file, not the
+    // whole drop, and is reported rather than leaving a silent partial import.
+    const perFile: Array<{ filename: string; periodMonth: string | null; rowCount: number; ok: boolean; error?: string }> = [];
+    const warnings: string[] = [];
+    const succeeded: Array<{ uploadId: number; periodMonth: string }> = [];
+    for (const file of attendanceFiles) {
+      try {
+        const one: any = await uploadAttendance(file);
+        perFile.push({ filename: file.name, periodMonth: one.data.periodMonth, rowCount: one.data.rowCount, ok: true });
+        succeeded.push({ uploadId: one.data.uploadId, periodMonth: one.data.periodMonth });
+        for (const warning of one.data.warnings || []) warnings.push(`${file.name}: ${warning}`);
+      } catch (error: any) {
+        perFile.push({ filename: file.name, periodMonth: null, rowCount: 0, ok: false, error: error?.message || String(error) });
+        warnings.push(`${file.name}: import failed — ${error?.message || error}`);
+      }
     }
-    return result;
+    if (!succeeded.length) throw new Error(`No attendance file could be imported. ${perFile.map(f => `${f.filename}: ${f.error}`).join(' | ')}`);
+    // Open on the newest month; the rest stay reachable from upload history.
+    const newest = succeeded.reduce((a, b) => (b.periodMonth > a.periodMonth ? b : a));
+    if (staffFiles.length) {
+      const staffResult = await importStaffMaster(staffFiles, newest.periodMonth);
+      for (const warning of staffResult.warnings || []) warnings.push(warning);
+    }
+    const rowCount = perFile.filter(f => f.ok).reduce((sum, f) => sum + f.rowCount, 0);
+    const months = [...new Set(succeeded.map(s => s.periodMonth))];
+    if (months.length > 1) warnings.unshift(`Imported ${months.length} months: ${months.sort().join(', ')}. Showing ${newest.periodMonth}; the others are in upload history.`);
+    return { data: { uploadId: newest.uploadId, periodMonth: newest.periodMonth, rowCount, warnings, files: perFile } };
   }
   const file = attendanceFiles[0];
   if (!/\.(xls|xlsx)$/i.test(file.name)) throw new Error('Please select an Excel .xls or .xlsx file.');
@@ -313,7 +373,7 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
       if (!recordDate) { warnings.push(`Row ${index + 1}: date could not be read for ${item.employeeName}`); continue; }
       const statusKey = String(item.status || '').toLowerCase().trim();
       item.recordDate = recordDate;
-      item.status = statusMap[statusKey] || String(item.status || 'Normal').trim() || 'Normal';
+      item.status = statusMap[statusKey] || canonicalStatus(item.status) || 'Normal';
       parsed.push(item);
     }
   }
@@ -356,9 +416,9 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
   const existingEmployees = await client.from('employees').select('id,email,employee_number,name,department,shift_timings,eligible_for_overtime');
   if (existingEmployees.error) throw new Error(`Employees could not be checked: ${existingEmployees.error.message}`);
   const existingEmails = new Set((existingEmployees.data || []).map((row: any) => String(row.email || '').toLowerCase()).filter(Boolean));
-  const existingNumbers = new Set((existingEmployees.data || []).map((row: any) => String(row.employee_number || '')).filter(Boolean));
+  const existingNumbers = new Set((existingEmployees.data || []).map((row: any) => employeeNumberKey(row.employee_number)).filter(Boolean));
   const existingNames = (existingEmployees.data || []).map((row: any) => String(row.name || '')).filter(Boolean);
-  const missingEmployees = dedupedEmployeeRows.filter(row => !existingEmails.has(row.email) && (!row.employee_number || !existingNumbers.has(row.employee_number)) && !existingNames.some(name => employeeNamesMatch(row.name, name)));
+  const missingEmployees = dedupedEmployeeRows.filter(row => !existingEmails.has(row.email) && (!row.employee_number || !existingNumbers.has(employeeNumberKey(row.employee_number))) && !existingNames.some(name => employeeNamesMatch(row.name, name)));
   if (missingEmployees.length > 0) {
     const insertedEmployees = await client.from('employees').insert(missingEmployees);
     if (insertedEmployees.error) throw new Error(`Employees could not be saved: ${insertedEmployees.error.message}`);
@@ -370,7 +430,7 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
   const employeeNameMap = new Map<string, any>();
   for (const row of (employeesQuery.data || []) as any[]) {
     const emailKey = String(row.email || '').toLowerCase();
-    const numberKey = String(row.employee_number || '');
+    const numberKey = employeeNumberKey(row.employee_number);
     if (emailKey) employeeMap.set(emailKey, row);
     if (numberKey) employeeNumberMap.set(numberKey, row);
     const nameKey = employeeNameKey(row.name);
@@ -384,11 +444,11 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
   const rowEmail = (row: Record<string, string | number | null>) =>
     String(row.email || `${row.employeeNumber || row.employeeName}@unknown.local`).trim().toLowerCase();
   const resolveEmployee = (row: Record<string, string | number | null>) =>
-    employeeMap.get(rowEmail(row)) || employeeNumberMap.get(String(row.employeeNumber || '').trim()) || findEmployeeByName(row.employeeName);
+    employeeMap.get(rowEmail(row)) || employeeNumberMap.get(employeeNumberKey(row.employeeNumber)) || findEmployeeByName(row.employeeName);
   const indexEmployees = (list: any[]) => {
     for (const row of list) {
       const emailKey = String(row.email || '').toLowerCase();
-      const numberKey = String(row.employee_number || '');
+      const numberKey = employeeNumberKey(row.employee_number);
       if (emailKey) employeeMap.set(emailKey, row);
       if (numberKey) employeeNumberMap.set(numberKey, row);
       const nameKey = employeeNameKey(row.name);
@@ -434,13 +494,13 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
     const status = String(row.status);
     const recordDate = String(row.recordDate);
     const sunday = new Date(`${recordDate}T00:00:00Z`).getUTCDay() === 0;
-    let finalStatus = sunday && isIt(department) && !paidLeaveStatuses.has(status) ? 'Weekend' : status;
+    let finalStatus = sunday && isIt(department) && !statusIsOneOf(status, [...paidLeaveStatuses]) ? 'Weekend' : status;
     const timeIn = parseTime(row.timeIn);
     const timeOut = parseTime(row.timeOut);
     let workHours = timeIn !== null && timeOut !== null ? Math.max(0, (timeOut < timeIn ? timeOut + 24 : timeOut) - timeIn) : null;
     let overtimeHours = 0;
     const detectedShift = timeIn === null ? null : nearestConfiguredShift(employee.shift_timings, Math.round(timeIn * 60));
-    if (detectedShift && timeIn !== null && !['Absent', 'Weekend', 'Holiday', 'Paid Leave'].includes(finalStatus)) {
+    if (detectedShift && timeIn !== null && !statusIsOneOf(finalStatus, ['Absent', 'Weekend', 'Holiday', 'Paid Leave'])) {
       const scheduledEnd = detectedShift.end <= detectedShift.start ? detectedShift.end + 1440 : detectedShift.end;
       const scheduledMinutes = scheduledEnd - detectedShift.start;
       const outMinutes = timeOut === null ? null : Math.round(timeOut * 60) + (timeOut < timeIn ? 1440 : 0);
@@ -453,7 +513,7 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
       else if (outMinutes < scheduledEnd) finalStatus = 'Early Leaving';
       else finalStatus = 'Normal';
     }
-    return [{ import_id: importResult.data.id, employee_id: employee.id, record_date: recordDate, status: finalStatus, time_in_raw: row.timeIn ? String(row.timeIn) : null, time_out_raw: row.timeOut ? String(row.timeOut) : null, work_hours: workHours, overtime_hours: overtimeHours, deduction_days: finalStatus === 'Absent' ? 1 : finalStatus === 'HALF_DAY' ? 0.5 : 0, policy_code: isIt(department) ? 'it' : 'non_it' }];
+    return [{ import_id: importResult.data.id, employee_id: employee.id, record_date: recordDate, status: finalStatus, time_in_raw: row.timeIn ? String(row.timeIn) : null, time_out_raw: row.timeOut ? String(row.timeOut) : null, work_hours: workHours, overtime_hours: overtimeHours, deduction_days: statusIsOneOf(finalStatus, ['Absent']) ? 1 : statusIsOneOf(finalStatus, ['HALF_DAY']) ? 0.5 : 0, policy_code: isIt(department) ? 'it' : 'non_it' }];
   });
   // Different source employee numbers can still resolve to the same canonical
   // employee (for example SAHIL / sahil jha soft). Deduplicate only after
@@ -462,7 +522,7 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
   for (const record of mappedRecords) {
     const key = `${record.employee_id}|${record.record_date}`;
     const current = uniqueMappedRecords.get(key);
-    const score = (value: typeof record) => Number(Boolean(value.time_in_raw)) + Number(Boolean(value.time_out_raw)) + Number(!['Absent', 'Missed Swipe'].includes(value.status));
+    const score = (value: typeof record) => Number(Boolean(value.time_in_raw)) + Number(Boolean(value.time_out_raw)) + Number(!statusIsOneOf(value.status, ['Absent', 'Missed Swipe']));
     if (!current || score(record) >= score(current)) uniqueMappedRecords.set(key, record);
   }
   const records = [...uniqueMappedRecords.values()];
@@ -1061,27 +1121,40 @@ export const getAnalyticsOverview = async () => {
   const error = employees.error || imports.error || messages.error || sent.error;
   return directResult({ totalEmployees: employees.count || 0, totalUploads: imports.count || 0, totalEmails: messages.count || 0, totalSent: sent.count || 0 }, error);
 };
+// A record is flagged when it is not an ordinary worked day. Tested on the
+// folded status so that ABSENT, "Absent (LOP)" and half_day all count — the
+// previous exact-match .in() list made any unlisted casing invisible here while
+// the Dispatcher summary still counted it, so the two screens disagreed.
+const UNFLAGGED = ['normal', 'present', 'weekend', 'holiday', 'official', 'paid leave'];
+const isFlaggedStatus = (status: unknown) => {
+  const folded = canonicalStatus(status).toLowerCase().replace(/[_-]+/g, ' ').trim();
+  return Boolean(folded) && !UNFLAGGED.includes(folded);
+};
+
 export const getMonthlyComparison = async () => {
   if (!supabaseConfigured) return api.get('/analytics/monthly-comparison');
   const client = directClient();
   const { data: imports, error: importsError } = await client.from('attendance_imports').select('id,period_month').order('period_month');
   if (importsError) throw new Error(importsError.message);
   const result = await Promise.all((imports || []).map(async (row: any) => {
-    const { count, error } = await client.from('attendance_records')
-      .select('id', { count: 'exact', head: true })
-      .eq('import_id', row.id)
-      .in('status', ['Absent', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'Half Day', 'HALF_DAY', 'LATE', 'ABSENT']);
+    const { data, error } = await fetchAllRows<any>((from, to) => client.from('attendance_records')
+      .select('status').eq('import_id', row.id).range(from, to));
     if (error) throw new Error(error.message);
-    return { month: row.period_month, flagged: count || 0, sent: 0 };
+    return { month: row.period_month, flagged: (data || []).filter(r => isFlaggedStatus(r.status)).length, sent: 0 };
   }));
   return { data: result };
 };
 export const getAnalyticsTrends = async (uploadId: number) => {
   if (!supabaseConfigured) return api.get(`/analytics/trends/${uploadId}`);
-  const { data, error } = await directClient().from('attendance_records').select('status,record_date').eq('import_id', uploadId).in('status', ['Absent', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'Half Day', 'HALF_DAY', 'LATE', 'ABSENT']);
+  const { data, error } = await directClient().from('attendance_records').select('status,record_date').eq('import_id', uploadId);
   if (error) throw new Error(error.message);
   const byStatus: Record<string, number> = {};
   const byDate: Record<string, number> = {};
-  for (const row of data || []) { byStatus[row.status] = (byStatus[row.status] || 0) + 1; byDate[row.record_date] = (byDate[row.record_date] || 0) + 1; }
+  for (const row of data || []) {
+    if (!isFlaggedStatus(row.status)) continue;
+    const label = canonicalStatus(row.status) || String(row.status || '');
+    byStatus[label] = (byStatus[label] || 0) + 1;
+    byDate[row.record_date] = (byDate[row.record_date] || 0) + 1;
+  }
   return { data: { byStatus, byDate: Object.entries(byDate).map(([date, count]) => ({ date, count })) } };
 };

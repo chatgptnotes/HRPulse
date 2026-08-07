@@ -36,6 +36,11 @@ function StatCard({ icon, label, value, color }: { icon: string; label: string; 
   );
 }
 
+// Drafts are stored with status 'draft'; the dispatcher previously looked for
+// 'pending', so the counter sat at zero and nothing could ever be sent.
+// Folded, because status casing is not guaranteed by older records.
+const isUnsent = (status: unknown) => ['draft', 'pending'].includes(String(status ?? '').trim().toLowerCase());
+
 export default function Dashboard() {
   const qc = useQueryClient();
   const [uploadId, setUploadId] = useState<number | null>(null);
@@ -88,9 +93,16 @@ export default function Dashboard() {
       const { data } = await api.uploadAttendance(files);
       setUploadId(data.uploadId);
       setPeriodMonth(data.periodMonth);
-      setUploadWarnings(data.warnings || []);
+      // Every file reports its own outcome, so a multi-file drop cannot hide a
+      // failure or a batch of skipped rows behind the last file's result.
+      const perFile = ((data as any).files || []) as Array<{ filename: string; periodMonth: string | null; rowCount: number; ok: boolean; error?: string }>;
+      const fileLines = perFile.map(f => f.ok ? `${f.filename}: ${f.rowCount} records for ${f.periodMonth}` : `${f.filename}: FAILED — ${f.error}`);
+      setUploadWarnings([...fileLines, ...(data.warnings || [])]);
       qc.invalidateQueries({ queryKey: ['uploads'] });
-      showToast(`Uploaded: ${data.rowCount} records for ${data.periodMonth}`);
+      const failed = perFile.filter(f => !f.ok).length;
+      showToast(failed
+        ? `Imported ${data.rowCount} records; ${failed} of ${perFile.length} files failed`
+        : `Uploaded: ${data.rowCount} records for ${data.periodMonth}`, failed ? 'err' : undefined);
     } catch (err: any) {
       showToast(err?.response?.data?.error || err?.message || 'Upload failed', 'err');
     } finally {
@@ -161,7 +173,7 @@ export default function Dashboard() {
 
   const handleDispatch = async () => {
     if (!uploadId) return;
-    const pendingDrafts = (drafts as any[]).filter(d => d.status === 'pending' && (selected.size === 0 || selected.has(d.id)));
+    const pendingDrafts = (drafts as any[]).filter(d => isUnsent(d.status) && (selected.size === 0 || selected.has(d.id)));
     if (pendingDrafts.length === 0) { showToast('No pending drafts to send', 'err'); return; }
     setSending(true);
     try {
@@ -186,7 +198,7 @@ export default function Dashboard() {
 
   const uniqueEntities = summary.length;
   const flaggedRecords = summary.reduce((acc, s) => acc + s.flaggedTotal, 0);
-  const pendingEmails = (drafts as any[]).filter(d => d.status === 'pending').length;
+  const pendingEmails = (drafts as any[]).filter(d => isUnsent(d.status)).length;
   const sentEmails = (drafts as any[]).filter(d => d.status === 'sent').length;
 
   const getDraftForEmployee = (empId: number) => (drafts as any[]).find((d: any) => d.employeeId === empId);
@@ -513,7 +525,7 @@ export default function Dashboard() {
                         >
                           Preview
                         </button>
-                        {draft.status === 'pending' && (
+                        {isUnsent(draft.status) && (
                           <button
                             onClick={async () => {
                               try {

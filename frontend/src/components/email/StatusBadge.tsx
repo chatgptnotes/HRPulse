@@ -8,13 +8,19 @@ const STATUS_COLORS: Record<string, string> = {
   'Normal': 'bg-green-50 text-green-600 border-green-100',
   'Weekend': 'bg-slate-100 text-slate-500 border-slate-200',
   'Holiday': 'bg-purple-50 text-purple-600 border-purple-100',
+  'half_day': 'bg-orange-100 text-orange-700 border-orange-200',
+  'paid leave': 'bg-teal-50 text-teal-700 border-teal-100',
+  'official': 'bg-indigo-50 text-indigo-600 border-indigo-100',
   'pending': 'bg-slate-100 text-slate-500 border-slate-200',
   'sent': 'bg-green-100 text-green-700 border-green-200',
   'failed': 'bg-red-100 text-red-700 border-red-200',
 };
 
 export default function StatusBadge({ label, small }: { label: string; small?: boolean }) {
-  const cls = STATUS_COLORS[label] || 'bg-slate-100 text-slate-600 border-slate-200';
+  // Status casing is not guaranteed by older imports, so match on a folded key.
+  const key = String(label ?? '').toLowerCase().replace(/[_-]+/g, ' ').trim();
+  const entry = Object.entries(STATUS_COLORS).find(([k]) => k.toLowerCase().replace(/[_-]+/g, ' ').trim() === key);
+  const cls = entry?.[1] || 'bg-slate-100 text-slate-600 border-slate-200';
   return (
     <span className={clsx('inline-flex items-center rounded-full border font-medium', small ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs', cls)}>
       {label}
