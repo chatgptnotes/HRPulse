@@ -661,10 +661,17 @@ export const getSalaryDeductions = async (uploadId: number) => {
   }
   const ids = [...new Set(rows.map((row: any) => row.employee_id))];
   if (!ids.length) return { data: [] };
-  const salaries = await client.from('employees').select('id,monthly_salary').in('id', ids);
+  const salaries = await client.from('employees').select('id,monthly_salary,contracted_hours').in('id', ids);
   if (salaries.error) throw new Error(salaries.error.message);
   const salaryMap = new Map<number, number>();
-  for (const row of salaries.data || []) salaryMap.set(row.id, Number(row.monthly_salary || 0));
+  // The contracted shift comes from the staff sheet. A completed shift is a
+  // full day whatever its length, so a six-hour sister is not docked for
+  // finishing on time. Null falls back to the flat threshold below.
+  const contractedMap = new Map<number, number | null>();
+  for (const row of salaries.data || []) {
+    salaryMap.set(row.id, Number(row.monthly_salary || 0));
+    contractedMap.set(row.id, row.contracted_hours == null ? null : Number(row.contracted_hours));
+  }
   const [{ data: activeRules, error: rulesError }, { data: settings, error: settingsError }] = await Promise.all([
     client.from('attendance_rules').select('rule_type,conditions,actions,description,name').eq('is_active', true),
     client.from('settings').select('key,value'),
@@ -713,22 +720,30 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const workingDay = !['absent', 'weekend', 'holiday', 'paid leave'].includes(status);
     const hours = row.work_hours === null || row.work_hours === undefined ? null : Number(row.work_hours);
 
+    // Completing the contracted shift is a full day whatever its length; half a
+    // day is charged only below half of it. Without a contracted shift on
+    // record, fall back to the flat threshold.
+    const contracted = contractedMap.get(row.employee_id) ?? null;
+    const halfBelow = contracted ? contracted / 2 : (rafttarStaff ? halfDayHours : 7);
+
     if (workingDay && hours !== null) {
       if (rafttarStaff) {
         // Standard 09:00-18:00 day. Overtime is earned only once the excess
         // beyond eight hours passes two hours; anything less is one shift.
         item.presentDays++;
         if (hours - 8 > 2) item.overtimeHours += hours - 8;
-        if (hours < halfDayHours) item.halfDays++;
+        if (hours < halfBelow) item.halfDays++;
       } else {
-        // Hospital ladder: under 7h is half a day, 7-10h is a full day, beyond
-        // 10h earns half a shift extra and 12h or more counts as two shifts.
-        // The 7h floor is a grace band for staff who fall minutes short.
-        const credit = hours >= 12 ? 2 : hours > 10 ? 1.5 : hours >= 7 ? 1 : 0.5;
+        // Beyond 10h earns half a shift extra and 12h or more counts as two.
+        const credit = hours >= 12 ? 2 : hours > 10 ? 1.5 : hours < halfBelow ? 0.5 : 1;
         item.presentDays += credit;
         if (credit > 1) item.extraDays += credit - 1;
         if (credit === 0.5) item.halfDays++;
       }
+    } else if (statusIsOneOf(status, ['Missed Swipe'])) {
+      // They were here — the punch out is simply missing. Credit the duty and
+      // keep the flag so the reminder still goes out.
+      item.presentDays++;
     } else if (['normal', 'present', 'late', 'late coming', 'early leaving'].includes(status)) {
       // A working day with no usable punch span still counts as attendance.
       item.presentDays++;
@@ -771,7 +786,9 @@ export const getSalaryDeductions = async (uploadId: number) => {
     // less LOP and nothing else. extraDays and overtimeHours stay on the result
     // so the measurement survives if a rate is ever agreed.
     const displayedPaidLeave = item.paidLeaveUsed + protectedAbsentDays;
-    return { ...item, isIt, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, netPayable: Math.max(0, basicSalary - totalLopAmount), dailySalary, totalLopAmount, basicSalary };
+    // The individual amounts travel with the totals so the salary sheet can
+    // explain, line by line, why the pay was cut.
+    return { ...item, isIt, rafttarStaff, sundaysInMonth, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, netPayable: Math.max(0, basicSalary - totalLopAmount), dailySalary, totalLopAmount, basicSalary };
   });
   // Deductions are derived on every read, so there is nothing to cache back to
   // the database. The previous write-back also stored an undefined
