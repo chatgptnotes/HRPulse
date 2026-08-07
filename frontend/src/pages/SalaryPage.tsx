@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import * as api from '../api';
 import EmailDraftModal from '../components/email/EmailDraftModal';
+import LopBreakdown from '../components/salary/LopBreakdown';
 
 const formatINR = (value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
@@ -304,89 +305,17 @@ export default function SalaryPage() {
         </div>
       )}
 
-      {lopExplain && (() => {
-        const d = lopExplain.ded, rate = Number(d.dailySalary || 0);
-        const money = (v: number) => formatINR(Math.round(v * 100) / 100);
-        // Only the lines that actually cut the pay are listed.
-        const lines: Array<{ label: string; detail: string; amount: number }> = [];
-        if (Number(d.chargeableAbsentDays || 0) > 0) lines.push({
-          label: 'Absent days charged', amount: Number(d.absenceDeduction || 0),
-          detail: `${d.chargeableAbsentDays} × ${money(rate)}`,
-        });
-        if (Number(d.halfDays || 0) > 0) lines.push({
-          label: 'Half days', amount: Number(d.halfDayDeduction || 0),
-          detail: `${d.halfDays} × ${money(rate / 2)} (worked less than half the shift)`,
-        });
-        if (Number(d.lateDeductionCount || 0) > 0) lines.push({
-          label: 'Late arrivals', amount: Number(d.lateDeduction || 0),
-          detail: `${d.lateOccurrences} late ÷ ${d.lateEvery} = ${d.lateDeductionCount} × ${money(rate)}`,
-        });
-        if (Number(d.excessPaidLeave || 0) > 0) lines.push({
-          label: 'Leave beyond the allowance', amount: Number(d.excessLeaveDeduction || 0),
-          detail: `${d.excessPaidLeave} × ${money(rate)}`,
-        });
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setLopExplain(null)}>
-            <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
-              <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
-                <div>
-                  <h3 className="font-semibold text-slate-800">Why {money(Number(d.lopAmount || 0))} was deducted</h3>
-                  <p className="mt-0.5 text-sm text-slate-500">{lopExplain.emp.name} · {month}</p>
-                </div>
-                <button onClick={() => setLopExplain(null)} className="text-xl leading-none text-slate-400 hover:text-slate-600">×</button>
-              </div>
-              <div className="px-6 py-4 text-sm">
-                <div className="flex justify-between py-1"><span className="text-slate-500">Monthly salary</span><span className="font-medium text-slate-800">{money(Number(lopExplain.salary || 0))}</span></div>
-                <div className="flex justify-between py-1 border-b border-slate-100 pb-2"><span className="text-slate-500">A day's pay — salary ÷ 30</span><span className="font-medium text-slate-800">{money(rate)}</span></div>
-
-                <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[13px] text-slate-600">
-                  {d.rafttarStaff
-                    ? <>Rafttar: every Sunday is a paid weekly off, plus <b>2</b> paid leaves.</>
-                    : <>Hospital: Sundays are working days. <b>{d.leaveLimit}</b> paid non-Sunday leaves this month (one per Sunday), and a Sunday taken off is always deducted.</>}
-                </div>
-
-                <div className="mt-3 space-y-1">
-                  <div className="flex justify-between py-0.5 text-[13px]"><span className="text-slate-500">Absent, not a Sunday</span><span>{d.absentNonSunday ?? 0} days</span></div>
-                  <div className="flex justify-between py-0.5 text-[13px]"><span className="text-slate-500">Covered by paid leave</span><span className="text-emerald-600">−{d.protectedAbsentDays ?? 0} days</span></div>
-                  {!d.rafttarStaff && Number(d.absentSunday || 0) > 0 && (
-                    <div className="flex justify-between py-0.5 text-[13px]"><span className="text-slate-500">Absent on a Sunday — never covered</span><span>+{d.absentSunday} days</span></div>
-                  )}
-                </div>
-
-                <table className="mt-3 w-full border-t border-slate-100 pt-2 text-[13px]">
-                  <tbody>
-                    {lines.map(l => (
-                      <tr key={l.label}>
-                        <td className="py-1.5 pr-2 align-top"><div className="font-medium text-slate-700">{l.label}</div><div className="text-[12px] text-slate-400">{l.detail}</div></td>
-                        <td className="py-1.5 text-right align-top font-medium text-red-600">{money(l.amount)}</td>
-                      </tr>
-                    ))}
-                    <tr className="border-t border-slate-200">
-                      <td className="pt-2 font-semibold text-slate-700">Total deducted</td>
-                      <td className="pt-2 text-right font-semibold text-red-600">{money(Number(d.lopAmount || 0))}</td>
-                    </tr>
-                    <tr>
-                      <td className="pt-1 font-semibold text-slate-700">Net payable</td>
-                      <td className="pt-1 text-right font-semibold text-emerald-700">{money(Math.max(0, Number(lopExplain.salary || 0) - Number(d.lopAmount || 0)))}</td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                {Number(d.missedSwipeDays || 0) > 0 && (
-                  <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
-                    {d.missedSwipeDays} missed swipe {Number(d.missedSwipeDays) === 1 ? 'day is' : 'days are'} counted as full duty — nothing deducted, but the punch out was not recorded.
-                  </p>
-                )}
-              </div>
-              <div className="flex justify-between gap-2 border-t border-slate-100 px-6 py-3">
-                <button onClick={() => { const emp = lopExplain.emp; setLopExplain(null); openAttendance(emp, { statuses: ['Absent'], label: 'Absent Dates' }); }}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">See the absent dates</button>
-                <button onClick={() => setLopExplain(null)} className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Close</button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {lopExplain && (
+        <LopBreakdown
+          ded={lopExplain.ded}
+          emp={lopExplain.emp}
+          salary={lopExplain.salary}
+          month={month}
+          uploadId={latestUpload?.id ?? null}
+          onClose={() => setLopExplain(null)}
+          onSeeDates={() => { const emp = lopExplain.emp; setLopExplain(null); openAttendance(emp, { statuses: ['Absent'], label: 'Absent Dates' }); }}
+        />
+      )}
 
       {attendanceEmployee && latestUpload?.id && (
         <EmailDraftModal
