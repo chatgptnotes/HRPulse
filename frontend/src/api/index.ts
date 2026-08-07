@@ -51,7 +51,11 @@ const statusIsOneOf = (value: unknown, list: string[]) => {
 };
 
 /** Employee numbers are compared folded, so EMP-001 and emp-001 are one person. */
-const employeeNumberKey = (value: unknown) => String(value ?? '').trim().toLowerCase();
+/** Employee numbers are only unique within one biometric device, so every
+ *  lookup is namespaced by company. Without this, Hope #15 and Ayushman #15
+ *  resolve to the same record and one person inherits another's month. */
+const employeeNumberKey = (company: unknown, value: unknown) =>
+  `${String(company ?? '').trim().toLowerCase()}:${String(value ?? '').trim().toLowerCase()}`;
 
 function timeValueToMinutes(value: unknown): number | null {
   const text = String(value ?? '').trim();
@@ -227,8 +231,24 @@ async function importStaffMaster(files: File[], effectiveMonth: string) {
   return { warnings };
 }
 
-export const uploadAttendance = async (fileInput: File | File[]) => {
-  const files = Array.isArray(fileInput) ? fileInput : [fileInput];
+export type UploadFile = File | { file: File; company?: string };
+
+/** Biometric devices number their users independently — #15 is one person at
+ *  Hope and someone else entirely at Ayushman. Employee numbers are therefore
+ *  only meaningful within a company, and every lookup is keyed accordingly. */
+export const guessCompany = (filename: string): string => {
+  const text = String(filename || '').toLowerCase();
+  if (text.includes('rafttar') || text.includes('raftar')) return 'Rafttar';
+  if (text.includes('ayushman')) return 'Ayushman';
+  if (text.includes('hope')) return 'Hope';
+  return '';
+};
+
+export const uploadAttendance = async (fileInput: UploadFile | UploadFile[]) => {
+  const asEntry = (item: UploadFile) => (item instanceof File ? { file: item, company: guessCompany(item.name) } : { file: item.file, company: item.company || guessCompany(item.file.name) });
+  const entries = (Array.isArray(fileInput) ? fileInput : [fileInput]).map(asEntry);
+  const files = entries.map(entry => entry.file);
+  const companyByFile = new Map(entries.map(entry => [entry.file, entry.company || '']));
   if (!files.length) throw new Error('Please select at least one Excel file.');
   const classifyFile = async (file: File) => {
     const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', sheetRows: 5 });
@@ -252,7 +272,7 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
     const succeeded: Array<{ uploadId: number; periodMonth: string }> = [];
     for (const file of attendanceFiles) {
       try {
-        const one: any = await uploadAttendance(file);
+        const one: any = await uploadAttendance({ file, company: companyByFile.get(file) || '' });
         perFile.push({ filename: file.name, periodMonth: one.data.periodMonth, rowCount: one.data.rowCount, ok: true });
         succeeded.push({ uploadId: one.data.uploadId, periodMonth: one.data.periodMonth });
         for (const warning of one.data.warnings || []) warnings.push(`${file.name}: ${warning}`);
@@ -274,6 +294,12 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
     return { data: { uploadId: newest.uploadId, periodMonth: newest.periodMonth, rowCount, warnings, files: perFile } };
   }
   const file = attendanceFiles[0];
+  const fileCompany = companyByFile.get(file) || guessCompany(file.name);
+  // A stand-in address built from the device number must include the company
+  // too, or "15@unknown.local" means two different people.
+  const emailPrefix = fileCompany ? `${fileCompany.toLowerCase()}_` : '';
+  const synthEmail = (row: Record<string, string | number | null>) =>
+    String(row.email || `${emailPrefix}${row.employeeNumber || row.employeeName}@unknown.local`).trim().toLowerCase();
   if (!/\.(xls|xlsx)$/i.test(file.name)) throw new Error('Please select an Excel .xls or .xlsx file.');
 
   const headerMap: Record<string, string> = {
@@ -420,7 +446,7 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
   // than once. This also protects the database upsert from duplicate input.
   const uniqueRecords = new Map<string, Record<string, string | number | null>>();
   for (const row of parsed) {
-    const employeeKey = String(row.employeeNumber || row.employeeName || '').trim().toLowerCase();
+    const employeeKey = employeeNumberKey(fileCompany, row.employeeNumber || row.employeeName || '');
     uniqueRecords.set(`${employeeKey}|${String(row.recordDate)}`, row);
   }
   parsed.length = 0;
@@ -429,9 +455,9 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
   const client = directClient();
   const employeeRowsByIdentity = new Map<string, { employee_number: string | null; name: string; email: string; organisation: string | null; entity: string | null; department: string | null }>();
   for (const row of parsed) {
-    const email = String(row.email || `${row.employeeNumber || row.employeeName}@unknown.local`).trim().toLowerCase();
+    const email = synthEmail(row);
     const employeeNumber = row.employeeNumber ? String(row.employeeNumber).trim() : null;
-    employeeRowsByIdentity.set(employeeNumber || email, { employee_number: employeeNumber, name: String(row.employeeName), email, organisation: row.organisation ? String(row.organisation) : null, entity: row.entity ? String(row.entity) : null, department: row.department ? String(row.department) : null });
+    employeeRowsByIdentity.set(employeeNumberKey(fileCompany, employeeNumber) || email, { employee_number: employeeNumber, name: String(row.employeeName), email, organisation: row.organisation ? String(row.organisation) : null, entity: row.entity ? String(row.entity) : null, department: row.department ? String(row.department) : null });
   }
   const employeeRows = [...employeeRowsByIdentity.values()];
   const dedupedEmployeeRows: typeof employeeRows = [];
@@ -447,24 +473,24 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
   }
   // Match by both identifiers because existing projects may have unique
   // constraints on email, employee_number, both, or neither.
-  const existingEmployees = await client.from('employees').select('id,email,employee_number,name,department,shift_timings,eligible_for_overtime');
+  const existingEmployees = await client.from('employees').select('id,email,employee_number,name,department,organisation,shift_timings,eligible_for_overtime');
   if (existingEmployees.error) throw new Error(`Employees could not be checked: ${existingEmployees.error.message}`);
   const existingEmails = new Set((existingEmployees.data || []).map((row: any) => String(row.email || '').toLowerCase()).filter(Boolean));
-  const existingNumbers = new Set((existingEmployees.data || []).map((row: any) => employeeNumberKey(row.employee_number)).filter(Boolean));
+  const existingNumbers = new Set((existingEmployees.data || []).map((row: any) => employeeNumberKey(row.organisation || fileCompany, row.employee_number)));
   const existingNames = (existingEmployees.data || []).map((row: any) => String(row.name || '')).filter(Boolean);
-  const missingEmployees = dedupedEmployeeRows.filter(row => !existingEmails.has(row.email) && (!row.employee_number || !existingNumbers.has(employeeNumberKey(row.employee_number))) && !existingNames.some(name => employeeNamesMatch(row.name, name)));
+  const missingEmployees = dedupedEmployeeRows.filter(row => !existingEmails.has(row.email) && (!row.employee_number || !existingNumbers.has(employeeNumberKey(fileCompany, row.employee_number))) && !existingNames.some(name => employeeNamesMatch(row.name, name)));
   if (missingEmployees.length > 0) {
-    const insertedEmployees = await client.from('employees').insert(missingEmployees);
+    const insertedEmployees = await client.from('employees').insert(missingEmployees.map(row => ({ ...row, organisation: row.organisation || fileCompany || null })));
     if (insertedEmployees.error) throw new Error(`Employees could not be saved: ${insertedEmployees.error.message}`);
   }
-  const employeesQuery = await client.from('employees').select('id,email,employee_number,name,department,shift_timings,eligible_for_overtime');
+  const employeesQuery = await client.from('employees').select('id,email,employee_number,name,department,organisation,shift_timings,eligible_for_overtime');
   if (employeesQuery.error) throw new Error(`Employees could not be loaded: ${employeesQuery.error.message}`);
   const employeeMap = new Map<string, any>();
   const employeeNumberMap = new Map<string, any>();
   const employeeNameMap = new Map<string, any>();
   for (const row of (employeesQuery.data || []) as any[]) {
     const emailKey = String(row.email || '').toLowerCase();
-    const numberKey = employeeNumberKey(row.employee_number);
+    const numberKey = employeeNumberKey(row.organisation || fileCompany, row.employee_number);
     if (emailKey) employeeMap.set(emailKey, row);
     if (numberKey) employeeNumberMap.set(numberKey, row);
     const nameKey = employeeNameKey(row.name);
@@ -475,14 +501,13 @@ export const uploadAttendance = async (fileInput: File | File[]) => {
     if (exact) return exact;
     return [...employeeNameMap.values()].find(row => employeeNamesMatch(name, row.name));
   };
-  const rowEmail = (row: Record<string, string | number | null>) =>
-    String(row.email || `${row.employeeNumber || row.employeeName}@unknown.local`).trim().toLowerCase();
+  const rowEmail = (row: Record<string, string | number | null>) => synthEmail(row);
   const resolveEmployee = (row: Record<string, string | number | null>) =>
-    employeeMap.get(rowEmail(row)) || employeeNumberMap.get(employeeNumberKey(row.employeeNumber)) || findEmployeeByName(row.employeeName);
+    employeeMap.get(rowEmail(row)) || employeeNumberMap.get(employeeNumberKey(fileCompany, row.employeeNumber)) || findEmployeeByName(row.employeeName);
   const indexEmployees = (list: any[]) => {
     for (const row of list) {
       const emailKey = String(row.email || '').toLowerCase();
-      const numberKey = employeeNumberKey(row.employee_number);
+      const numberKey = employeeNumberKey(row.organisation || fileCompany, row.employee_number);
       if (emailKey) employeeMap.set(emailKey, row);
       if (numberKey) employeeNumberMap.set(numberKey, row);
       const nameKey = employeeNameKey(row.name);

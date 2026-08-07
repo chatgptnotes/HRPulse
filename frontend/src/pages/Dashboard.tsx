@@ -47,6 +47,7 @@ export default function Dashboard() {
   const [periodMonth, setPeriodMonth] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([]);
+  const [staged, setStaged] = useState<Array<{ file: File; company: string }>>([]);
   const [customGuide, setCustomGuide] = useState('');
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState<{ completed: number; total: number; current: string } | null>(null);
@@ -85,12 +86,21 @@ export default function Dashboard() {
     }
   }, [uploads]);
 
-  const onDrop = useCallback(async (files: File[]) => {
+  // Files are staged rather than sent straight away: biometric devices number
+  // their users independently, so each file must say which company it came
+  // from before #15 can be resolved to a person.
+  const onDrop = useCallback((files: File[]) => {
     if (!files[0]) return;
+    setStaged(files.map(file => ({ file, company: api.guessCompany(file.name) })));
+    setUploadWarnings([]);
+  }, []);
+
+  const startUpload = useCallback(async () => {
+    if (!staged.length) return;
     setUploading(true);
     setUploadWarnings([]);
     try {
-      const { data } = await api.uploadAttendance(files);
+      const { data } = await api.uploadAttendance(staged);
       setUploadId(data.uploadId);
       setPeriodMonth(data.periodMonth);
       // Every file reports its own outcome, so a multi-file drop cannot hide a
@@ -107,8 +117,9 @@ export default function Dashboard() {
       showToast(err?.response?.data?.error || err?.message || 'Upload failed', 'err');
     } finally {
       setUploading(false);
+      setStaged([]);
     }
-  }, [qc]);
+  }, [qc, staged]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -254,6 +265,44 @@ export default function Dashboard() {
               </>
             )}
           </div>
+
+          {staged.length > 0 && (
+            <div className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50/60 p-2.5">
+              <p className="text-[11px] font-semibold text-indigo-900">Which company is each file from?</p>
+              <p className="mt-0.5 text-[10px] leading-4 text-indigo-700">
+                Attendance devices number their staff separately — #15 is a different person at each site — so the company decides who each punch belongs to.
+              </p>
+              <div className="mt-2 space-y-1.5">
+                {staged.map((item, i) => (
+                  <div key={item.file.name + i} className="flex items-center gap-2">
+                    <span className="material-icons text-sm text-indigo-400">description</span>
+                    <span className="flex-1 truncate text-[11px] text-slate-700" title={item.file.name}>{item.file.name}</span>
+                    <select
+                      value={item.company}
+                      onChange={e => setStaged(list => list.map((x, xi) => xi === i ? { ...x, company: e.target.value } : x))}
+                      className={`rounded-lg border px-2 py-1 text-[11px] ${item.company ? 'border-slate-200 bg-white text-slate-700' : 'border-amber-300 bg-amber-50 text-amber-700'}`}
+                    >
+                      <option value="">Select company…</option>
+                      <option value="Hope">Hope</option>
+                      <option value="Ayushman">Ayushman</option>
+                      <option value="Rafttar">Rafttar</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={startUpload}
+                  disabled={uploading || staged.some(item => !item.company)}
+                  className="flex-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-50"
+                >{uploading ? 'Importing…' : `Import ${staged.length} file${staged.length === 1 ? '' : 's'}`}</button>
+                <button onClick={() => setStaged([])} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600">Cancel</button>
+              </div>
+              {staged.some(item => !item.company) && (
+                <p className="mt-1.5 text-[10px] text-amber-700">Choose a company for every file before importing.</p>
+              )}
+            </div>
+          )}
 
           {uploadWarnings.length > 0 && (
             <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-2.5 space-y-0.5">
