@@ -16,9 +16,14 @@ interface Props {
   filterStatuses?: string[];
   /** Heading shown in place of "Attendance Details" when filtering. */
   filterLabel?: string;
+  /** Also list Sundays, which Rafttar staff are paid for even though nobody
+   *  punched and the stored status is therefore Absent. */
+  includeSundays?: boolean;
+  /** Optional line under the heading explaining what the list represents. */
+  filterNote?: string;
 }
 
-export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false, filterStatuses, filterLabel }: Props) {
+export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false, filterStatuses, filterLabel, includeSundays = false, filterNote }: Props) {
   const qc = useQueryClient();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -79,8 +84,14 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
   // When a specific column is clicked (e.g. Absent Days) show only the dates
   // behind that number, so the count and the listed dates always agree.
   const wanted = filterStatuses?.map(s => s.toLowerCase());
+  const isSunday = (value: unknown) => {
+    const date = new Date(`${String(value || '').slice(0, 10)}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.getUTCDay() === 0;
+  };
   const visibleRecords = wanted
-    ? baseRecords.filter((r: any) => wanted.includes(String(r.status || '').trim().toLowerCase()))
+    ? baseRecords.filter((r: any) =>
+        wanted.includes(String(r.status || '').trim().toLowerCase())
+        || (includeSundays && isSunday(r.recordDate)))
     : baseRecords;
 
   return (
@@ -91,6 +102,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
           <div>
             <h3 className="font-semibold text-slate-800">{tab === 'records' ? (filterLabel || 'Attendance Details') : 'Email Draft Preview'}</h3>
             <p className="text-sm text-slate-500 mt-0.5">{employeeName} · {employeeEmail}</p>
+            {tab === 'records' && filterNote && <p className="mt-1 text-xs text-slate-400">{filterNote}</p>}
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
         </div>
@@ -145,7 +157,9 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                   {visibleRecords.map((r: any, i: number) => (
                     <tr key={i} className="border-t border-slate-100">
                       <td className="px-3 py-2 text-slate-700">{r.recordDate}</td>
-                      <td className="px-3 py-2"><StatusBadge label={r.status} small /></td>
+                      <td className="px-3 py-2">{includeSundays && isSunday(r.recordDate) && String(r.status || '').trim().toLowerCase() === 'absent'
+                        ? <StatusBadge label="Paid weekly off" small />
+                        : <StatusBadge label={r.status} small />}</td>
                       <td className="px-3 py-2 text-slate-500">{r.timeIn || '—'}</td>
                       <td className="px-3 py-2 text-slate-500">{r.timeOut || '—'}</td>
                     </tr>

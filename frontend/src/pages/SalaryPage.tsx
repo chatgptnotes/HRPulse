@@ -17,11 +17,11 @@ export default function SalaryPage() {
   const [showPrintOptions, setShowPrintOptions] = useState(false);
   const [attendanceEmployee, setAttendanceEmployee] = useState<any | null>(null);
   // Which attendance statuses the details modal should list. null = all records.
-  const [attendanceFilter, setAttendanceFilter] = useState<{ statuses: string[]; label: string } | null>(null);
+  const [attendanceFilter, setAttendanceFilter] = useState<{ statuses: string[]; label: string; includeSundays?: boolean; note?: string } | null>(null);
   // Which employee's LOP is being explained, if any.
   const [lopExplain, setLopExplain] = useState<any | null>(null);
 
-  const openAttendance = (emp: any, filter: { statuses: string[]; label: string } | null = null) => {
+  const openAttendance = (emp: any, filter: { statuses: string[]; label: string; includeSundays?: boolean; note?: string } | null = null) => {
     if (!latestUpload?.id) return;
     setAttendanceFilter(filter);
     setAttendanceEmployee(emp);
@@ -237,7 +237,7 @@ export default function SalaryPage() {
                     <p className="font-medium text-slate-700">{currentSalary > 0 ? formatINR(currentSalary) : '—'}</p>
                     {!hasSalary && <p className="mt-1 text-[10px] font-medium text-amber-600">Missing salary</p>}
                   </td>
-                  <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5"><button type="button" onClick={() => openAttendance(emp)} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View attendance dates">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
+                  <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5"><button type="button" onClick={() => openAttendance(emp, { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'HALF_DAY'], label: 'Present Dates', includeSundays: ded?.rafttarStaff === true, note: 'A long shift counts as more than one day and a short one as half, so the days credited need not equal the number of dates listed.' })} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View the dates this employee was present">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
                   <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">
                     {ded && Number(ded.absentDays || 0) > 0 ? (
                       <button
@@ -398,6 +398,8 @@ export default function SalaryPage() {
           recordsOnly
           filterStatuses={attendanceFilter?.statuses}
           filterLabel={attendanceFilter?.label}
+          includeSundays={attendanceFilter?.includeSundays}
+          filterNote={attendanceFilter?.note}
           onClose={() => { setAttendanceEmployee(null); setAttendanceFilter(null); }}
           onSent={() => { setAttendanceEmployee(null); setAttendanceFilter(null); }}
         />

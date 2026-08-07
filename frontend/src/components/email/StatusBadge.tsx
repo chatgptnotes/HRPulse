@@ -9,6 +9,7 @@ const STATUS_COLORS: Record<string, string> = {
   'Weekend': 'bg-slate-100 text-slate-500 border-slate-200',
   'Holiday': 'bg-purple-50 text-purple-600 border-purple-100',
   'half_day': 'bg-orange-100 text-orange-700 border-orange-200',
+  'paid weekly off': 'bg-sky-50 text-sky-700 border-sky-100',
   'paid leave': 'bg-teal-50 text-teal-700 border-teal-100',
   'official': 'bg-indigo-50 text-indigo-600 border-indigo-100',
   'pending': 'bg-slate-100 text-slate-500 border-slate-200',
