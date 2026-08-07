@@ -198,20 +198,23 @@ export default function SalaryPage() {
             <button onClick={clearFilters} className="ml-auto font-semibold text-indigo-600 hover:text-indigo-800">Clear filters</button>
           </div>
         )}
+        {/* A fade on the right edge whenever the table is wider than its box, so a
+            column pushed off-screen is visible rather than silently cut off. */}
+        <div className="relative">
         <div className="w-full overflow-x-auto pb-2">
-        <table className="w-full min-w-[1180px] table-auto text-[11px]">
+        <table className="w-full min-w-[880px] table-auto text-[10px] tabular-nums sm:text-[11px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="sticky left-0 z-10 bg-slate-50 px-1.5 py-2.5 text-left font-semibold text-slate-600 shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">Employee</th>
-              <th className="px-0.5 py-2.5 text-left font-semibold text-slate-600">Salary<br />(₹)</th>
-              <th className="px-0.5 py-2.5 text-center font-semibold text-emerald-700">Present<br />Days</th>
-              <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">Absent<br />Days</th>
-              <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">Half<br />Days</th>
-              <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">Late<br />Count</th>
-              <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">Paid<br />Leave</th>
-              <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">LOP<br />Days</th>
-              <th className="px-0.5 py-2.5 text-center font-semibold text-slate-600">LOP<br />Amount</th>
-              <th className="px-0.5 py-2.5 text-center font-semibold text-emerald-700">Net<br />Payable</th>
+              <th className="z-10 bg-slate-50 px-2 py-2.5 text-left font-semibold text-slate-600 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">Employee</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-2">Salary<br />(₹)</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-emerald-700 sm:px-1.5">Present<br />Days</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Absent<br />Days</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Half<br />Days</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Late<br />Count</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Paid<br />Leave</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">LOP<br />Days</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-2">LOP<br />Amount</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-emerald-700 sm:px-2">Net<br />Payable</th>
             </tr>
           </thead>
           <tbody>
@@ -221,7 +224,7 @@ export default function SalaryPage() {
               const netPayable = currentSalary > 0 ? Math.max(0, currentSalary - (liveLopAmount || 0)) : null;
               return (
                 <tr key={emp.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="sticky left-0 z-[1] max-w-0 overflow-hidden bg-white px-1.5 py-2.5 shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
+                  <td className="z-[1] max-w-0 overflow-hidden bg-white px-2 py-2.5 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
                     <button type="button" onClick={() => openAttendance(emp)} className="w-full text-left" title="Open attendance details">
                       <p className="break-words font-medium leading-tight text-slate-800 hover:text-brand-600" title={emp.name}>{emp.name}</p>
                       {emp.email && <p className="break-all text-[10px] leading-tight text-slate-400" title={emp.email}>{emp.email}</p>}
@@ -230,12 +233,12 @@ export default function SalaryPage() {
                       </span>
                     </button>
                   </td>
-                  <td className="whitespace-nowrap px-2 py-2.5">
+                  <td className="whitespace-nowrap px-1 py-2.5 text-right sm:px-2">
                     <p className="font-medium text-slate-700">{currentSalary > 0 ? formatINR(currentSalary) : '—'}</p>
                     {!hasSalary && <p className="mt-1 text-[10px] font-medium text-amber-600">Missing salary</p>}
                   </td>
-                  <td className="px-0.5 py-2.5 text-center font-medium text-emerald-700"><button type="button" onClick={() => openAttendance(emp)} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View attendance dates">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
-                  <td className="px-0.5 py-2.5 text-center text-slate-600">
+                  <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5"><button type="button" onClick={() => openAttendance(emp)} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View attendance dates">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
+                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">
                     {ded && Number(ded.absentDays || 0) > 0 ? (
                       <button
                         type="button"
@@ -247,18 +250,18 @@ export default function SalaryPage() {
                       </button>
                     ) : (ded?.absentDays ?? '—')}
                   </td>
-                  <td className="px-0.5 py-2.5 text-center text-slate-600">{ded?.halfDays ?? '—'}</td>
-                  <td className="px-0.5 py-2.5 text-center text-slate-600">{ded?.lateOccurrences ?? '—'}</td>
-                  <td className="px-0.5 py-2.5 text-center text-slate-600">{ded ? `${ded.paidLeaveUsed}/${ded.leaveLimit}` : '—'}</td>
-                  <td className="px-0.5 py-2.5 text-center text-slate-600">{ded?.lopDays ? ded.lopDays.toFixed(1) : '—'}</td>
-                  <td className="whitespace-nowrap px-2 py-2.5 text-center font-medium text-red-600">
+                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">{ded?.halfDays ?? '—'}</td>
+                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">{ded?.lateOccurrences ?? '—'}</td>
+                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">{ded ? `${ded.paidLeaveUsed}/${ded.leaveLimit}` : '—'}</td>
+                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">{ded?.lopDays ? ded.lopDays.toFixed(1) : '—'}</td>
+                  <td className="whitespace-nowrap px-1 py-2.5 text-right font-medium text-red-600 sm:px-2">
                     {ded && Number(ded.lopAmount || 0) > 0 ? (
                       <button type="button" onClick={() => setLopExplain({ ded, emp, salary: currentSalary })}
                         className="rounded px-1.5 py-0.5 underline decoration-dotted underline-offset-2 hover:bg-red-50"
                         title="Show why this amount was cut">{formatINR(liveLopAmount || 0)}</button>
                     ) : liveLopAmount !== null ? formatINR(liveLopAmount) : Number(currentSalary) > 0 ? '₹0' : '—'}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-2.5 text-center font-semibold text-emerald-700">
+                  <td className="whitespace-nowrap px-1 py-2.5 text-right font-semibold text-emerald-700 sm:px-2">
                     {netPayable !== null ? formatINR(netPayable) : '—'}
                   </td>
                 </tr>
@@ -266,6 +269,8 @@ export default function SalaryPage() {
             })}
           </tbody>
         </table>
+        </div>
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent md:hidden" />
         </div>
         {filteredRows.length === 0 && (
           <div className="text-center py-12 text-slate-400">
