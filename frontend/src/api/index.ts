@@ -806,8 +806,16 @@ export const getSalaryDeductions = async (uploadId: number) => {
         if (hours - 8 > 2) item.overtimeHours += hours - 8;
         if (hours < halfBelow) item.halfDays++;
       } else {
-        // Beyond 10h earns half a shift extra and 12h or more counts as two.
-        const credit = hours >= 12 ? 2 : hours > 10 ? 1.5 : hours < halfBelow ? 0.5 : 1;
+        // An extra shift is measured against the person's own contracted hours,
+        // not a fixed clock. A twelve-hour night guard working twelve hours has
+        // done one shift; a six-hour sister working twelve has done two. Fixed
+        // 10h and 12h thresholds credited that guard with two days every night
+        // and pushed him past forty present days in a thirty-one day month.
+        const shift = contracted || 8;
+        const credit = hours >= shift * 2 ? 2
+          : hours >= shift * 1.5 ? 1.5
+          : hours < halfBelow ? 0.5
+          : 1;
         item.presentDays += credit;
         if (credit > 1) item.extraDays += credit - 1;
         if (credit === 0.5) item.halfDays++;
