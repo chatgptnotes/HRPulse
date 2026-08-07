@@ -73,16 +73,50 @@ function nearestConfiguredShift(timings: any, punchMinutes: number) {
 
 // Supabase commonly limits one REST response to 1,000 rows. Attendance
 // uploads contain many rows per employee, so read larger result sets in pages.
+// The first page reports the total, which lets the rest be fetched at once
+// instead of one after another — a month of attendance is nine pages, and
+// waiting for each in turn cost about six seconds.
 async function fetchAllRows<T>(buildQuery: (from: number, to: number) => any): Promise<{ data: T[]; error: any }> {
-  const all: T[] = [];
   const pageSize = 1000;
-  for (let from = 0; ; from += pageSize) {
-    const result = await buildQuery(from, from + pageSize - 1);
-    if (result.error) return { data: all, error: result.error };
-    const page = (result.data || []) as T[];
-    all.push(...page);
-    if (page.length < pageSize) return { data: all, error: null };
+  const first = await buildQuery(0, pageSize - 1);
+  if (first.error) return { data: [], error: first.error };
+  const head = (first.data || []) as T[];
+  if (head.length < pageSize) return { data: head, error: null };
+
+  // `count` is present when the caller asked for it; without it, fall back to
+  // reading sequentially so a missing total degrades rather than breaks.
+  const total = typeof first.count === 'number' ? first.count : null;
+  if (total === null) {
+    const all = [...head];
+    for (let from = pageSize; ; from += pageSize) {
+      const result = await buildQuery(from, from + pageSize - 1);
+      if (result.error) return { data: all, error: result.error };
+      const page = (result.data || []) as T[];
+      all.push(...page);
+      if (page.length < pageSize) return { data: all, error: null };
+    }
   }
+
+  const offsets: number[] = [];
+  for (let from = pageSize; from < total; from += pageSize) offsets.push(from);
+
+  // Four at a time. Firing every page at once was measurably faster still, but
+  // it drew an intermittent 500 from the REST endpoint; four keeps almost all
+  // of the gain without leaning on the server.
+  const concurrency = 4;
+  const pages: T[][] = new Array(offsets.length);
+  let cursor = 0;
+  let failure: any = null;
+  await Promise.all(Array.from({ length: Math.min(concurrency, offsets.length) }, async () => {
+    while (cursor < offsets.length && !failure) {
+      const index = cursor++;
+      const result = await buildQuery(offsets[index], offsets[index] + pageSize - 1);
+      if (result.error) { failure = result.error; return; }
+      pages[index] = (result.data || []) as T[];
+    }
+  }));
+  if (failure) return { data: head, error: failure };
+  return { data: head.concat(...pages.map(page => page || [])), error: null };
 }
 
 /**
@@ -568,11 +602,19 @@ export const getUploads = async () => {
 };
 export const getAttendanceSummary = async (uploadId: number) => {
   if (!supabaseConfigured) return api.get(`/attendance/summary/${uploadId}`);
-  const { data, error } = await fetchAllRows<any>((from, to) => directClient().from('attendance_records').select('*, employees(id,name,email)').eq('import_id', uploadId).range(from, to));
+  // Only the two columns the summary counts on, and names resolved from one
+  // employee read instead of embedded on every row.
+  const { data, error } = await fetchAllRows<any>((from, to) => directClient().from('attendance_records').select('employee_id,status', { count: 'exact' }).eq('import_id', uploadId).range(from, to));
   if (error) throw new Error(error.message);
+  const rowsForSummary = data || [];
+  const summaryIds = [...new Set(rowsForSummary.map((row: any) => row.employee_id))];
+  const employeeRows = summaryIds.length
+    ? (await directClient().from('employees').select('id,name,email').in('id', summaryIds)).data || []
+    : [];
+  const employeeById = new Map<number, any>(employeeRows.map((e: any) => [e.id, e]));
   const grouped = new Map<number, any>();
-  for (const row of data || []) {
-    const employee = row.employees || {};
+  for (const row of rowsForSummary) {
+    const employee = employeeById.get(row.employee_id) || {};
     const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', absentDays: 0, missedSwipeDays: 0, lateComingDays: 0, earlyLeavingDays: 0, flaggedTotal: 0, lopDays: 0, lopAmount: 0, hasDraft: false, draftStatus: null, draftId: null };
     const status = String(row.status || '').toLowerCase();
     if (status.includes('absent')) { item.absentDays++; item.lopDays++; }
@@ -646,7 +688,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
   const periodEnd = nextMonth.toISOString().slice(0, 10);
   // Use the month as the source of truth. Imports are merged/replaced during
   // re-upload, so the newest import ID may not own every valid record.
-  const records = await fetchAllRows<any>((from, to) => client.from('attendance_records').select('employee_id,record_date,status,work_hours,overtime_hours,time_in,policy_code,employees(id,name,email,department,organisation,entity,eligible_for_paid_leaves)').gte('record_date', periodStart).lt('record_date', periodEnd).range(from, to));
+  const records = await fetchAllRows<any>((from, to) => client.from('attendance_records').select('employee_id,record_date,status,work_hours,time_in,policy_code', { count: 'exact' }).gte('record_date', periodStart).lt('record_date', periodEnd).range(from, to));
   if (records.error) throw new Error(records.error.message);
   const rows = records.data || [];
   // Payroll covers the real calendar month. A day's pay is still salary over
@@ -661,16 +703,21 @@ export const getSalaryDeductions = async (uploadId: number) => {
   }
   const ids = [...new Set(rows.map((row: any) => row.employee_id))];
   if (!ids.length) return { data: [] };
-  const salaries = await client.from('employees').select('id,monthly_salary,contracted_hours').in('id', ids);
+  const salaries = await client.from('employees').select('id,name,email,department,organisation,entity,eligible_for_paid_leaves,monthly_salary,contracted_hours').in('id', ids);
   if (salaries.error) throw new Error(salaries.error.message);
   const salaryMap = new Map<number, number>();
   // The contracted shift comes from the staff sheet. A completed shift is a
   // full day whatever its length, so a six-hour sister is not docked for
   // finishing on time. Null falls back to the flat threshold below.
   const contractedMap = new Map<number, number | null>();
+  // Employee details are read once here rather than embedded on every
+  // attendance row, where each person's record repeated for all 31 days of the
+  // month and tripled the payload.
+  const employeeMap = new Map<number, any>();
   for (const row of salaries.data || []) {
     salaryMap.set(row.id, Number(row.monthly_salary || 0));
     contractedMap.set(row.id, row.contracted_hours == null ? null : Number(row.contracted_hours));
+    employeeMap.set(row.id, row);
   }
   const [{ data: activeRules, error: rulesError }, { data: settings, error: settingsError }] = await Promise.all([
     client.from('attendance_rules').select('rule_type,conditions,actions,description,name').eq('is_active', true),
@@ -697,7 +744,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
   };
   const grouped = new Map<number, any>();
   for (const row of payrollRows as any[]) {
-    const employee = row.employees || {};
+    const employee = employeeMap.get(row.employee_id) || {};
     const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, absentDays: 0, absentSunday: 0, absentNonSunday: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, extraDays: 0, overtimeEligibleDays: 0, itRecords: 0 };
     if (String(row.policy_code || '').toLowerCase() === 'it') item.itRecords++;
     const status = String(row.status || '').toLowerCase();
@@ -939,7 +986,7 @@ export const getDerivedShiftTimings = async () => {
   if (!supabaseConfigured) return { data: new Map<number, DerivedTimings>() };
   const client = directClient();
   const records = await fetchAllRows<any>((from, to) => client.from('attendance_records')
-    .select('employee_id,time_in_raw,time_out_raw')
+    .select('employee_id,time_in_raw,time_out_raw', { count: 'exact' })
     .not('time_in_raw', 'is', null)
     .not('time_out_raw', 'is', null)
     .range(from, to));
@@ -1155,7 +1202,7 @@ export const getMonthlyComparison = async () => {
   if (importsError) throw new Error(importsError.message);
   const result = await Promise.all((imports || []).map(async (row: any) => {
     const { data, error } = await fetchAllRows<any>((from, to) => client.from('attendance_records')
-      .select('status').eq('import_id', row.id).range(from, to));
+      .select('status', { count: 'exact' }).eq('import_id', row.id).range(from, to));
     if (error) throw new Error(error.message);
     return { month: row.period_month, flagged: (data || []).filter(r => isFlaggedStatus(r.status)).length, sent: 0 };
   }));
