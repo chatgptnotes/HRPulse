@@ -6,7 +6,7 @@ const links = [
   { to: '/', label: 'Dispatcher', icon: 'send', end: true },
   { to: '/analytics', label: 'Analytics', icon: 'bar_chart', end: false },
   { to: '/employees', label: 'Employees', icon: 'people', end: false },
-  { to: '/salary', label: 'Salary / LOP', icon: 'payments', end: false },
+  { to: '/salary', label: 'Salary / Loss of Pay', icon: 'payments', end: false },
   { to: '/history', label: 'Email History', icon: 'history', end: false },
   { to: '/rules', label: 'Rules', icon: 'rule', end: false },
   { to: '/sops', label: 'SOPs', icon: 'description', end: false },

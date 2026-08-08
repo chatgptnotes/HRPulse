@@ -117,19 +117,19 @@ export default function RulesPage() {
     const presets = {
       late: {
         name: 'Late after 9:30 AM', ruleType: 'late_coming',
-        description: 'Count a late day when check-in is after 9:30 AM. Every 3 late days creates 1 LOP day.',
+        description: 'Count a late day when check-in is after 9:30 AM. Every 3 late days creates 1 loss-of-pay day.',
         conditionsStr: JSON.stringify({ lateAfter: '09:30', lateOccurrencesForDeduction: 3 }),
         actionsStr: JSON.stringify({ applyLop: true, lopDays: 'floor(lateDays / 3)', sendEmail: true }),
       },
       absence: {
         name: 'Full-day absence', ruleType: 'absence_threshold',
-        description: 'A full-day absence creates 1 LOP day.',
+        description: 'A full-day absence creates 1 loss-of-pay day.',
         conditionsStr: JSON.stringify({ status: 'absent' }),
         actionsStr: JSON.stringify({ applyLop: true, lopDays: 1, sendEmail: true }),
       },
       half: {
         name: 'Half day below 4 hours', ruleType: 'custom',
-        description: 'Working less than 4 hours creates half a LOP day.',
+        description: 'Working less than 4 hours creates half a loss-of-pay day.',
         conditionsStr: JSON.stringify({ workHoursLessThan: 4 }),
         actionsStr: JSON.stringify({ applyLop: true, lopDays: 0.5, sendEmail: true }),
       },
@@ -148,15 +148,15 @@ export default function RulesPage() {
     const text = `${rule.name} ${rule.description || ''} ${JSON.stringify(rule.conditions)} ${JSON.stringify(rule.actions)}`.toLowerCase();
     if (text.includes('late')) return [
       'Late when check-in is after 09:30 AM',
-      '3 late days = 1 LOP day',
-      '6 late days = 2 LOP days',
-      '9 late days = 3 LOP days',
+      '3 late days = 1 loss-of-pay day',
+      '6 late days = 2 loss-of-pay days',
+      '9 late days = 3 loss-of-pay days',
     ];
     if (text.includes('half') || text.includes('4 hour')) return [
       'Working less than 4 hours = half day',
-      'Half day = 0.5 LOP day',
+      'Half day = 0.5 loss-of-pay day',
     ];
-    if (text.includes('absen')) return ['Full-day absence = 1 LOP day'];
+    if (text.includes('absen')) return ['Full-day absence = 1 loss-of-pay day'];
     if (text.includes('missed') || text.includes('swipe')) return ['Missing check-in or check-out creates a missed-punch flag'];
     return (rule.description || 'This rule is applied to matching attendance records.')
       .split(/\n|(?<=[.!?])\s+/)
@@ -175,20 +175,20 @@ export default function RulesPage() {
 
   function ruleExamples(rule: Rule) {
     const text = `${rule.name} ${rule.description || ''} ${JSON.stringify(rule.conditions)} ${JSON.stringify(rule.actions)}`.toLowerCase();
-    if (text.includes('late')) return ['Check-in at 09:31 AM → late day', '3 late days → 1 LOP day'];
-    if (text.includes('half') || text.includes('4 hour')) return ['Work 3 hours 59 minutes → half day', 'Half day → 0.5 LOP day'];
-    if (text.includes('absen')) return ['No attendance for a scheduled day → 1 LOP day'];
+    if (text.includes('late')) return ['Check-in at 09:31 AM → late day', '3 late days → 1 loss-of-pay day'];
+    if (text.includes('half') || text.includes('4 hour')) return ['Work 3 hours 59 minutes → half day', 'Half day → 0.5 loss-of-pay day'];
+    if (text.includes('absen')) return ['No attendance for a scheduled day → 1 loss-of-pay day'];
     if (text.includes('missed') || text.includes('swipe')) return ['Only check-in or only check-out → missed-punch flag'];
     return ['The rule is checked against matching attendance records.'];
   }
 
   function ruleImpact(rule: Rule) {
     const text = `${rule.name} ${rule.description || ''} ${JSON.stringify(rule.conditions)} ${JSON.stringify(rule.actions)}`.toLowerCase();
-    if (text.includes('late')) return 'Salary / LOP impact: adds one LOP day for every three late days.';
-    if (text.includes('half') || text.includes('4 hour')) return 'Salary / LOP impact: adds 0.5 LOP day.';
-    if (text.includes('absen')) return 'Salary / LOP impact: adds one LOP day for each full-day absence.';
-    if (text.includes('missed') || text.includes('swipe')) return 'Salary / LOP impact: creates a missed-punch attendance flag.';
-    return 'Salary / LOP impact depends on the rule action settings.';
+    if (text.includes('late')) return 'Salary / Loss of Pay impact: adds one loss-of-pay day for every three late days.';
+    if (text.includes('half') || text.includes('4 hour')) return 'Salary / Loss of Pay impact: adds 0.5 loss-of-pay day.';
+    if (text.includes('absen')) return 'Salary / Loss of Pay impact: adds one loss-of-pay day for each full-day absence.';
+    if (text.includes('missed') || text.includes('swipe')) return 'Salary / Loss of Pay impact: creates a missed-punch attendance flag.';
+    return 'Salary / Loss of Pay impact depends on the rule action settings.';
   }
 
   function closeModal() {
@@ -233,7 +233,7 @@ export default function RulesPage() {
       </div>
 
       <div className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
-        <span className="font-semibold">How it works:</span> Active rules are followed. Inactive rules are ignored. Salary / LOP uses active absence, half-day, leave, and late-coming rules. You can edit or switch any rule below.
+        <span className="font-semibold">How it works:</span> Active rules are followed. Inactive rules are ignored. Salary / Loss of Pay uses active absence, half-day, leave, and late-coming rules. You can edit or switch any rule below.
       </div>
 
       {isLoading ? (
@@ -327,7 +327,7 @@ export default function RulesPage() {
                     value={policyText}
                     onChange={e => setPolicyText(e.target.value)}
                     rows={3}
-                    placeholder="Example: If an employee is late 4 times in one month, send a warning and apply half a day LOP."
+                    placeholder="Example: If an employee is late 4 times in one month, send a warning and apply half a day loss of pay."
                     className="border border-indigo-200 rounded-lg px-3 py-2 text-sm w-full bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                   />
                   <div className="flex items-center justify-between gap-3">

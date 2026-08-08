@@ -122,7 +122,7 @@ export default function SalaryPage() {
     }).join('');
     const popup = window.open('', '_blank', 'width=1100,height=750');
     if (!popup) return;
-    popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+3),th:nth-child(n+3){text-align:right}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick="window.print()">Print</button><table><thead><tr><th>Employee</th><th>Company</th><th>Salary (₹)</th><th>LOP Days</th><th>LOP Amount (₹)</th><th>Net Payable (₹)</th></tr></thead><tbody>${body || '<tr><td colspan="6">No salaried employees found</td></tr>'}</tbody></table></body></html>`);
+    popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+3),th:nth-child(n+3){text-align:right}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick="window.print()">Print</button><table><thead><tr><th>Employee</th><th>Company</th><th>Salary (₹)</th><th>Loss of Pay (Days)</th><th>Loss of Pay (₹)</th><th>Net Payable (₹)</th></tr></thead><tbody>${body || '<tr><td colspan="6">No salaried employees found</td></tr>'}</tbody></table></body></html>`);
     popup.document.close();
     popup.focus();
     setShowPrintOptions(false);
@@ -132,7 +132,7 @@ export default function SalaryPage() {
     <div className="w-full min-w-0 p-4 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Salary & LOP Deductions</h1>
+          <h1 className="text-xl font-bold text-slate-800">Salary & Loss of Pay</h1>
           <p className="text-sm text-slate-500 mt-0.5">Salary is taken automatically from Employee Master and calculated from attendance.</p>
         </div>
         <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -155,7 +155,7 @@ export default function SalaryPage() {
           <p className="mt-0.5 text-lg font-bold text-emerald-600">{summary.attendance}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Has LOP</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Has loss of pay</p>
           <p className="mt-0.5 text-lg font-bold text-red-600">{summary.lop}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
@@ -171,7 +171,7 @@ export default function SalaryPage() {
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email or ID..." className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" />
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {[['payable', 'Net payable'], ['all', 'All'], ['attendance', 'With attendance'], ['missing-attendance', 'Missing attendance'], ['lop', 'Has LOP'], ['missing-salary', 'Missing salary']].map(([value, label]) => (
+            {[['payable', 'Net payable'], ['all', 'All'], ['attendance', 'With attendance'], ['missing-attendance', 'Missing attendance'], ['lop', 'Has loss of pay'], ['missing-salary', 'Missing salary']].map(([value, label]) => (
               <button key={value} onClick={() => setFilter(value)} className={`rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors ${filter === value ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-100'}`}>
                 {label}
               </button>
@@ -188,7 +188,7 @@ export default function SalaryPage() {
         {noAttendanceData && (
           <div className="flex flex-wrap items-center gap-2 border-b border-amber-100 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
             <span className="material-icons text-sm">info</span>
-            <span>No attendance records for {month}. Showing salary only — import an attendance file to calculate LOP, overtime and net payable.</span>
+            <span>No attendance records for {month}. Showing salary only — import an attendance file to calculate loss of pay, overtime and net payable.</span>
           </div>
         )}
         {hasActiveFilters && (
@@ -196,7 +196,7 @@ export default function SalaryPage() {
             <span className="font-semibold text-slate-600">Showing:</span>
             {search.trim() && <span className="rounded-md bg-indigo-50 px-2 py-1 text-indigo-700">Search “{search.trim()}”</span>}
             {companyFilter !== 'All' && <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-700">Company: {companyFilter}</span>}
-            {filter !== 'attendance' && <span className="rounded-md bg-emerald-50 px-2 py-1 text-emerald-700">Status: {filter === 'missing-attendance' ? 'Missing attendance' : filter === 'missing-salary' ? 'Missing salary' : filter === 'lop' ? 'Has LOP' : filter === 'payable' ? 'Net payable' : 'All'}</span>}
+            {filter !== 'attendance' && <span className="rounded-md bg-emerald-50 px-2 py-1 text-emerald-700">Status: {filter === 'missing-attendance' ? 'Missing attendance' : filter === 'missing-salary' ? 'Missing salary' : filter === 'lop' ? 'Has loss of pay' : filter === 'payable' ? 'Net payable' : 'All'}</span>}
             <button onClick={clearFilters} className="ml-auto font-semibold text-indigo-600 hover:text-indigo-800">Clear filters</button>
           </div>
         )}
@@ -204,7 +204,7 @@ export default function SalaryPage() {
             column pushed off-screen is visible rather than silently cut off. */}
         <div className="relative">
         <div className="w-full overflow-x-auto pb-2">
-        <table className="w-full min-w-[880px] table-auto text-[10px] tabular-nums sm:text-[11px]">
+        <table className="w-full min-w-[960px] table-auto text-[10px] tabular-nums sm:text-[11px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="z-10 bg-slate-50 px-2 py-2.5 text-left font-semibold text-slate-600 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">Employee</th>
@@ -214,8 +214,8 @@ export default function SalaryPage() {
               <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Half<br />Days</th>
               <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Late<br />Count</th>
               <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Paid<br />Leave</th>
-              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">LOP<br />Days</th>
-              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-2">LOP<br />Amount</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Loss of Pay<br />Days</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-2">Loss of Pay<br />Amount</th>
               <th className="px-1 py-2.5 text-right font-semibold text-emerald-700 sm:px-2">Net<br />Payable</th>
             </tr>
           </thead>
@@ -232,7 +232,7 @@ export default function SalaryPage() {
                       <p className="break-words font-medium leading-tight text-slate-800 hover:text-brand-600" title={emp.name}>{emp.name}</p>
                       {emp.email && <p className="break-all text-[10px] leading-tight text-slate-400" title={emp.email}>{emp.email}</p>}
                       <span className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${!hasAttendance ? 'bg-slate-100 text-slate-500' : ded?.lopAmount ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                        {!hasAttendance ? 'No attendance' : ded?.lopAmount ? 'LOP calculated' : 'Attendance loaded'}
+                        {!hasAttendance ? 'No attendance' : ded?.lopAmount ? 'Loss of pay calculated' : 'Attendance loaded'}
                       </span>
                     </button>
                   </td>

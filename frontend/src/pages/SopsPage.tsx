@@ -248,7 +248,7 @@ export default function SopsPage() {
                   value={form.tags}
                   onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
                   className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  placeholder="absence, lop, policy"
+                  placeholder="absence, loss of pay, policy"
                 />
               </div>
               <div>

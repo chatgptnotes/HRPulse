@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 const features = [
   { icon: 'upload_file', title: 'GDHR SmartTime Integration', desc: 'Upload your SmartTime Excel export and HRPulse instantly parses all 15+ column variants — no config needed.' },
   { icon: 'mail', title: 'Template Email Drafting', desc: 'Generate consistent attendance emails from editable HR templates, with previews before dispatch.' },
-  { icon: 'payments', title: 'Loss of Pay Calculator', desc: 'Configurable LOP formula: basic salary / working days × effective absent days with adjustable missed-swipe weights.' },
+  { icon: 'payments', title: 'Loss of Pay Calculator', desc: 'Configurable loss-of-pay formula: basic salary / working days × effective absent days with adjustable missed-swipe weights.' },
   { icon: 'send', title: 'Bulk SMTP Dispatch', desc: 'Preview, edit, and dispatch emails to 100+ employees in one click via your corporate SMTP server.' },
   { icon: 'bar_chart', title: 'Attendance Analytics', desc: 'Trend charts, top offenders, and monthly comparisons across all uploaded periods.' },
   { icon: 'rule', title: 'Rules & SOPs Engine', desc: 'Define HR policy rules and maintain standard operating procedures in a searchable knowledge base.' },
@@ -15,7 +15,7 @@ const competitors = [
   { feature: 'Supabase + Vercel deployment', hrpulse: true, bayzat: false, keka: false, greythr: false, zoho: false },
   { feature: 'GDHR SmartTime Excel parser', hrpulse: true, bayzat: false, keka: false, greythr: false, zoho: false },
   { feature: 'Bulk attendance email dispatch', hrpulse: true, bayzat: true, keka: true, greythr: true, zoho: true },
-  { feature: 'LOP calculation', hrpulse: true, bayzat: true, keka: true, greythr: true, zoho: true },
+  { feature: 'Loss of pay calculation', hrpulse: true, bayzat: true, keka: true, greythr: true, zoho: true },
 ];
 
 export default function LandingPage() {
