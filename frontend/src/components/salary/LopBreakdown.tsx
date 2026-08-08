@@ -33,9 +33,9 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
   });
 
   // Walk the month in order and attribute each deduction to the day that caused
-  // it. The engine only counts these, so which particular non-Sunday absences
-  // used the allowance is a presentation choice — chronological, and the label
-  // says which one each consumed.
+  // it. The engine only counts these, so which particular absences used the
+  // allowance is a presentation choice — chronological, and the label says
+  // which one each consumed.
   const allowance = Number(ded.protectedAbsentDays || 0);
   const contracted = emp.contracted_hours == null ? null : Number(emp.contracted_hours);
   const halfBelow = contracted ? contracted / 2 : (ded.rafttarStaff ? Number(ded.halfDayHours || 4) : 7);
@@ -46,10 +46,10 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
     const sunday = isSunday(row.recordDate);
     const base = { date: String(row.recordDate).slice(0, 10), day: dayName(row.recordDate) };
     if (status === 'absent') {
-      if (sunday) {
-        // A Rafttar Sunday is a paid weekly off and costs nothing.
-        if (!ded.rafttarStaff) charges.push({ ...base, why: 'Absent on a Sunday — never covered', amount: rate });
-      } else if (covered < allowance) {
+      // A Rafttar Sunday is a paid weekly off and costs nothing. Every other
+      // absence, a hospital Sunday included, draws on the monthly allowance.
+      if (sunday && ded.rafttarStaff) continue;
+      if (covered < allowance) {
         covered++;
         charges.push({ ...base, why: `Absent — covered by paid leave (${covered} of ${allowance})`, amount: 0 });
       } else {
@@ -93,7 +93,7 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
           <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[13px] text-slate-600">
             {ded.rafttarStaff
               ? <>Rafttar: every Sunday is a paid weekly off, plus <b>2</b> paid leaves.</>
-              : <>Hospital: Sundays are working days. <b>{ded.leaveLimit}</b> paid non-Sunday leaves this month (one per Sunday), and a Sunday taken off is always deducted.</>}
+              : <>Hospital: Sundays are working days, but <b>{ded.leaveLimit}</b> paid leaves a month — a Sunday taken off counts as one of them.</>}
           </div>
 
           {isLoading && <p className="mt-4 text-center text-[13px] text-slate-400">Loading the dates…</p>}

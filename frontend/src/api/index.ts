@@ -720,12 +720,6 @@ export const getSalaryDeductions = async (uploadId: number) => {
   // thirty, but the 31st is a working day like any other and is no longer
   // discarded.
   const payrollRows = rows.filter((row: any) => !Number.isNaN(new Date(`${String(row.record_date).slice(0, 10)}T00:00:00Z`).getTime()));
-  // Hospital staff are allowed as many non-Sunday paid leaves as the month has
-  // Sundays, so this is counted from the calendar rather than fixed at four.
-  let sundaysInMonth = 0;
-  for (const cursor = new Date(`${periodStart}T00:00:00Z`); cursor.toISOString().slice(0, 10) < periodEnd; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-    if (cursor.getUTCDay() === 0) sundaysInMonth++;
-  }
   const ids = [...new Set(rows.map((row: any) => row.employee_id))];
   if (!ids.length) return { data: [] };
   const salaries = await client.from('employees').select('id,name,email,department,organisation,entity,eligible_for_paid_leaves,monthly_salary,contracted_hours').in('id', ids);
@@ -754,6 +748,11 @@ export const getSalaryDeductions = async (uploadId: number) => {
   let lateAfterMinutes = Number(settingMap.get('late_after_minutes') || 570);
   let lateEvery = Number(settingMap.get('late_occurrences_for_deduction') || 3);
   let halfDayHours = Number(settingMap.get('half_day_threshold_hours') || 4);
+  // The monthly paid-leave allowance. Both keys are seeded by
+  // 20260806_attendance_salary_policies.sql, so the limit can be retuned from
+  // the settings table without touching this file; the fallbacks match the seed.
+  const itLeaveLimit = Number(settingMap.get('it_paid_leave_limit') || 2);
+  const nonItLeaveLimit = Number(settingMap.get('non_it_paid_leave_limit') || 4);
   const lateTime = policyText.match(/(?:after|greater than|more than)\D{0,20}(\d{1,2})\s*:\s*(\d{2})/);
   if (lateTime) lateAfterMinutes = Number(lateTime[1]) * 60 + Number(lateTime[2]);
   const lateCount = policyText.match(/(?:every|set of|divide|÷|\/|by)\D{0,12}(\d+)\s*(?:late|occurrence|day)?/);
@@ -847,13 +846,15 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const isIt = item.itRecords > 0 || /\bit\b|information technology/i.test(`${item.department} ${item.organisation} ${item.entity}`);
     const rafttarStaff = /rafttar/i.test(`${item.organisation} ${item.entity} ${item.department}`);
     // Rafttar already has every Sunday off and gets two further paid leaves.
-    // Hospital staff work Sundays, and are allowed as many non-Sunday paid
-    // leaves as the month has Sundays.
-    const leaveLimit = rafttarStaff ? 2 : sundaysInMonth;
-    const protectedAbsentDays = Math.min(item.absentNonSunday, Math.max(0, leaveLimit - item.paidLeaveUsed));
-    // The allowance covers non-Sunday absence only. A Sunday taken off is
-    // deducted however few non-Sunday leaves have been used.
-    const chargeableAbsentDays = Math.max(0, item.absentNonSunday - protectedAbsentDays) + item.absentSunday;
+    // Hospital staff work Sundays, and get a flat monthly allowance.
+    const leaveLimit = rafttarStaff ? itLeaveLimit : nonItLeaveLimit;
+    // A hospital Sunday is an ordinary working day, but an absence on one now
+    // draws on the same allowance as any other day rather than being charged
+    // outright. One pool serves both groups: Rafttar's Sunday is credited as a
+    // paid weekly off above and never reaches this branch as absence, so their
+    // absentSunday stays nil and absentDays is their non-Sunday count.
+    const protectedAbsentDays = Math.min(item.absentDays, Math.max(0, leaveLimit - item.paidLeaveUsed));
+    const chargeableAbsentDays = Math.max(0, item.absentDays - protectedAbsentDays);
     const excessPaidLeave = Math.max(0, item.paidLeaveUsed - leaveLimit);
     const lateDeductionCount = Math.floor(item.lateOccurrences / lateEvery);
     const absenceDeduction = chargeableAbsentDays * dailySalary;
@@ -868,7 +869,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const displayedPaidLeave = item.paidLeaveUsed + protectedAbsentDays;
     // The individual amounts travel with the totals so the salary sheet can
     // explain, line by line, why the pay was cut.
-    return { ...item, isIt, rafttarStaff, sundaysInMonth, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, netPayable: Math.max(0, basicSalary - totalLopAmount), dailySalary, totalLopAmount, basicSalary };
+    return { ...item, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, netPayable: Math.max(0, basicSalary - totalLopAmount), dailySalary, totalLopAmount, basicSalary };
   });
   // Deductions are derived on every read, so there is nothing to cache back to
   // the database. The previous write-back also stored an undefined
