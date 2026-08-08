@@ -3,9 +3,9 @@
 // getSalaryDeductions (api/index.ts) only ever returns monthly totals — how many
 // days were absent, how much was cut. This walks the same records the same way
 // and says which date each rupee belongs to, so a salary screen can show the
-// month line by line. The per-day rules below mirror api/index.ts:749-830; if
-// that engine changes, this has to change with it, and the reconcile flag is the
-// safety net when it does not.
+// month line by line. The per-day rules below mirror the crediting ladder in
+// getSalaryDeductions; if that engine changes, this has to change with it, and
+// the reconcile flag is the safety net when it does not.
 
 import { canonicalStatus } from './status';
 
@@ -18,20 +18,6 @@ export const isSunday = (value: unknown) => {
 
 export const dayName = (value: unknown) =>
   new Date(`${String(value || '').slice(0, 10)}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' });
-
-const timeInMinutes = (value: unknown) => {
-  const text = String(value || '');
-  const match = text.match(/(?:T|\s)(\d{1,2}):(\d{2})/);
-  if (match) return Number(match[1]) * 60 + Number(match[2]);
-  const parsed = new Date(text);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.getHours() * 60 + parsed.getMinutes();
-};
-
-const ordinal = (n: number) => {
-  const rest = n % 100;
-  if (rest >= 11 && rest <= 13) return `${n}th`;
-  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;
-};
 
 export type DayLine = {
   date: string;
@@ -68,9 +54,8 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
   // decides what counts as an extra shift, but no longer what counts as half one.
   const halfBelow = Number(ded?.halfDayHours || 4);
   const shift = contracted || 8;
-  const lateAfterMinutes = Number(ded?.lateAfterMinutes || 570);
 
-  type Working = DayLine & { isAbsent: boolean; isHalf: boolean; isLate: boolean; isPaidLeave: boolean };
+  type Working = DayLine & { isAbsent: boolean; isHalf: boolean; isPaidLeave: boolean };
 
   const lines: Working[] = [];
   const sorted = [...(records || [])].sort((a, b) => String(a.recordDate).localeCompare(String(b.recordDate)));
@@ -90,7 +75,6 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
       why: '',
       isAbsent: false,
       isHalf: false,
-      isLate: false,
       isPaidLeave: false,
     };
 
@@ -126,14 +110,19 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
     } else if (canonicalStatus(status) === 'Missed Swipe' || ['normal', 'present', 'late', 'late coming', 'early leaving'].includes(status)) {
       // Present, but with no usable punch span to measure. Full duty.
       line.credit = 1;
+    } else if (['holiday', 'weekend'].includes(status) || canonicalStatus(status) === 'Official') {
+      // Paid days nobody punches for — mirrors the engine, which has to credit
+      // them explicitly now that pay is counted up from the days owed.
+      line.credit = 1;
     }
     if (status === 'half_day' || status === 'half day') line.credit += 0.5;
 
     if (status === 'absent') line.isAbsent = true;
-    if (status.includes('late') || (() => { const m = timeInMinutes(row.time_in); return m !== null && m > lateAfterMinutes; })()) line.isLate = true;
     if (status.includes('paid leave') || status.includes('casual leave') || status.includes('sick leave')) line.isPaidLeave = true;
 
-    line.earned = line.credit * rate;
+    // The ladder still shows an extra shift as 1.5 or 2 days of duty, but a day
+    // is only ever worth a day's pay — the engine caps it the same way.
+    line.earned = Math.min(line.credit, 1) * rate;
     lines.push(line);
   }
 
@@ -161,20 +150,8 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
     line.why = line.why || 'Half day — short of half the shift';
   }
 
-  // Every lateEvery-th late arrival costs a day. Charged on the date that
-  // completed the set, so the count on screen matches lateDeductionCount.
-  const lateEvery = Math.max(1, Number(ded?.lateEvery || 3));
-  const lateBudget = Number(ded?.lateDeductionCount || 0);
-  let lateSeen = 0;
-  let lateCharged = 0;
-  for (const line of lines) {
-    if (!line.isLate) continue;
-    lateSeen++;
-    if (lateSeen % lateEvery !== 0 || lateCharged >= lateBudget) continue;
-    lateCharged++;
-    line.deducted += rate;
-    line.why = `${ordinal(lateSeen)} late arrival — one day cut`;
-  }
+  // Lateness used to cost a day for every third occurrence. It no longer costs
+  // anything in any month, so no date carries a late charge.
 
   // Paid leave past the monthly allowance is charged, oldest first.
   const excessBudget = Number(ded?.excessPaidLeave || 0);
@@ -190,7 +167,7 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
     line.why = 'Leave beyond the monthly allowance';
   }
 
-  const clean: DayLine[] = lines.map(({ isAbsent: _a, isHalf: _h, isLate: _l, isPaidLeave: _p, ...line }) => line);
+  const clean: DayLine[] = lines.map(({ isAbsent: _a, isHalf: _h, isPaidLeave: _p, ...line }) => line);
   const totalEarned = clean.reduce((sum, l) => sum + l.earned, 0);
   const totalDeducted = clean.reduce((sum, l) => sum + l.deducted, 0);
 

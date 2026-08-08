@@ -210,8 +210,11 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
               {showMoney && (
                 <div className="mt-4 rounded-lg bg-slate-50 px-3 py-2.5 text-[13px]">
                   <div className="flex justify-between py-0.5"><span className="text-slate-500">Monthly salary</span><span className="font-medium text-slate-800">{money(Number(monthlySalary || deduction.basicSalary || 0))}</span></div>
-                  <div className="flex justify-between py-0.5"><span className="text-slate-500">Total deducted this month</span><span className="font-medium text-red-600">{money(Number(deduction.lopAmount || 0))}</span></div>
-                  <div className="flex justify-between border-t border-slate-200 py-0.5 pt-1.5"><span className="font-semibold text-slate-700">Net payable</span><span className="font-semibold text-emerald-700">{money(Math.max(0, Number(monthlySalary || deduction.basicSalary || 0) - Number(deduction.lopAmount || 0)))}</span></div>
+                  <div className="flex justify-between py-0.5"><span className="text-slate-500">Payable days</span><span className="font-medium text-slate-800">{Number(deduction.payableDays || 0).toFixed(Number(deduction.payableDays || 0) % 1 ? 1 : 0)} of {deduction.daysInMonth}</span></div>
+                  <div className="flex justify-between py-0.5"><span className="text-slate-500">Days not paid for</span><span className="font-medium text-red-600">{money(Number(deduction.lopAmount || 0))}</span></div>
+                  {/* Read from the engine, not recomputed. This line used to drop
+                      extraPayment and quietly showed a lower net than the grid. */}
+                  <div className="flex justify-between border-t border-slate-200 py-0.5 pt-1.5"><span className="font-semibold text-slate-700">Net payable</span><span className="font-semibold text-emerald-700">{money(Number(deduction.netPayable || 0))}</span></div>
                   <p className="mt-2 text-[12px] leading-snug text-slate-400">
                     A day's pay is salary ÷ 30, so the daily column need not add up to the monthly salary. Net payable above is authoritative.
                   </p>

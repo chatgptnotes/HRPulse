@@ -29,10 +29,10 @@ const SHIFT_LATE_GRACE_MINUTES = 30;
 // settings table, so it uses this constant directly while getSalaryDeductions
 // takes it as the fallback for half_day_threshold_hours — the two cannot drift.
 const HALF_DAY_HOURS = 4;
-// July 2026 was waived: late arrivals are recorded on the attendance row as
-// usual, but cost nothing that month. Add a YYYY-MM here to waive another; the
-// rule is untouched everywhere else.
-const LATE_RULE_WAIVED_MONTHS = new Set(['2026-07']);
+// Lateness costs nothing anywhere any more — pay follows the days a person is
+// entitled to, and a late arrival is still a day worked. The count is kept for
+// reporting, and hidden outright for the months listed here.
+const LATE_COUNT_HIDDEN_MONTHS = new Set(['2026-07']);
 
 // The status vocabulary now lives in lib/status.ts so the salary attribution can
 // use it without importing this module. Re-exported here because callers of the
@@ -654,10 +654,14 @@ export const getSalaryDeductions = async (uploadId: number) => {
   const upload = await client.from('attendance_imports').select('period_month').eq('id', uploadId).single();
   if (upload.error) throw new Error(upload.error.message);
   const periodStart = `${upload.data.period_month}-01`;
-  const lateRuleWaived = LATE_RULE_WAIVED_MONTHS.has(upload.data.period_month);
+  const lateCountHidden = LATE_COUNT_HIDDEN_MONTHS.has(upload.data.period_month);
   const nextMonth = new Date(`${periodStart}T00:00:00Z`);
   nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
   const periodEnd = nextMonth.toISOString().slice(0, 10);
+  // Pay is counted up from the days owed, so the length of the month matters:
+  // it is what a full attendance is measured against, and what tells us whether
+  // the import covered every date.
+  const daysInMonth = Math.round((new Date(`${periodEnd}T00:00:00Z`).getTime() - new Date(`${periodStart}T00:00:00Z`).getTime()) / 86400000);
   // Use the month as the source of truth. Imports are merged/replaced during
   // re-upload, so the newest import ID may not own every valid record.
   const records = await fetchAllRows<any>((from, to) => client.from('attendance_records').select('employee_id,record_date,status,work_hours,time_in,policy_code', { count: 'exact' }).gte('record_date', periodStart).lt('record_date', periodEnd).range(from, to));
@@ -716,7 +720,10 @@ export const getSalaryDeductions = async (uploadId: number) => {
   const grouped = new Map<number, any>();
   for (const row of payrollRows as any[]) {
     const employee = employeeMap.get(row.employee_id) || {};
-    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, absentDays: 0, absentSunday: 0, absentNonSunday: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, extraDays: 0, workedWeeklyOffs: 0, overtimeEligibleDays: 0, itRecords: 0 };
+    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, attendedDays: 0, datesSeen: new Set<string>(), absentDays: 0, absentSunday: 0, absentNonSunday: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, extraDays: 0, workedWeeklyOffs: 0, overtimeEligibleDays: 0, itRecords: 0 };
+    // Days-up pay cannot notice a date that was never imported, so the spread of
+    // dates is tracked here and checked against the month below.
+    item.datesSeen.add(String(row.record_date).slice(0, 10));
     if (String(row.policy_code || '').toLowerCase() === 'it') item.itRecords++;
     const status = String(row.status || '').toLowerCase();
     // Rafttar is the exception; every other entity follows the hospital shift
@@ -742,6 +749,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
       // day's pay in the result map below. The status is no guide here — the
       // importer stamps Weekend over a worked Sunday — so trust the punch.
       item.presentDays++;
+      item.attendedDays++;
       const attended = (row.time_in != null || Number(row.work_hours || 0) > 0)
         && !['absent', 'holiday', 'paid leave'].includes(status);
       if (attended) item.workedWeeklyOffs += hours !== null && hours < halfBelow ? 0.5 : 1;
@@ -751,12 +759,18 @@ export const getSalaryDeductions = async (uploadId: number) => {
 
     const workingDay = !['absent', 'weekend', 'holiday', 'paid leave'].includes(status);
     const contracted = contractedMap.get(row.employee_id) ?? null;
+    // Pay is counted up from the days owed, so every branch below states what the
+    // day is worth and the cap is applied once, at the end. A day can never be
+    // worth more than a day: an extra shift is still recorded on presentDays and
+    // extraDays, but only an off that went untaken ever takes pay past full.
+    let dayCredit = 0;
 
     if (workingDay && hours !== null) {
       if (rafttarStaff) {
         // Standard 09:00-18:00 day. Overtime is earned only once the excess
         // beyond eight hours passes two hours; anything less is one shift.
         item.presentDays++;
+        dayCredit = 1;
         if (hours - 8 > 2) item.overtimeHours += hours - 8;
         if (hours < halfBelow) item.halfDays++;
       } else {
@@ -771,6 +785,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
           : hours < halfBelow ? 0.5
           : 1;
         item.presentDays += credit;
+        dayCredit = credit;
         if (credit > 1) item.extraDays += credit - 1;
         if (credit === 0.5) item.halfDays++;
       }
@@ -778,11 +793,21 @@ export const getSalaryDeductions = async (uploadId: number) => {
       // They were here — the punch out is simply missing. Credit the duty and
       // keep the flag so the reminder still goes out.
       item.presentDays++;
+      dayCredit = 1;
     } else if (['normal', 'present', 'late', 'late coming', 'early leaving'].includes(status)) {
       // A working day with no usable punch span still counts as attendance.
       item.presentDays++;
+      dayCredit = 1;
+    } else if (['holiday', 'weekend'].includes(status) || statusIsOneOf(status, ['Official'])) {
+      // A declared holiday, a rostered off and a day spent on official duty are
+      // all paid days that nobody punches for. Counting down from the salary
+      // they needed no branch, because they cost nothing; counting up, a day
+      // left uncounted is a day left unpaid. They are not attendance, so
+      // presentDays is deliberately untouched.
+      dayCredit = 1;
     }
-    if (status === 'half_day' || status === 'half day') item.presentDays += 0.5;
+    if (status === 'half_day' || status === 'half day') { item.presentDays += 0.5; dayCredit += 0.5; }
+    item.attendedDays += Math.min(dayCredit, 1);
     if (status === 'absent') {
       item.absentDays++;
       // A hospital Sunday absence is always chargeable; the monthly
@@ -791,10 +816,9 @@ export const getSalaryDeductions = async (uploadId: number) => {
     }
     if (status.includes('missed') || status.includes('incomplete')) item.missedSwipeDays++;
     const checkInMinutes = timeInMinutes(row.time_in);
-    // A waived month never counts a late arrival, so every figure derived from
-    // the count — the deduction, the LOP total, the breakdown row, the salary
-    // grid column — falls to zero together rather than one at a time.
-    if (!lateRuleWaived && (status.includes('late') || (checkInMinutes !== null && checkInMinutes > lateAfterMinutes))) item.lateOccurrences++;
+    // Counted for reporting only — lateness no longer costs anything — and not
+    // even counted for the months whose count is hidden outright.
+    if (!lateCountHidden && (status.includes('late') || (checkInMinutes !== null && checkInMinutes > lateAfterMinutes))) item.lateOccurrences++;
     if (status.includes('paid leave') || status.includes('casual leave') || status.includes('sick leave')) item.paidLeaveUsed++;
     grouped.set(row.employee_id, item);
   }
@@ -814,13 +838,13 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const protectedAbsentDays = Math.min(item.absentDays, Math.max(0, leaveLimit - item.paidLeaveUsed));
     const chargeableAbsentDays = Math.max(0, item.absentDays - protectedAbsentDays);
     const excessPaidLeave = Math.max(0, item.paidLeaveUsed - leaveLimit);
-    const lateDeductionCount = Math.floor(item.lateOccurrences / lateEvery);
+    // Lateness is recorded but never charged, so the count is carried through at
+    // nil to keep the shape of the row stable for callers.
+    const lateDeductionCount = 0;
     const absenceDeduction = chargeableAbsentDays * dailySalary;
     const halfDayDeduction = item.halfDays * dailySalary * 0.5;
-    const lateDeduction = lateDeductionCount * dailySalary;
+    const lateDeduction = 0;
     const excessLeaveDeduction = excessPaidLeave * dailySalary;
-    const totalLopAmount = absenceDeduction + halfDayDeduction + lateDeduction + excessLeaveDeduction;
-    const lopDays = chargeableAbsentDays + item.halfDays * 0.5 + lateDeductionCount + excessPaidLeave;
     // An entitled off that was worked rather than taken is paid for. Two kinds
     // exist: a Sunday Rafttar came in on, counted above, and leave allowance
     // still unspent at month end. Absences and taken leave eat the allowance
@@ -833,9 +857,30 @@ export const getSalaryDeductions = async (uploadId: number) => {
     // An extra *shift* is still not an unavailed *off*: extraDays and
     // overtimeHours remain measured and unpaid, and are not part of extraPayment.
     const displayedPaidLeave = item.paidLeaveUsed + protectedAbsentDays;
+
+    // Pay is counted up from the days owed rather than down from the salary.
+    // Days attended, plus the offs the monthly allowance covers, at a day's pay
+    // each. The allowance is one pool: leave taken draws on it first, and what
+    // is left shields absences.
+    const paidOffDays = Math.min(item.paidLeaveUsed + item.absentDays, leaveLimit);
+    const payableDays = item.attendedDays + paidOffDays;
+    // Thirty days of pay is the month's ceiling however long the month runs, so
+    // a thirty-one day month with perfect attendance still pays the salary and
+    // no more. Only an off that went untaken is added past it.
+    const basePay = Math.min(basicSalary, payableDays * dailySalary);
+    // What the month did not pay for. In a thirty-one day month this will not
+    // reconcile against the salary — thirty days of pay cannot cover thirty-one
+    // days of month — which is why the breakdown leads with the days.
+    const lopDays = Math.max(0, daysInMonth - payableDays);
+    const totalLopAmount = lopDays * dailySalary;
+    // A date that was never imported is a day that cannot be paid, so the spread
+    // travels with the row and the salary sheet flags a short month rather than
+    // quietly paying less than the person is owed.
+    const daysCovered = item.datesSeen.size;
+    const { datesSeen: _datesSeen, ...counts } = item;
     // The individual amounts travel with the totals so the salary sheet can
-    // explain, line by line, why the pay was cut and what was added back.
-    return { ...item, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, unusedLeaveDays, workedWeeklyOffPay, unusedLeavePay, extraPayableDays, extraPayment, netPayable: Math.max(0, basicSalary - totalLopAmount + extraPayment), dailySalary, totalLopAmount, basicSalary };
+    // explain, line by line, how the pay was arrived at.
+    return { ...counts, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, daysInMonth, daysCovered, paidOffDays, payableDays, basePay, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, unusedLeaveDays, workedWeeklyOffPay, unusedLeavePay, extraPayableDays, extraPayment, netPayable: basePay + extraPayment, dailySalary, totalLopAmount, basicSalary };
   });
   // Deductions are derived on every read, so there is nothing to cache back to
   // the database. The previous write-back also stored an undefined

@@ -126,12 +126,14 @@ export default function SalaryPage() {
       const salary = Number(cfg?.basicSalary || 0);
       const lop = Number(ded?.lopAmount || 0);
       const extra = Number(ded?.extraPayment || 0);
-      const net = Math.max(0, salary - lop + extra);
-      return `<tr><td>${emp.name || ''}</td><td>${companyOf(emp)}</td><td>${money(salary)}</td><td>${ded?.lopDays ?? 0}</td><td>${money(lop)}</td><td>${ded?.extraPayableDays ?? 0}</td><td>${money(extra)}</td><td>${money(net)}</td></tr>`;
+      // The engine owns the formula. Recomputing it here is how the print sheet
+      // and the email draft drifted apart from the grid in the first place.
+      const net = Number(ded?.netPayable || 0);
+      return `<tr><td>${emp.name || ''}</td><td>${companyOf(emp)}</td><td>${money(salary)}</td><td>${ded?.payableDays ?? 0}</td><td>${ded?.lopDays ?? 0}</td><td>${money(lop)}</td><td>${ded?.extraPayableDays ?? 0}</td><td>${money(extra)}</td><td>${money(net)}</td></tr>`;
     }).join('');
     const popup = window.open('', '_blank', 'width=1100,height=750');
     if (!popup) return;
-    popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+3),th:nth-child(n+3){text-align:right}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick="window.print()">Print</button><table><thead><tr><th>Employee</th><th>Company</th><th>Salary (₹)</th><th>Loss of Pay (Days)</th><th>Loss of Pay (₹)</th><th>Extra Days</th><th>Extra Pay (₹)</th><th>Net Payable (₹)</th></tr></thead><tbody>${body || '<tr><td colspan="8">No salaried employees found</td></tr>'}</tbody></table></body></html>`);
+    popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+3),th:nth-child(n+3){text-align:right}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick="window.print()">Print</button><table><thead><tr><th>Employee</th><th>Company</th><th>Salary (₹)</th><th>Payable Days</th><th>Loss of Pay (Days)</th><th>Loss of Pay (₹)</th><th>Extra Days</th><th>Extra Pay (₹)</th><th>Net Payable (₹)</th></tr></thead><tbody>${body || '<tr><td colspan="9">No salaried employees found</td></tr>'}</tbody></table></body></html>`);
     popup.document.close();
     popup.focus();
     setShowPrintOptions(false);
@@ -217,12 +219,13 @@ export default function SalaryPage() {
             column pushed off-screen is visible rather than silently cut off. */}
         <div className="relative">
         <div className="w-full overflow-x-auto pb-2">
-        <table className="w-full min-w-[1120px] table-auto text-[10px] tabular-nums sm:text-[11px]">
+        <table className="w-full min-w-[1220px] table-auto text-[10px] tabular-nums sm:text-[11px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="z-10 bg-slate-50 px-2 py-2.5 text-left font-semibold text-slate-600 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">Employee</th>
               <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-2">Salary<br />(₹)</th>
               <th className="px-1 py-2.5 text-right font-semibold text-emerald-700 sm:px-1.5">Present<br />Days</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-emerald-700 sm:px-1.5">Payable<br />Days</th>
               <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Absent<br />Days</th>
               <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Half<br />Days</th>
               <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Late<br />Count</th>
@@ -240,7 +243,12 @@ export default function SalaryPage() {
               const currentSalary = Number(cfg?.basicSalary || 0);
               const liveLopAmount = ded ? Number(ded.lopAmount || 0) : null;
               const liveExtraPayment = ded ? Number(ded.extraPayment || 0) : 0;
-              const netPayable = currentSalary > 0 ? Math.max(0, currentSalary - (liveLopAmount || 0) + liveExtraPayment) : null;
+              // Read, never recomputed — the engine counts the payable days and
+              // owns the formula, and every screen has to tell the same story.
+              const netPayable = ded && currentSalary > 0 ? Number(ded.netPayable || 0) : null;
+              // A month whose import is short of dates cannot be paid in full,
+              // because a day nobody recorded is a day nobody is paid for.
+              const daysMissing = ded ? Math.max(0, Number(ded.daysInMonth || 0) - Number(ded.daysCovered || 0)) : 0;
               return (
                 <tr key={emp.id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="z-[1] max-w-0 overflow-hidden bg-white px-2 py-2.5 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
@@ -257,6 +265,14 @@ export default function SalaryPage() {
                     {!hasSalary && <p className="mt-1 text-[10px] font-medium text-amber-600">Missing salary</p>}
                   </td>
                   <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5"><button type="button" onClick={() => openAttendance(row, { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'HALF_DAY'], label: 'Present Dates', includeSundays: ded?.rafttarStaff === true, note: 'A long shift counts as more than one day and a short one as half, so the days credited need not equal the number of dates listed.' })} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View the dates this employee was present">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
+                  <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5" title={ded ? `${Number(ded.attendedDays || 0)} attended + ${Number(ded.paidOffDays || 0)} paid off, of ${ded.daysInMonth} days` : undefined}>
+                    {ded ? Number(ded.payableDays || 0).toFixed(Number(ded.payableDays || 0) % 1 ? 1 : 0) : '—'}
+                    {daysMissing > 0 && (
+                      <p className="mt-1 text-[9px] font-semibold text-amber-600" title={`${daysMissing} date${daysMissing === 1 ? '' : 's'} of this month were never imported, so they cannot be paid for. Re-import the month before paying.`}>
+                        {daysMissing} date{daysMissing === 1 ? '' : 's'} missing
+                      </p>
+                    )}
+                  </td>
                   <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">
                     {ded && Number(ded.absentDays || 0) > 0 ? (
                       <button

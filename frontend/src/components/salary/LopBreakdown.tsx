@@ -40,7 +40,6 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
   const summary: Array<{ label: string; detail: string; amount: number }> = [];
   if (Number(ded.chargeableAbsentDays || 0) > 0) summary.push({ label: 'Absent days charged', amount: Number(ded.absenceDeduction || 0), detail: `${ded.chargeableAbsentDays} × ${money(rate)}` });
   if (Number(ded.halfDays || 0) > 0) summary.push({ label: 'Half days', amount: Number(ded.halfDayDeduction || 0), detail: `${ded.halfDays} × ${money(rate / 2)}` });
-  if (Number(ded.lateDeductionCount || 0) > 0) summary.push({ label: 'Late arrivals', amount: Number(ded.lateDeduction || 0), detail: `${ded.lateOccurrences} late ÷ ${ded.lateEvery}` });
   if (Number(ded.excessPaidLeave || 0) > 0) summary.push({ label: 'Leave beyond the allowance', amount: Number(ded.excessLeaveDeduction || 0), detail: `${ded.excessPaidLeave} × ${money(rate)}` });
 
   // An entitled off that was worked rather than taken is paid for. Stated as its
@@ -49,7 +48,18 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
   if (Number(ded.workedWeeklyOffs || 0) > 0) additions.push({ label: 'Weekly offs worked', amount: Number(ded.workedWeeklyOffPay || 0), detail: `${ded.workedWeeklyOffs} × ${money(rate)}` });
   if (Number(ded.unusedLeaveDays || 0) > 0) additions.push({ label: 'Leave not availed', amount: Number(ded.unusedLeavePay || 0), detail: `${ded.unusedLeaveDays} of ${ded.leaveLimit} × ${money(rate)}` });
   const extraPayment = Number(ded.extraPayment || 0);
-  const netPayable = Math.max(0, Number(salary || 0) - headline + extraPayment);
+  // The engine counts the payable days and owns the formula; this modal explains
+  // it rather than working it out again.
+  const netPayable = Number(ded.netPayable || 0);
+  const payableDays = Number(ded.payableDays || 0);
+  const attendedDays = Number(ded.attendedDays || 0);
+  const paidOffDays = Number(ded.paidOffDays || 0);
+  const basePay = Number(ded.basePay || 0);
+  const days = (value: number) => value.toFixed(value % 1 ? 1 : 0);
+  // Thirty days of pay cannot cover a thirty-one day month, so in a long month
+  // the base pay is less than the days would suggest and saying so is better
+  // than leaving the arithmetic looking wrong.
+  const cappedByCeiling = payableDays * rate > Number(salary || 0) + 0.005;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
@@ -57,11 +67,7 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
         <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
           <div>
             <h3 className="font-semibold text-slate-800">
-              {headline > 0
-                ? <>Why {money(headline)} was deducted</>
-                : extraPayment > 0
-                  ? <>Why {money(extraPayment)} was added</>
-                  : <>How this month's pay was worked out</>}
+              How {money(netPayable)} was worked out
             </h3>
             <p className="mt-0.5 text-sm text-slate-500">{emp.name} · {month}</p>
           </div>
@@ -72,13 +78,36 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
           <div className="flex justify-between py-1"><span className="text-slate-500">Monthly salary</span><span className="font-medium text-slate-800">{money(Number(salary || 0))}</span></div>
           <div className="flex justify-between border-b border-slate-100 py-1 pb-2"><span className="text-slate-500">A day's pay — salary ÷ 30</span><span className="font-medium text-slate-800">{money(rate)}</span></div>
 
+          {/* Pay is counted up from the days owed, so the days come first and the
+              charges below explain which dates did not make the count. */}
+          <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2.5">
+            <div className="flex justify-between text-[13px]">
+              <span className="text-slate-600">Days attended</span>
+              <span className="font-medium text-slate-800">{days(attendedDays)}</span>
+            </div>
+            <div className="flex justify-between text-[13px]">
+              <span className="text-slate-600">Paid offs within the allowance</span>
+              <span className="font-medium text-slate-800">{days(paidOffDays)} of {ded.leaveLimit}</span>
+            </div>
+            <div className="mt-1 flex justify-between border-t border-emerald-200 pt-1.5 text-[13px]">
+              <span className="font-semibold text-slate-700">Payable days — {days(payableDays)} of {ded.daysInMonth} × {money(rate)}</span>
+              <span className="font-semibold text-emerald-700">{money(basePay)}</span>
+            </div>
+            {cappedByCeiling && (
+              <p className="mt-1.5 text-[11px] text-slate-500">
+                Capped at the monthly salary — {days(payableDays)} days at a day's pay comes to {money(payableDays * rate)}, but a month never pays more than the salary unless an off was worked.
+              </p>
+            )}
+          </div>
+
           <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[13px] text-slate-600">
             {ded.rafttarStaff
               ? <>Rafttar: every Sunday is a paid weekly off, plus <b>{ded.leaveLimit}</b> paid leaves.</>
               : <>Hospital: Sundays are working days, but <b>{ded.leaveLimit}</b> paid leaves a month — a Sunday taken off counts as one of them.</>}
-            {' '}Under <b>4 hours</b> worked is half a day. An off that was worked rather
-            than taken — a weekly off come in on, or leave still unspent at month end —
-            is paid at a day's pay each.
+            {' '}Under <b>4 hours</b> worked is half a day, and a long shift is still
+            one day's pay. Lateness is recorded but never costs anything. An off that
+            was worked rather than taken — a weekly off come in on, or leave still
+            unspent at month end — is paid at a day's pay each, on top of the salary.
           </div>
 
           {isLoading && <p className="mt-4 text-center text-[13px] text-slate-400">Loading the dates…</p>}
@@ -101,7 +130,7 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
                   </tr>
                 ))}
                 <tr>
-                  <td className="pt-2 font-semibold text-slate-700" colSpan={2}>Total deducted</td>
+                  <td className="pt-2 font-semibold text-slate-700" colSpan={2}>Days the month did not pay for — {days(Number(ded.lopDays || 0))}</td>
                   <td className="pt-2 text-right font-semibold text-red-600">{money(headline)}</td>
                 </tr>
               </tbody>
@@ -119,7 +148,7 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
                     </tr>
                   ))}
                   <tr className="border-t border-slate-200">
-                    <td className="pt-2 font-semibold text-slate-700">Total deducted</td>
+                    <td className="pt-2 font-semibold text-slate-700">Days the month did not pay for — {days(Number(ded.lopDays || 0))}</td>
                     <td className="pt-2 text-right font-semibold text-red-600">{money(headline)}</td>
                   </tr>
                 </tbody>
