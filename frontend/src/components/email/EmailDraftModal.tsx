@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from '../../api';
 import StatusBadge from './StatusBadge';
+import { buildDayWiseSalary, formatINR } from '../../lib/dayWiseSalary';
 
 interface Props {
   uploadId: number;
@@ -21,16 +22,21 @@ interface Props {
   includeSundays?: boolean;
   /** Optional line under the heading explaining what the list represents. */
   filterNote?: string;
+  /** Pass all three to show what each day earned and cost. The Dashboard opens
+   *  this modal without them and keeps the plain attendance table. */
+  deduction?: any;
+  employee?: any;
+  monthlySalary?: number;
 }
 
-export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false, filterStatuses, filterLabel, includeSundays = false, filterNote }: Props) {
+export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false, filterStatuses, filterLabel, includeSundays = false, filterNote, deduction, employee, monthlySalary }: Props) {
   const qc = useQueryClient();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [draftId, setDraftId] = useState<number | null>(null);
   const [tab, setTab] = useState<'draft' | 'records'>(initialTab);
-  const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const { data: draft } = useQuery({
     queryKey: ['draft', uploadId, employeeId],
@@ -94,9 +100,28 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
         || (includeSundays && isSunday(r.recordDate)))
     : baseRecords;
 
+  // What each day was worth. Attributed over the whole month — the totals below
+  // then cover only the rows actually on screen, so a filtered list (Absent
+  // Dates, say) adds up to what it shows rather than to the month.
+  // Nothing to attribute without a salary on record — every column would read
+  // ₹0 and imply the month was worth nothing, rather than unknown.
+  const salaryData = useMemo(
+    () => (deduction && employee && Number(deduction.dailySalary || 0) > 0 ? buildDayWiseSalary(records, deduction, employee) : null),
+    [records, deduction, employee],
+  );
+  const showMoney = !!salaryData && salaryData.reconciles;
+  const lineByDate = useMemo(
+    () => new Map((salaryData?.lines || []).map(l => [l.date, l])),
+    [salaryData],
+  );
+  const lineFor = (r: any) => lineByDate.get(String(r.recordDate).slice(0, 10));
+  const visibleEarned = visibleRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.earned || 0), 0);
+  const visibleDeducted = visibleRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.deducted || 0), 0);
+  const money = (value: number) => formatINR(Math.round(value * 100) / 100);
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className={`bg-white rounded-2xl shadow-2xl w-full ${showMoney ? 'max-w-3xl' : 'max-w-2xl'} max-h-[90vh] flex flex-col`}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between">
           <div>
@@ -144,30 +169,69 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
             </div>
           ) : (
             <div>
-              <table className="w-full text-sm">
+              <table className="w-full text-sm tabular-nums">
                 <thead>
                   <tr className="bg-slate-50">
                     <th className="text-left px-3 py-2 text-xs font-semibold text-slate-500 rounded-l">Date</th>
                     <th className="text-left px-3 py-2 text-xs font-semibold text-slate-500">Status</th>
                     <th className="text-left px-3 py-2 text-xs font-semibold text-slate-500">Time In</th>
-                    <th className="text-left px-3 py-2 text-xs font-semibold text-slate-500 rounded-r">Time Out</th>
+                    <th className={`text-left px-3 py-2 text-xs font-semibold text-slate-500 ${showMoney ? '' : 'rounded-r'}`}>Time Out</th>
+                    {showMoney && <th className="text-right px-3 py-2 text-xs font-semibold text-slate-500">Earned</th>}
+                    {showMoney && <th className="text-right px-3 py-2 text-xs font-semibold text-slate-500 rounded-r">Deducted</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleRecords.map((r: any, i: number) => (
-                    <tr key={i} className="border-t border-slate-100">
-                      <td className="px-3 py-2 text-slate-700">{r.recordDate}</td>
-                      <td className="px-3 py-2">{includeSundays && isSunday(r.recordDate) && String(r.status || '').trim().toLowerCase() === 'absent'
-                        ? <StatusBadge label="Paid weekly off" small />
-                        : <StatusBadge label={r.status} small />}</td>
-                      <td className="px-3 py-2 text-slate-500">{r.timeIn || '—'}</td>
-                      <td className="px-3 py-2 text-slate-500">{r.timeOut || '—'}</td>
+                  {visibleRecords.map((r: any, i: number) => {
+                    const line = lineFor(r);
+                    return (
+                      <tr key={i} className="border-t border-slate-100">
+                        <td className="px-3 py-2 text-slate-700">{r.recordDate}</td>
+                        <td className="px-3 py-2">{includeSundays && isSunday(r.recordDate) && String(r.status || '').trim().toLowerCase() === 'absent'
+                          ? <StatusBadge label="Paid weekly off" small />
+                          : <StatusBadge label={r.status} small />}</td>
+                        <td className="px-3 py-2 text-slate-500">{r.timeIn || '—'}</td>
+                        <td className="px-3 py-2 text-slate-500">{r.timeOut || '—'}</td>
+                        {showMoney && (
+                          <td className="px-3 py-2 text-right text-slate-700" title={line?.why || undefined}>
+                            {line?.earned ? money(line.earned) : '—'}
+                          </td>
+                        )}
+                        {showMoney && (
+                          <td className="px-3 py-2 text-right font-medium text-red-600" title={line?.why || undefined}>
+                            {line?.deducted ? money(line.deducted) : '—'}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                  {showMoney && visibleRecords.length > 0 && (
+                    <tr className="border-t border-slate-200">
+                      <td className="px-3 pt-2 font-semibold text-slate-700" colSpan={4}>
+                        Total for the {visibleRecords.length} {visibleRecords.length === 1 ? 'date' : 'dates'} listed
+                      </td>
+                      <td className="px-3 pt-2 text-right font-semibold text-slate-800">{money(visibleEarned)}</td>
+                      <td className="px-3 pt-2 text-right font-semibold text-red-600">{money(visibleDeducted)}</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
               {visibleRecords.length === 0 && (
                 <p className="py-8 text-center text-sm text-slate-400">No matching attendance dates for this employee.</p>
+              )}
+              {showMoney && (
+                <div className="mt-4 rounded-lg bg-slate-50 px-3 py-2.5 text-[13px]">
+                  <div className="flex justify-between py-0.5"><span className="text-slate-500">Monthly salary</span><span className="font-medium text-slate-800">{money(Number(monthlySalary || deduction.basicSalary || 0))}</span></div>
+                  <div className="flex justify-between py-0.5"><span className="text-slate-500">Total deducted this month</span><span className="font-medium text-red-600">{money(Number(deduction.lopAmount || 0))}</span></div>
+                  <div className="flex justify-between border-t border-slate-200 py-0.5 pt-1.5"><span className="font-semibold text-slate-700">Net payable</span><span className="font-semibold text-emerald-700">{money(Math.max(0, Number(monthlySalary || deduction.basicSalary || 0) - Number(deduction.lopAmount || 0)))}</span></div>
+                  <p className="mt-2 text-[12px] leading-snug text-slate-400">
+                    A day's pay is salary ÷ 30, so the daily column need not add up to the monthly salary. Net payable above is authoritative.
+                  </p>
+                </div>
+              )}
+              {salaryData && !salaryData.reconciles && (
+                <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[12px] text-slate-500">
+                  Day-by-day pay is not shown here because it did not add up to this month's total — the salary sheet is authoritative.
+                </p>
               )}
             </div>
           )}

@@ -4,8 +4,7 @@ import { format } from 'date-fns';
 import * as api from '../api';
 import EmailDraftModal from '../components/email/EmailDraftModal';
 import LopBreakdown from '../components/salary/LopBreakdown';
-
-const formatINR = (value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+import { formatINR } from '../lib/dayWiseSalary';
 
 export default function SalaryPage() {
   const currentMonth = format(new Date(), 'yyyy-MM');
@@ -16,16 +15,18 @@ export default function SalaryPage() {
   const [filter, setFilter] = useState('attendance');
   const [companyFilter, setCompanyFilter] = useState('All');
   const [showPrintOptions, setShowPrintOptions] = useState(false);
-  const [attendanceEmployee, setAttendanceEmployee] = useState<any | null>(null);
+  // The whole payroll row, not just the employee: the details modal needs the
+  // deduction and the salary to show what each day was worth.
+  const [attendanceRow, setAttendanceRow] = useState<any | null>(null);
   // Which attendance statuses the details modal should list. null = all records.
   const [attendanceFilter, setAttendanceFilter] = useState<{ statuses: string[]; label: string; includeSundays?: boolean; note?: string } | null>(null);
   // Which employee's LOP is being explained, if any.
   const [lopExplain, setLopExplain] = useState<any | null>(null);
 
-  const openAttendance = (emp: any, filter: { statuses: string[]; label: string; includeSundays?: boolean; note?: string } | null = null) => {
+  const openAttendance = (row: any, filter: { statuses: string[]; label: string; includeSundays?: boolean; note?: string } | null = null) => {
     if (!latestUpload?.id) return;
     setAttendanceFilter(filter);
-    setAttendanceEmployee(emp);
+    setAttendanceRow(row);
   };
 
   const { data: employees = [] } = useQuery({ queryKey: ['employees'], queryFn: () => api.getEmployees().then(r => r.data as any[]) });
@@ -219,14 +220,15 @@ export default function SalaryPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredRows.map(({ emp, config: cfg, deduction: ded, hasAttendance, hasSalary }) => {
+            {filteredRows.map(row => {
+              const { emp, config: cfg, deduction: ded, hasAttendance, hasSalary } = row;
               const currentSalary = Number(cfg?.basicSalary || 0);
               const liveLopAmount = ded ? Number(ded.lopAmount || 0) : null;
               const netPayable = currentSalary > 0 ? Math.max(0, currentSalary - (liveLopAmount || 0)) : null;
               return (
                 <tr key={emp.id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="z-[1] max-w-0 overflow-hidden bg-white px-2 py-2.5 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
-                    <button type="button" onClick={() => openAttendance(emp)} className="w-full text-left" title="Open attendance details">
+                    <button type="button" onClick={() => openAttendance(row)} className="w-full text-left" title="Open attendance details">
                       <p className="break-words font-medium leading-tight text-slate-800 hover:text-brand-600" title={emp.name}>{emp.name}</p>
                       {emp.email && <p className="break-all text-[10px] leading-tight text-slate-400" title={emp.email}>{emp.email}</p>}
                       <span className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${!hasAttendance ? 'bg-slate-100 text-slate-500' : ded?.lopAmount ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
@@ -238,12 +240,12 @@ export default function SalaryPage() {
                     <p className="font-medium text-slate-700">{currentSalary > 0 ? formatINR(currentSalary) : '—'}</p>
                     {!hasSalary && <p className="mt-1 text-[10px] font-medium text-amber-600">Missing salary</p>}
                   </td>
-                  <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5"><button type="button" onClick={() => openAttendance(emp, { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'HALF_DAY'], label: 'Present Dates', includeSundays: ded?.rafttarStaff === true, note: 'A long shift counts as more than one day and a short one as half, so the days credited need not equal the number of dates listed.' })} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View the dates this employee was present">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
+                  <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5"><button type="button" onClick={() => openAttendance(row, { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'HALF_DAY'], label: 'Present Dates', includeSundays: ded?.rafttarStaff === true, note: 'A long shift counts as more than one day and a short one as half, so the days credited need not equal the number of dates listed.' })} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View the dates this employee was present">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
                   <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">
                     {ded && Number(ded.absentDays || 0) > 0 ? (
                       <button
                         type="button"
-                        onClick={() => openAttendance(emp, { statuses: ['Absent'], label: 'Absent Dates' })}
+                        onClick={() => openAttendance(row, { statuses: ['Absent'], label: 'Absent Dates' })}
                         className="rounded px-1.5 py-0.5 font-medium text-red-600 hover:bg-red-50 hover:underline"
                         title="View the dates this employee was absent"
                       >
@@ -257,7 +259,7 @@ export default function SalaryPage() {
                   <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">{ded?.lopDays ? ded.lopDays.toFixed(1) : '—'}</td>
                   <td className="whitespace-nowrap px-1 py-2.5 text-right font-medium text-red-600 sm:px-2">
                     {ded && Number(ded.lopAmount || 0) > 0 ? (
-                      <button type="button" onClick={() => setLopExplain({ ded, emp, salary: currentSalary })}
+                      <button type="button" onClick={() => setLopExplain({ ded, emp, row, salary: currentSalary })}
                         className="rounded px-1.5 py-0.5 underline decoration-dotted underline-offset-2 hover:bg-red-50"
                         title="Show why this amount was cut">{formatINR(liveLopAmount || 0)}</button>
                     ) : liveLopAmount !== null ? formatINR(liveLopAmount) : Number(currentSalary) > 0 ? '₹0' : '—'}
@@ -313,24 +315,27 @@ export default function SalaryPage() {
           month={month}
           uploadId={latestUpload?.id ?? null}
           onClose={() => setLopExplain(null)}
-          onSeeDates={() => { const emp = lopExplain.emp; setLopExplain(null); openAttendance(emp, { statuses: ['Absent'], label: 'Absent Dates' }); }}
+          onSeeDates={() => { const row = lopExplain.row; setLopExplain(null); openAttendance(row, { statuses: ['Absent'], label: 'Absent Dates' }); }}
         />
       )}
 
-      {attendanceEmployee && latestUpload?.id && (
+      {attendanceRow && latestUpload?.id && (
         <EmailDraftModal
           uploadId={latestUpload.id}
-          employeeId={attendanceEmployee.id}
-          employeeName={attendanceEmployee.name || ''}
-          employeeEmail={attendanceEmployee.email || ''}
+          employeeId={attendanceRow.emp.id}
+          employeeName={attendanceRow.emp.name || ''}
+          employeeEmail={attendanceRow.emp.email || ''}
           initialTab="records"
           recordsOnly
           filterStatuses={attendanceFilter?.statuses}
           filterLabel={attendanceFilter?.label}
           includeSundays={attendanceFilter?.includeSundays}
           filterNote={attendanceFilter?.note}
-          onClose={() => { setAttendanceEmployee(null); setAttendanceFilter(null); }}
-          onSent={() => { setAttendanceEmployee(null); setAttendanceFilter(null); }}
+          deduction={attendanceRow.deduction}
+          employee={attendanceRow.emp}
+          monthlySalary={Number(attendanceRow.config?.basicSalary || 0)}
+          onClose={() => { setAttendanceRow(null); setAttendanceFilter(null); }}
+          onSent={() => { setAttendanceRow(null); setAttendanceFilter(null); }}
         />
       )}
     </div>

@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import * as api from '../../api';
-
-const formatINR = (value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+import { buildDayWiseSalary, formatINR } from '../../lib/dayWiseSalary';
 
 interface Props {
   ded: any;
@@ -13,15 +12,6 @@ interface Props {
   onSeeDates: () => void;
 }
 
-type Charge = { date: string; day: string; why: string; amount: number };
-
-const isSunday = (value: unknown) => {
-  const date = new Date(`${String(value || '').slice(0, 10)}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.getUTCDay() === 0;
-};
-const dayName = (value: unknown) =>
-  new Date(`${String(value || '').slice(0, 10)}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' });
-
 export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClose, onSeeDates }: Props) {
   const rate = Number(ded.dailySalary || 0);
   const money = (value: number) => formatINR(Math.round(value * 100) / 100);
@@ -32,42 +22,20 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
     enabled: !!uploadId,
   });
 
-  // Walk the month in order and attribute each deduction to the day that caused
-  // it. The engine only counts these, so which particular absences used the
-  // allowance is a presentation choice — chronological, and the label says
-  // which one each consumed.
-  const allowance = Number(ded.protectedAbsentDays || 0);
-  const contracted = emp.contracted_hours == null ? null : Number(emp.contracted_hours);
-  const halfBelow = contracted ? contracted / 2 : (ded.rafttarStaff ? Number(ded.halfDayHours || 4) : 7);
-  const charges: Charge[] = [];
-  let covered = 0;
-  for (const row of [...records].sort((a, b) => String(a.recordDate).localeCompare(String(b.recordDate)))) {
-    const status = String(row.status || '').trim().toLowerCase();
-    const sunday = isSunday(row.recordDate);
-    const base = { date: String(row.recordDate).slice(0, 10), day: dayName(row.recordDate) };
-    if (status === 'absent') {
-      // A Rafttar Sunday is a paid weekly off and costs nothing. Every other
-      // absence, a hospital Sunday included, draws on the monthly allowance.
-      if (sunday && ded.rafttarStaff) continue;
-      if (covered < allowance) {
-        covered++;
-        charges.push({ ...base, why: `Absent — covered by paid leave (${covered} of ${allowance})`, amount: 0 });
-      } else {
-        charges.push({ ...base, why: 'Absent — allowance already used', amount: rate });
-      }
-      continue;
-    }
-    const hours = row.work_hours == null ? null : Number(row.work_hours);
-    if (hours !== null && hours < halfBelow && !['weekend', 'holiday', 'paid leave'].includes(status)) {
-      charges.push({ ...base, why: `Half day — worked ${hours.toFixed(1)}h`, amount: rate * 0.5 });
-    }
-  }
+  // Which day each rupee came off. Shared with the attendance details modal so
+  // the two screens can never tell different stories about the same month.
+  const daywise = buildDayWiseSalary(records, ded, emp);
+  // Days the employee was paid in full are the uninteresting majority here —
+  // keep the ones that cost something, plus the absences the allowance covered,
+  // because "this absence was free" is worth saying.
+  const charges = daywise.lines
+    .filter(line => line.deducted > 0 || line.why.startsWith('Absent'))
+    .map(line => ({ date: line.date, day: line.day, why: line.why, amount: line.deducted }));
 
   // A per-date list that disagrees with the headline would be worse than none,
   // so it is only shown when it reconciles.
-  const attributed = charges.reduce((sum, c) => sum + c.amount, 0);
   const headline = Number(ded.lopAmount || 0);
-  const reconciles = Math.abs(attributed - headline) <= 1;
+  const reconciles = daywise.reconciles;
 
   const summary: Array<{ label: string; detail: string; amount: number }> = [];
   if (Number(ded.chargeableAbsentDays || 0) > 0) summary.push({ label: 'Absent days charged', amount: Number(ded.absenceDeduction || 0), detail: `${ded.chargeableAbsentDays} × ${money(rate)}` });
