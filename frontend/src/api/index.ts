@@ -29,6 +29,10 @@ const SHIFT_LATE_GRACE_MINUTES = 30;
 // settings table, so it uses this constant directly while getSalaryDeductions
 // takes it as the fallback for half_day_threshold_hours — the two cannot drift.
 const HALF_DAY_HOURS = 4;
+// July 2026 was waived: late arrivals are recorded on the attendance row as
+// usual, but cost nothing that month. Add a YYYY-MM here to waive another; the
+// rule is untouched everywhere else.
+const LATE_RULE_WAIVED_MONTHS = new Set(['2026-07']);
 
 // The status vocabulary now lives in lib/status.ts so the salary attribution can
 // use it without importing this module. Re-exported here because callers of the
@@ -650,6 +654,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
   const upload = await client.from('attendance_imports').select('period_month').eq('id', uploadId).single();
   if (upload.error) throw new Error(upload.error.message);
   const periodStart = `${upload.data.period_month}-01`;
+  const lateRuleWaived = LATE_RULE_WAIVED_MONTHS.has(upload.data.period_month);
   const nextMonth = new Date(`${periodStart}T00:00:00Z`);
   nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
   const periodEnd = nextMonth.toISOString().slice(0, 10);
@@ -786,7 +791,10 @@ export const getSalaryDeductions = async (uploadId: number) => {
     }
     if (status.includes('missed') || status.includes('incomplete')) item.missedSwipeDays++;
     const checkInMinutes = timeInMinutes(row.time_in);
-    if (status.includes('late') || (checkInMinutes !== null && checkInMinutes > lateAfterMinutes)) item.lateOccurrences++;
+    // A waived month never counts a late arrival, so every figure derived from
+    // the count — the deduction, the LOP total, the breakdown row, the salary
+    // grid column — falls to zero together rather than one at a time.
+    if (!lateRuleWaived && (status.includes('late') || (checkInMinutes !== null && checkInMinutes > lateAfterMinutes))) item.lateOccurrences++;
     if (status.includes('paid leave') || status.includes('casual leave') || status.includes('sick leave')) item.paidLeaveUsed++;
     grouped.set(row.employee_id, item);
   }
