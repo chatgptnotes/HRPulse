@@ -5,6 +5,9 @@ import * as api from '../api';
 import EmailDraftModal from '../components/email/EmailDraftModal';
 import LopBreakdown from '../components/salary/LopBreakdown';
 import { formatINR } from '../lib/dayWiseSalary';
+import TablePagination from '../components/TablePagination';
+
+const PAGE_SIZE = 25;
 
 export default function SalaryPage() {
   const currentMonth = format(new Date(), 'yyyy-MM');
@@ -14,6 +17,7 @@ export default function SalaryPage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('attendance');
   const [companyFilter, setCompanyFilter] = useState('All');
+  const [page, setPage] = useState(1);
   const [showPrintOptions, setShowPrintOptions] = useState(false);
   // The whole payroll row, not just the employee: the details modal needs the
   // deduction and the salary to show what each day was worth.
@@ -100,6 +104,11 @@ export default function SalaryPage() {
       return true;
     }).sort((a, b) => Number(b.hasSalary) - Number(a.hasSalary));
   }, [rows, search, filter, companyFilter, noAttendanceData]);
+
+  // Changing what is being looked for starts the reading again from the top;
+  // staying on page 7 of a freshly narrowed list shows an empty table.
+  useEffect(() => { setPage(1); }, [search, filter, companyFilter, month]);
+  const visibleRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const hasActiveFilters = Boolean(search.trim()) || filter !== 'attendance' || companyFilter !== 'All';
   const clearFilters = () => { setSearch(''); setFilter('attendance'); setCompanyFilter('All'); };
@@ -228,7 +237,7 @@ export default function SalaryPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredRows.map(row => {
+            {visibleRows.map(row => {
               const { emp, config: cfg, deduction: ded, hasAttendance, hasSalary } = row;
               const currentSalary = Number(cfg?.basicSalary || 0);
               const liveLopAmount = ded ? Number(ded.lopAmount || 0) : null;
@@ -295,6 +304,9 @@ export default function SalaryPage() {
         </div>
         <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent md:hidden" />
         </div>
+        {filteredRows.length > 0 && (
+          <TablePagination total={filteredRows.length} page={page} pageSize={PAGE_SIZE} onPageChange={setPage} noun="employees" />
+        )}
         {filteredRows.length === 0 && (
           <div className="text-center py-12 text-slate-400">
             <p>{rows.length === 0 ? 'No employees found. Upload an attendance file first.' : hasActiveFilters ? 'No employees match all selected filters. Try clearing one filter.' : 'No employees match this search or filter.'}</p>

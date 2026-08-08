@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import * as api from '../api';
 import StatusBadge from '../components/email/StatusBadge';
+import TablePagination from '../components/TablePagination';
+
+const PAGE_SIZE = 25;
 
 export default function HistoryPage() {
   const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [viewBody, setViewBody] = useState<{ subject: string; body: string } | null>(null);
 
   const { data: history = [] } = useQuery({
@@ -17,6 +21,9 @@ export default function HistoryPage() {
   const filtered = (history as any[]).filter(h =>
     !search || h.employeeName?.toLowerCase().includes(search.toLowerCase())
   );
+  // A new search or a new month is a new list — start it from the top.
+  useEffect(() => { setPage(1); }, [search, month]);
+  const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="w-full min-w-0 p-4 sm:p-6">
@@ -54,7 +61,7 @@ export default function HistoryPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((h: any) => (
+            {visible.map((h: any) => (
               <tr key={h.id} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="px-4 py-2.5">
                   <p className="font-medium text-slate-800">{h.employeeName}</p>
@@ -80,6 +87,9 @@ export default function HistoryPage() {
           </tbody>
         </table>
         </div>
+        {filtered.length > 0 && (
+          <TablePagination total={filtered.length} page={page} pageSize={PAGE_SIZE} onPageChange={setPage} noun="emails" />
+        )}
         {filtered.length === 0 && (
           <div className="text-center py-12 text-slate-400">
             No email history found for {month}
