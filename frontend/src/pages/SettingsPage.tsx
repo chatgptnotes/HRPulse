@@ -9,7 +9,6 @@ export default function SettingsPage() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [editTemplate, setEditTemplate] = useState<Record<string, { subject: string; body: string }>>({});
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
-  const [testing, setTesting] = useState(false);
 
   const showToast = (msg: string, type: 'ok' | 'err' = 'ok') => {
     setToast({ msg, type });
@@ -43,15 +42,6 @@ export default function SettingsPage() {
     }
     qc.invalidateQueries({ queryKey: ['templates'] });
     showToast('Templates saved');
-  };
-
-  const testSMTP = async () => {
-    setTesting(true);
-    await saveSettings();
-    try {
-      const { data } = await api.testSmtp();
-      showToast((data as any).ok ? 'SMTP connection successful' : `SMTP error: ${(data as any).error}`, (data as any).ok ? 'ok' : 'err');
-    } finally { setTesting(false); }
   };
 
   const TABS = [
@@ -132,10 +122,11 @@ export default function SettingsPage() {
             <p className="text-xs text-slate-400">For Gmail: use an App Password. Go to Google Account → Security → 2-Step Verification → App Passwords</p>
             <div className="flex gap-3 pt-2">
               <button onClick={saveSettings} className="bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-brand-700">Save</button>
-              <button onClick={testSMTP} disabled={testing} className="border border-slate-200 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-50 disabled:opacity-50">
-                {testing ? 'Testing...' : 'Test Connection'}
+              <button disabled title={`Testing SMTP ${api.NOT_MIGRATED}`} className="border border-slate-200 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg opacity-50 cursor-not-allowed">
+                Test Connection
               </button>
             </div>
+            <p className="text-xs text-amber-700">These credentials are stored but not used yet — sending email {api.NOT_MIGRATED}</p>
           </div>
         )}
 

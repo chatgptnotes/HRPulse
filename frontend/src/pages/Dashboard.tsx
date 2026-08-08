@@ -54,11 +54,8 @@ export default function Dashboard() {
   const [search, setSearch] = useState('');
   const [previewEmployee, setPreviewEmployee] = useState<{ uploadId: number; employeeId: number; name: string; email: string } | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [sending, setSending] = useState(false);
   const [applyingRules, setApplyingRules] = useState(false);
   const [ruleResult, setRuleResult] = useState<{ draftsCreated: number; evaluated: number } | null>(null);
-  const [checkingReminders, setCheckingReminders] = useState(false);
-  const [reminderResult, setReminderResult] = useState<{ created: number; checked: number } | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
 
   const showToast = (msg: string, type: 'ok' | 'err' = 'ok') => {
@@ -145,26 +142,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleCheckReminders = async () => {
-    setCheckingReminders(true);
-    setReminderResult(null);
-    try {
-      const { data } = await api.checkPendingReminders();
-      setReminderResult(data);
-      if (data.created > 0) {
-        showToast(`${data.created} reminder draft${data.created !== 1 ? 's' : ''} created for overdue employees`);
-        qc.invalidateQueries({ queryKey: ['drafts', uploadId] });
-        qc.invalidateQueries({ queryKey: ['summary', uploadId] });
-      } else {
-        showToast(`Checked ${data.checked} employees — no reminders needed yet`);
-      }
-    } catch {
-      showToast('Reminder check failed', 'err');
-    } finally {
-      setCheckingReminders(false);
-    }
-  };
-
   const handleApplyRules = async () => {
     if (!uploadId) return;
     setApplyingRules(true);
@@ -179,26 +156,6 @@ export default function Dashboard() {
       showToast('Rule evaluation failed', 'err');
     } finally {
       setApplyingRules(false);
-    }
-  };
-
-  const handleDispatch = async () => {
-    if (!uploadId) return;
-    const pendingDrafts = (drafts as any[]).filter(d => isUnsent(d.status) && (selected.size === 0 || selected.has(d.id)));
-    if (pendingDrafts.length === 0) { showToast('No pending drafts to send', 'err'); return; }
-    setSending(true);
-    try {
-      const { data } = await api.sendBulk(pendingDrafts.map((d: any) => d.id));
-      const sent = data.results.filter((r: any) => r.ok).length;
-      const failed = data.results.filter((r: any) => !r.ok).length;
-      showToast(`Sent ${sent} emails${failed > 0 ? `, ${failed} failed` : ''}`);
-      qc.invalidateQueries({ queryKey: ['summary', uploadId] });
-      qc.invalidateQueries({ queryKey: ['drafts', uploadId] });
-      setSelected(new Set());
-    } catch {
-      showToast('Dispatch failed', 'err');
-    } finally {
-      setSending(false);
     }
   };
 
@@ -394,21 +351,12 @@ export default function Dashboard() {
           )}
 
           <button
-            onClick={handleCheckReminders}
-            disabled={checkingReminders}
-            className="w-full mt-2 text-rose-800 bg-rose-50 border border-rose-200 hover:bg-rose-100 disabled:opacity-50 text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+            disabled
+            title={`Pending reminders ${api.NOT_MIGRATED}`}
+            className="w-full mt-2 text-rose-800 bg-rose-50 border border-rose-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
           >
-            {checkingReminders
-              ? <><span className="material-icons text-base animate-spin">sync</span> Checking...</>
-              : <><span className="material-icons text-base">alarm</span> Check 7-Day Reminders</>
-            }
+            <span className="material-icons text-base">alarm</span> Check 7-Day Reminders
           </button>
-          {reminderResult && reminderResult.created > 0 && (
-            <div className="mt-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 flex items-center gap-1.5">
-              <span className="material-icons text-xs">mark_email_unread</span>
-              {reminderResult.created} reminder{reminderResult.created !== 1 ? 's' : ''} queued
-            </div>
-          )}
         </div>
 
         {/* Stats */}
@@ -435,15 +383,15 @@ export default function Dashboard() {
         {uploadId && (
           <div className="px-4 py-4 mt-auto">
             <button
-              onClick={handleDispatch}
-              disabled={sending || pendingEmails === 0}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-900/20"
+              disabled
+              title={`Sending email ${api.NOT_MIGRATED}`}
+              className="w-full bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-900/20"
             >
-              {sending
-                ? <><span className="material-icons text-base animate-spin">sync</span> Dispatching...</>
-                : <><span className="material-icons text-base">send</span> Dispatch Emails{selected.size > 0 ? ` (${selected.size})` : ''}</>
-              }
+              <span className="material-icons text-base">send</span> Dispatch Emails{selected.size > 0 ? ` (${selected.size})` : ''}
             </button>
+            <p className="mt-2 text-[11px] leading-snug text-slate-400 text-center">
+              Drafts are saved and editable. Delivery is being rebuilt on Supabase.
+            </p>
           </div>
         )}
       </div>
@@ -576,15 +524,9 @@ export default function Dashboard() {
                         </button>
                         {isUnsent(draft.status) && (
                           <button
-                            onClick={async () => {
-                              try {
-                                await api.sendEmail(draft.id);
-                                qc.invalidateQueries({ queryKey: ['drafts', uploadId] });
-                                qc.invalidateQueries({ queryKey: ['summary', uploadId] });
-                                showToast(`Email sent to ${s.employeeName}`);
-                              } catch { showToast('Send failed', 'err'); }
-                            }}
-                            className="text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-xl transition-colors border border-emerald-200"
+                            disabled
+                            title={`Sending email ${api.NOT_MIGRATED}`}
+                            className="text-xs font-semibold bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200 opacity-40 cursor-not-allowed"
                           >
                             Send
                           </button>
