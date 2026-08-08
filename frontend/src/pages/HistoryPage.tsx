@@ -3,9 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import * as api from '../api';
 import StatusBadge from '../components/email/StatusBadge';
-import TablePagination from '../components/TablePagination';
-
-const PAGE_SIZE = 25;
+import TablePagination, { PAGE_SIZE } from '../components/TablePagination';
 
 export default function HistoryPage() {
   const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));

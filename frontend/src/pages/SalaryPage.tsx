@@ -5,9 +5,7 @@ import * as api from '../api';
 import EmailDraftModal from '../components/email/EmailDraftModal';
 import LopBreakdown from '../components/salary/LopBreakdown';
 import { formatINR } from '../lib/dayWiseSalary';
-import TablePagination from '../components/TablePagination';
-
-const PAGE_SIZE = 25;
+import TablePagination, { PAGE_SIZE } from '../components/TablePagination';
 
 export default function SalaryPage() {
   const currentMonth = format(new Date(), 'yyyy-MM');

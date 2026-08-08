@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
 
+/** Rows on one page of any list. One number so the tabs cannot drift apart. */
+export const PAGE_SIZE = 10;
+
 interface Props {
   /** How many rows the filters left, before slicing. */
   total: number;
