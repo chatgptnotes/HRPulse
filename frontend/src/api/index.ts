@@ -1,11 +1,8 @@
-import axios from 'axios';
 import * as XLSX from 'xlsx';
-import { supabase, supabaseConfigured } from '../lib/supabase';
-
-export const api = axios.create({ baseURL: '/api' });
+import { supabase } from '../lib/supabase';
 
 function directClient() {
-  if (!supabaseConfigured || !supabase) throw new Error('Supabase is not configured. Restart the frontend after checking .env.');
+  if (!supabase) throw new Error('Supabase is not configured. Restart the frontend after checking .env.');
   return supabase;
 }
 
@@ -14,41 +11,30 @@ function directResult<T>(data: T, error: { message: string } | null) {
   return { data };
 }
 
+/**
+ * Features that lived in the retired Express backend and have no Supabase
+ * implementation yet. They reject loudly rather than pretending to work: the
+ * old /api routes no longer exist, so a silent call would just return the
+ * SPA's index.html and fail somewhere far less obvious.
+ */
+export const NOT_MIGRATED = 'is not available yet — it is being rebuilt on Supabase.';
+// The type parameter is the shape the caller would have received, so pages keep
+// compiling against the eventual contract. Nothing is ever resolved.
+const notMigrated = <T = void>(feature: string): Promise<T> =>
+  Promise.reject(new Error(`${feature} ${NOT_MIGRATED}`));
+
 const SHIFT_LATE_GRACE_MINUTES = 30;
+// One half-day rule for the whole company: under four hours worked is half a day,
+// whatever the shift length or the entity. The import path has no access to the
+// settings table, so it uses this constant directly while getSalaryDeductions
+// takes it as the fallback for half_day_threshold_hours — the two cannot drift.
+const HALF_DAY_HOURS = 4;
 
-// Attendance exports spell a status however they like — ABSENT, "Absent (LOP)",
-// half day, HALF_DAY, WEEKEND/OFF, "LATE COMING". Everything is folded to one
-// vocabulary here, at the point of parsing, so that nothing downstream has to
-// guess at casing or punctuation. Order matters: "early leave" must be settled
-// before the general leave rule, and "weekly off" before anything else.
-const STATUS_PATTERNS: Array<[RegExp, string]> = [
-  [/\bweek\s*end\b|\bweak\s*end\b|\bweekly\s*off\b|\bweek\s*off\b/, 'Weekend'],
-  [/\bholiday\b/, 'Holiday'],
-  [/\bhalf\s*day\b|\bhalf\b/, 'HALF_DAY'],
-  [/\bmissed?\s*swipe\b|\bincomplete\b|\bmissing\s*punch\b/, 'Missed Swipe'],
-  [/\bearly\s*(leaving|leave|going|out)\b/, 'Early Leaving'],
-  [/\blate\b/, 'Late Coming'],
-  [/\b(casual|sick|paid|earned|privilege)\s*leave\b|\bleave\b|\bcl\b|\bsl\b|\bpl\b/, 'Paid Leave'],
-  [/\babsent\b|\babsence\b/, 'Absent'],
-  [/\bofficial\b|\bon\s*duty\b|\bod\b/, 'Official'],
-  [/\bnormal\b|\bpresent\b/, 'Normal'],
-];
-
-/** Fold a spreadsheet status to the canonical vocabulary. Unrecognised text is
- *  returned trimmed rather than discarded, so nothing is silently lost. */
-export const canonicalStatus = (value: unknown): string => {
-  const text = String(value ?? '').toLowerCase().replace(/[_\-/(),.]+/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!text) return '';
-  for (const [pattern, canonical] of STATUS_PATTERNS) if (pattern.test(text)) return canonical;
-  return String(value ?? '').trim();
-};
-
-/** Case-insensitive membership test for statuses that may predate canonicalisation. */
-const statusIsOneOf = (value: unknown, list: string[]) => {
-  const canonical = canonicalStatus(value).toLowerCase();
-  const raw = String(value ?? '').trim().toLowerCase();
-  return list.some(item => { const l = item.toLowerCase(); return canonical === l || raw === l; });
-};
+// The status vocabulary now lives in lib/status.ts so the salary attribution can
+// use it without importing this module. Re-exported here because callers of the
+// api module have always got canonicalStatus from it.
+import { canonicalStatus, statusIsOneOf } from '../lib/status';
+export { canonicalStatus, statusIsOneOf };
 
 /** Employee numbers are compared folded, so EMP-001 and emp-001 are one person. */
 /** Employee numbers are only unique within one biometric device, so every
@@ -122,34 +108,6 @@ async function fetchAllRows<T>(buildQuery: (from: number, to: number) => any): P
   if (failure) return { data: head, error: failure };
   return { data: head.concat(...pages.map(page => page || [])), error: null };
 }
-
-/**
- * Attach or clear the bearer token used by every request.
- * Called by AuthProvider on login, logout, and on restoring a stored token.
- */
-export function setAuthToken(token: string | null): void {
-  if (token) {
-    api.defaults.headers.common.Authorization = `Bearer ${token}`;
-  } else {
-    delete api.defaults.headers.common.Authorization;
-  }
-}
-
-// A token can expire mid-session. Rather than let every page surface its own
-// confusing error, drop the dead token and send the user back to sign in.
-api.interceptors.response.use(
-  response => response,
-  error => {
-    const status = error?.response?.status;
-    const isLoginAttempt = error?.config?.url?.includes('/auth/login');
-    if (status === 401 && !isLoginAttempt) {
-      localStorage.removeItem('hrpulse.token');
-      setAuthToken(null);
-      if (window.location.pathname !== '/login') window.location.assign('/login');
-    }
-    return Promise.reject(error);
-  }
-);
 
 // Attendance
 const staffNameKey = (value: unknown) => String(value || '')
@@ -260,7 +218,6 @@ export const uploadAttendance = async (fileInput: UploadFile | UploadFile[]) => 
   const attendanceFiles = classified.filter(item => item.kind === 'attendance').map(item => item.file);
   const staffFiles = classified.filter(item => item.kind === 'staff').map(item => item.file);
   if (!attendanceFiles.length) throw new Error('Please include at least one attendance file.');
-  if (!supabaseConfigured || !supabase) return api.post<{ uploadId: number; periodMonth: string; rowCount: number; warnings: string[] }>('/attendance/upload', (() => { const fd = new FormData(); files.forEach(file => fd.append('file', file)); return fd; })());
   if (attendanceFiles.length > 1 || staffFiles.length > 0) {
     // Import each file on its own and keep every outcome. The previous version
     // reassigned a single `result` per pass, so only the last file was ever
@@ -567,7 +524,7 @@ export const uploadAttendance = async (fileInput: UploadFile | UploadFile[]) => 
       workHours = outMinutes === null ? null : (outMinutes - inMinutes) / 60;
       overtimeHours = outMinutes !== null && employee.eligible_for_overtime ? Math.max(0, (outMinutes - inMinutes - scheduledMinutes) / 60) : 0;
       if (outMinutes === null) finalStatus = 'Missed Swipe';
-      else if (outMinutes - inMinutes < scheduledMinutes / 2) finalStatus = 'HALF_DAY';
+      else if ((outMinutes - inMinutes) / 60 < HALF_DAY_HOURS) finalStatus = 'HALF_DAY';
       else if (inMinutes > detectedShift.start + SHIFT_LATE_GRACE_MINUTES) finalStatus = 'Late Coming';
       else if (outMinutes < scheduledEnd) finalStatus = 'Early Leaving';
       else finalStatus = 'Normal';
@@ -621,12 +578,10 @@ export const uploadAttendance = async (fileInput: UploadFile | UploadFile[]) => 
   }
 };
 export const getUploads = async () => {
-  if (!supabaseConfigured) return api.get('/attendance/uploads');
   const { data, error } = await directClient().from('attendance_imports').select('*').order('uploaded_at', { ascending: false });
   return directResult((data || []).map((row: any) => ({ ...row, periodMonth: row.period_month, rowCount: row.row_count, uploadedAt: row.uploaded_at })), error);
 };
 export const getAttendanceSummary = async (uploadId: number) => {
-  if (!supabaseConfigured) return api.get(`/attendance/summary/${uploadId}`);
   // Only the two columns the summary counts on, and names resolved from one
   // employee read instead of embedded on every row.
   const { data, error } = await fetchAllRows<any>((from, to) => directClient().from('attendance_records').select('employee_id,status', { count: 'exact' }).eq('import_id', uploadId).range(from, to));
@@ -654,43 +609,32 @@ export const getAttendanceSummary = async (uploadId: number) => {
   return { data: Array.from(grouped.values()) };
 };
 export const getAttendanceRecords = async (uploadId: number, employeeId: number) => {
-  if (!supabaseConfigured) return api.get(`/attendance/records/${uploadId}/${employeeId}`);
   const { data, error } = await directClient().from('attendance_records').select('*').eq('import_id', uploadId).eq('employee_id', employeeId).order('record_date');
   return directResult((data || []).map((row: any) => ({ ...row, recordDate: row.record_date, timeIn: row.time_in || row.time_in_raw, timeOut: row.time_out || row.time_out_raw, timeInRaw: row.time_in_raw, timeOutRaw: row.time_out_raw })), error);
 };
-export const deleteUpload = (uploadId: number) => api.delete(`/attendance/uploads/${uploadId}`);
-
 // Emails
 export const getEmailDrafts = async (uploadId: number) => {
-  if (!supabaseConfigured) return api.get(`/emails/drafts/${uploadId}`);
   const { data, error } = await directClient().from('email_messages').select('*, employees(name,email)').eq('import_id', uploadId).order('created_at', { ascending: false });
   return directResult((data || []).map((row: any) => ({ ...row, employeeId: row.employee_id, employeeName: row.employees?.name, employeeEmail: row.employees?.email, templateType: row.template_type, isEdited: row.is_edited, sentAt: row.sent_at })), error);
 };
 export const updateDraft = async (draftId: number, data: { subject: string; body: string }) => {
-  if (!supabaseConfigured) return api.patch(`/emails/drafts/${draftId}`, data);
   const { data: saved, error } = await directClient().from('email_messages').update({ subject: data.subject, body: data.body, is_edited: true }).eq('id', draftId).select().single();
   return directResult(saved, error);
 };
-export const sendEmail = (draftId: number) => {
-  if (supabaseConfigured) return Promise.reject(new Error('Email sending is disabled in the Supabase draft-only version.'));
-  return api.post(`/emails/send/${draftId}`);
-};
-export const sendBulk = (draftIds: number[]) => {
-  if (supabaseConfigured) return Promise.reject(new Error('Email sending is disabled in the Supabase draft-only version.'));
-  return api.post('/emails/send-bulk', { draftIds });
-};
+// Drafts are read and edited through Supabase; actually delivering them needs
+// SMTP credentials, which cannot live in the browser. That waits on an edge
+// function.
+export const sendEmail = (_draftId: number) => notMigrated('Sending email');
+export const sendBulk = (_draftIds: number[]) => notMigrated('Sending email');
 export const getEmailHistory = async (month?: string, employeeId?: number) => {
-  if (!supabaseConfigured) return api.get('/emails/history', { params: { month, employeeId } });
   let query = directClient().from('email_messages').select('*, employees(name,email)').not('sent_at', 'is', null).order('sent_at', { ascending: false });
   if (employeeId) query = query.eq('employee_id', employeeId);
   if (month) query = query.gte('sent_at', `${month}-01T00:00:00Z`).lt('sent_at', `${month}-32T00:00:00Z`);
   const { data, error } = await query;
   return directResult((data || []).map((row: any) => ({ ...row, employeeName: row.employees?.name, employeeEmail: row.employees?.email, sentAt: row.sent_at })), error);
 };
-export const checkPendingReminders = () => {
-  if (supabaseConfigured) return Promise.resolve({ data: { created: 0, checked: 0 } });
-  return api.post<{ created: number; checked: number }>('/emails/remind-pending');
-};
+// Depends on sendEmail, so it waits on the same edge function.
+export const checkPendingReminders = () => notMigrated('Pending reminders');
 
 // Salary
 // Salary lives on employees.monthly_salary — one current salary per employee,
@@ -698,12 +642,10 @@ export const checkPendingReminders = () => {
 // `month` argument is accepted so callers can keep passing the viewed month,
 // but there is no per-month salary history to select from.
 export const getSalaryConfigs = async (month?: string) => {
-  if (!supabaseConfigured) return api.get('/salary/configs', { params: { month } });
   const { data, error } = await directClient().from('employees').select('id,monthly_salary');
   return directResult((data || []).map((row: any) => ({ employeeId: row.id, basicSalary: row.monthly_salary == null ? null : Number(row.monthly_salary) })), error);
 };
 export const getSalaryDeductions = async (uploadId: number) => {
-  if (!supabaseConfigured) return api.get(`/salary/deductions/${uploadId}`);
   const client = directClient();
   const upload = await client.from('attendance_imports').select('period_month').eq('id', uploadId).single();
   if (upload.error) throw new Error(upload.error.message);
@@ -747,7 +689,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
   const settingMap = new Map((settings || []).map((row: any) => [row.key, row.value]));
   let lateAfterMinutes = Number(settingMap.get('late_after_minutes') || 570);
   let lateEvery = Number(settingMap.get('late_occurrences_for_deduction') || 3);
-  let halfDayHours = Number(settingMap.get('half_day_threshold_hours') || 4);
+  let halfDayHours = Number(settingMap.get('half_day_threshold_hours') || HALF_DAY_HOURS);
   // The monthly paid-leave allowance. Both keys are seeded by
   // 20260806_attendance_salary_policies.sql, so the limit can be retuned from
   // the settings table without touching this file; the fallbacks match the seed.
@@ -769,7 +711,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
   const grouped = new Map<number, any>();
   for (const row of payrollRows as any[]) {
     const employee = employeeMap.get(row.employee_id) || {};
-    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, absentDays: 0, absentSunday: 0, absentNonSunday: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, extraDays: 0, overtimeEligibleDays: 0, itRecords: 0 };
+    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, absentDays: 0, absentSunday: 0, absentNonSunday: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, extraDays: 0, workedWeeklyOffs: 0, overtimeEligibleDays: 0, itRecords: 0 };
     if (String(row.policy_code || '').toLowerCase() === 'it') item.itRecords++;
     const status = String(row.status || '').toLowerCase();
     // Rafttar is the exception; every other entity follows the hospital shift
@@ -782,20 +724,28 @@ export const getSalaryDeductions = async (uploadId: number) => {
     // because the importer only ever stamped Weekend on the one employee whose
     // department literally read "IT". One paid day whether or not they punched.
     const isSunday = new Date(`${String(row.record_date).slice(0, 10)}T00:00:00Z`).getUTCDay() === 0;
+
+    // Under four hours is half a day for everyone — the same rule whatever the
+    // entity or the contracted shift length. The contracted hours still decide
+    // what counts as an extra shift below, but no longer what counts as half a day.
+    const halfBelow = halfDayHours;
+    const hours = row.work_hours === null || row.work_hours === undefined ? null : Number(row.work_hours);
+
     if (rafttarStaff && isSunday) {
+      // The weekly off is paid whether or not they came in. If they did come in,
+      // the day is also an entitled off they did not take, and earns a second
+      // day's pay in the result map below. The status is no guide here — the
+      // importer stamps Weekend over a worked Sunday — so trust the punch.
       item.presentDays++;
+      const attended = (row.time_in != null || Number(row.work_hours || 0) > 0)
+        && !['absent', 'holiday', 'paid leave'].includes(status);
+      if (attended) item.workedWeeklyOffs += hours !== null && hours < halfBelow ? 0.5 : 1;
       grouped.set(row.employee_id, item);
       continue;
     }
 
     const workingDay = !['absent', 'weekend', 'holiday', 'paid leave'].includes(status);
-    const hours = row.work_hours === null || row.work_hours === undefined ? null : Number(row.work_hours);
-
-    // Completing the contracted shift is a full day whatever its length; half a
-    // day is charged only below half of it. Without a contracted shift on
-    // record, fall back to the flat threshold.
     const contracted = contractedMap.get(row.employee_id) ?? null;
-    const halfBelow = contracted ? contracted / 2 : (rafttarStaff ? halfDayHours : 7);
 
     if (workingDay && hours !== null) {
       if (rafttarStaff) {
@@ -863,13 +813,21 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const excessLeaveDeduction = excessPaidLeave * dailySalary;
     const totalLopAmount = absenceDeduction + halfDayDeduction + lateDeduction + excessLeaveDeduction;
     const lopDays = chargeableAbsentDays + item.halfDays * 0.5 + lateDeductionCount + excessPaidLeave;
-    // Extra shifts and overtime are measured but not paid: net pay is salary
-    // less LOP and nothing else. extraDays and overtimeHours stay on the result
-    // so the measurement survives if a rate is ever agreed.
+    // An entitled off that was worked rather than taken is paid for. Two kinds
+    // exist: a Sunday Rafttar came in on, counted above, and leave allowance
+    // still unspent at month end. Absences and taken leave eat the allowance
+    // first, so only what is genuinely left over is paid.
+    const unusedLeaveDays = Math.max(0, leaveLimit - item.paidLeaveUsed - protectedAbsentDays);
+    const workedWeeklyOffPay = item.workedWeeklyOffs * dailySalary;
+    const unusedLeavePay = unusedLeaveDays * dailySalary;
+    const extraPayableDays = item.workedWeeklyOffs + unusedLeaveDays;
+    const extraPayment = workedWeeklyOffPay + unusedLeavePay;
+    // An extra *shift* is still not an unavailed *off*: extraDays and
+    // overtimeHours remain measured and unpaid, and are not part of extraPayment.
     const displayedPaidLeave = item.paidLeaveUsed + protectedAbsentDays;
     // The individual amounts travel with the totals so the salary sheet can
-    // explain, line by line, why the pay was cut.
-    return { ...item, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, netPayable: Math.max(0, basicSalary - totalLopAmount), dailySalary, totalLopAmount, basicSalary };
+    // explain, line by line, why the pay was cut and what was added back.
+    return { ...item, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, unusedLeaveDays, workedWeeklyOffPay, unusedLeavePay, extraPayableDays, extraPayment, netPayable: Math.max(0, basicSalary - totalLopAmount + extraPayment), dailySalary, totalLopAmount, basicSalary };
   });
   // Deductions are derived on every read, so there is nothing to cache back to
   // the database. The previous write-back also stored an undefined
@@ -879,32 +837,26 @@ export const getSalaryDeductions = async (uploadId: number) => {
 
 // Settings
 export const getSettings = async () => {
-  if (!supabaseConfigured) return api.get('/settings');
   const { data, error } = await directClient().from('settings').select('key,value');
   return directResult(Object.fromEntries((data || []).map((row: any) => [row.key, row.value])), error);
 };
 export const saveSettings = async (data: Record<string, string>) => {
-  if (!supabaseConfigured) return api.put('/settings', data);
   const { data: saved, error } = await directClient().from('settings').upsert(Object.entries(data).map(([key, value]) => ({ key, value })));
   return directResult(saved, error);
 };
 export const getTemplates = async () => {
-  if (!supabaseConfigured) return api.get('/settings/templates');
   const { data, error } = await directClient().from('email_templates').select('*').order('type');
   return directResult(data || [], error);
 };
 export const saveTemplate = async (type: string, data: { subject: string; body: string }) => {
-  if (!supabaseConfigured) return api.put(`/settings/templates/${type}`, data);
   const { data: saved, error } = await directClient().from('email_templates').upsert({ type, subject: data.subject, body: data.body }, { onConflict: 'type' }).select().single();
   return directResult(saved, error);
 };
-export const testSmtp = () => api.post('/settings/test-smtp');
 
 // Employees
 export const getEmployees = async () => {
-  if (!supabaseConfigured) return api.get('/employees');
   const { data, error } = await directClient().from('employees').select('*').order('name');
-  if (error) return directResult(null, error);
+  if (error) throw new Error(error.message);
   return directResult((data || []).map((row: any) => ({
     ...row, employeeId: row.employee_number, photoUrl: row.photo_url, createdAt: row.created_at,
     actualDesignation: row.designation, designation: row.biometric_name || row.designation, biometricName: row.biometric_name,
@@ -912,9 +864,8 @@ export const getEmployees = async () => {
     shiftTimings: row.shift_timings || {}, eligibleForPaidLeaves: row.eligible_for_paid_leaves, eligibleForOvertime: row.eligible_for_overtime,
   })), null);
 };
-export const getEmployee = (id: number) => supabaseConfigured ? directClient().from('employees').select('*').eq('id', id).single() : api.get(`/employees/${id}`);
+export const getEmployee = (id: number) => directClient().from('employees').select('*').eq('id', id).single();
 export const mergeEmployees = async (keepId: number, mergeId: number) => {
-  if (!supabaseConfigured) return api.post('/employees/merge', { keepId, mergeId });
   const client = directClient();
   const [keep, merge] = await Promise.all([
     client.from('employees').select('id,name,monthly_salary').eq('id', keepId).single(),
@@ -950,7 +901,6 @@ export const mergeEmployees = async (keepId: number, mergeId: number) => {
   return { data: { kept: keep.data.name, removed: merge.data.name } };
 };
 export const updateEmployee = async (id: number, data: { name?: string; email?: string; department?: string; employeeNumber?: string; mobile?: string; designation?: string; biometricName?: string; branch?: string; status?: string; monthlySalary?: number | null; shiftTimings?: Record<string, { start: string; end: string }>; eligibleForPaidLeaves?: boolean; eligibleForOvertime?: boolean }) => {
-  if (!supabaseConfigured) return api.patch(`/employees/${id}`, data);
   const { data: saved, error } = await directClient().from('employees').update({
     name: data.name, email: data.email, department: data.department, designation: data.designation, biometric_name: data.biometricName,
     employee_number: data.employeeNumber, mobile: data.mobile, branch: data.branch, status: data.status,
@@ -994,7 +944,6 @@ const mapAssignment = (row: any): EmployeeShiftAssignment => ({
 });
 
 export const getShiftOptions = async () => {
-  if (!supabaseConfigured) return api.get<ShiftOption[]>('/shifts').then(response => ({ data: response.data.map(mapShift) }));
   const { data, error } = await directClient().from('shifts').select('*').eq('is_active', true).order('role_target').order('start_time');
   return directResult((data || []).map(mapShift), error);
 };
@@ -1017,7 +966,6 @@ const median = (values: number[]) => {
 // cannot drag a whole shift. Read-only: nothing is written back to employees,
 // which would switch on the importer's shift detection.
 export const getDerivedShiftTimings = async () => {
-  if (!supabaseConfigured) return { data: new Map<number, DerivedTimings>() };
   const client = directClient();
   const records = await fetchAllRows<any>((from, to) => client.from('attendance_records')
     .select('employee_id,time_in_raw,time_out_raw', { count: 'exact' })
@@ -1060,7 +1008,6 @@ export const getDerivedShiftTimings = async () => {
 // One query for the whole table so the employee list does not fire a request
 // per row. Empty until shifts are assigned from the M / E / N modal.
 export const getAllShiftAssignments = async () => {
-  if (!supabaseConfigured) return { data: new Map<number, EmployeeShiftAssignment>() };
   const { data, error } = await directClient().from('employee_shifts')
     .select('id,employee_id,effective_from,effective_to,shift:shifts(*)')
     .order('effective_from', { ascending: false });
@@ -1075,7 +1022,6 @@ export const getAllShiftAssignments = async () => {
 };
 
 export const getEmployeeShiftAssignments = async (employeeId: number) => {
-  if (!supabaseConfigured) return api.get<EmployeeShiftAssignment[]>(`/shifts/employees/${employeeId}`).then(response => ({ data: response.data.map(mapAssignment) }));
   const { data, error } = await directClient().from('employee_shifts').select('id,effective_from,effective_to,shift:shifts(*)').eq('employee_id', employeeId).order('effective_from', { ascending: false });
   return directResult((data || []).map(mapAssignment), error);
 };
@@ -1088,7 +1034,6 @@ export interface SaveEmployeeShiftInput {
 }
 
 export const saveEmployeeShiftAssignment = async (employeeId: number, input: SaveEmployeeShiftInput) => {
-  if (!supabaseConfigured) return api.post<EmployeeShiftAssignment>(`/shifts/employees/${employeeId}`, input).then(response => ({ data: mapAssignment(response.data) }));
   const client = directClient();
   let shiftId = input.shiftId;
   if (input.customShift) {
@@ -1107,55 +1052,47 @@ export const saveEmployeeShiftAssignment = async (employeeId: number, input: Sav
   const saved = await client.from('employee_shifts').insert({ employee_id: employeeId, shift_id: shiftId, effective_from: input.effectiveFrom, effective_to: input.effectiveTo || null }).select('id,effective_from,effective_to,shift:shifts(*)').single();
   return directResult(saved.data ? mapAssignment(saved.data) : saved.data, saved.error);
 };
-export const uploadEmployeePhoto = (id: number, file: File) => {
-  const fd = new FormData();
-  fd.append('photo', file);
-  return api.post(`/employees/${id}/photo`, fd);
-};
-
 // SOPs
-export const getSops = (params?: { category?: string; search?: string }) => api.get('/sops', { params });
-export const getSopCategories = () => api.get('/sops/categories');
-export const getSop = (id: number) => api.get(`/sops/${id}`);
-export const createSop = (data: { title: string; category: string; content: string; tags?: string[] }) => api.post('/sops', data);
-export const updateSop = (id: number, data: { title: string; category: string; content: string; tags?: string[] }) => api.put(`/sops/${id}`, data);
-export const deleteSop = (id: number) => api.delete(`/sops/${id}`);
+// There is no `sops` table in Supabase yet — the whole feature lived in the
+// retired backend's database.
+export const getSops = (_params?: { category?: string; search?: string }) => notMigrated<{ data: any[] }>('SOPs');
+export const getSopCategories = () => notMigrated<{ data: string[] }>('SOPs');
+export const createSop = (_data: { title: string; category: string; content: string; tags?: string[] }) => notMigrated('SOPs');
+export const updateSop = (_id: number, _data: { title: string; category: string; content: string; tags?: string[] }) => notMigrated('SOPs');
+export const deleteSop = (_id: number) => notMigrated('SOPs');
 
 // Rules
 export const getRules = async () => {
-  if (!supabaseConfigured) return api.get('/rules');
   const { data, error } = await directClient().from('attendance_rules').select('*').order('priority').order('created_at');
   return directResult((data || []).map((row: any) => ({ ...row, ruleType: row.rule_type, isActive: row.is_active, createdAt: row.created_at })), error);
 };
-export const generateRule = (policy: string) => api.post<{
-  name: string; description: string; ruleType: string; conditions: object; actions: object; priority: number;
-}>('/rules/generate', { policy });
+type GeneratedRule = { name: string; description: string; ruleType: string; conditions: object; actions: object; priority: number };
+export const generateRule = async (policy: string) => {
+  const { data, error } = await directClient().functions.invoke('generate-rule', { body: { policy } });
+  if (error) throw error;
+  return directResult(data as GeneratedRule, null);
+};
 export const createRule = async (data: { name: string; description: string; ruleType: string; conditions: object; actions: object; priority?: number }) => {
-  if (!supabaseConfigured) return api.post('/rules', data);
   const { data: saved, error } = await directClient().from('attendance_rules').insert({ name: data.name, description: data.description, rule_type: data.ruleType, conditions: data.conditions, actions: data.actions, priority: data.priority ?? 0 }).select().single();
   return directResult(saved, error);
 };
 export const updateRule = async (id: number, data: any) => {
-  if (!supabaseConfigured) return api.put(`/rules/${id}`, data);
   const mapped = { ...data, rule_type: data.ruleType, is_active: data.isActive };
   delete mapped.ruleType; delete mapped.isActive;
   const { data: saved, error } = await directClient().from('attendance_rules').update(mapped).eq('id', id).select().single();
   return directResult(saved, error);
 };
 export const deleteRule = async (id: number) => {
-  if (!supabaseConfigured) return api.delete(`/rules/${id}`);
   const { data, error } = await directClient().from('attendance_rules').delete().eq('id', id);
   return directResult(data, error);
 };
 export const toggleRule = async (id: number) => {
-  if (!supabaseConfigured) return api.patch(`/rules/${id}/toggle`);
   const current = await directClient().from('attendance_rules').select('is_active').eq('id', id).single();
   if (current.error) throw new Error(current.error.message);
   const { data, error } = await directClient().from('attendance_rules').update({ is_active: !current.data.is_active }).eq('id', id).select().single();
   return directResult(data, error);
 };
 export const evaluateRules = async (uploadId: number, autoCreateDrafts = true) => {
-  if (!supabaseConfigured) return api.post<{ matches: any[]; draftsCreated: number; employeesEvaluated: number }>(`/rules/evaluate/${uploadId}`, { autoCreateDrafts });
   const client = directClient();
   const [{ data: records, error: recordsError }, { data: rules, error: rulesError }] = await Promise.all([
     client.from('attendance_records').select('*, employees(id,name,email)').eq('import_id', uploadId),
@@ -1208,7 +1145,6 @@ export const evaluateRules = async (uploadId: number, autoCreateDrafts = true) =
 
 // Analytics
 export const getAnalyticsOverview = async () => {
-  if (!supabaseConfigured) return api.get('/analytics/overview');
   const client = directClient();
   const [employees, imports, messages, sent] = await Promise.all([
     client.from('employees').select('id', { count: 'exact', head: true }),
@@ -1230,7 +1166,6 @@ const isFlaggedStatus = (status: unknown) => {
 };
 
 export const getMonthlyComparison = async () => {
-  if (!supabaseConfigured) return api.get('/analytics/monthly-comparison');
   const client = directClient();
   const { data: imports, error: importsError } = await client.from('attendance_imports').select('id,period_month').order('period_month');
   if (importsError) throw new Error(importsError.message);
@@ -1243,16 +1178,36 @@ export const getMonthlyComparison = async () => {
   return { data: result };
 };
 export const getAnalyticsTrends = async (uploadId: number) => {
-  if (!supabaseConfigured) return api.get(`/analytics/trends/${uploadId}`);
-  const { data, error } = await directClient().from('attendance_records').select('status,record_date').eq('import_id', uploadId);
+  // Paged like the Dispatcher summary: a month of records for a large branch
+  // runs past PostgREST's 1000-row default, and a truncated read here would
+  // quietly under-report every chart on the page.
+  const { data, error } = await fetchAllRows<any>((from, to) => directClient().from('attendance_records')
+    .select('status,record_date,employee_id', { count: 'exact' })
+    .eq('import_id', uploadId)
+    .range(from, to));
   if (error) throw new Error(error.message);
   const byStatus: Record<string, number> = {};
   const byDate: Record<string, number> = {};
+  const byEmployee = new Map<number, number>();
   for (const row of data || []) {
     if (!isFlaggedStatus(row.status)) continue;
     const label = canonicalStatus(row.status) || String(row.status || '');
     byStatus[label] = (byStatus[label] || 0) + 1;
     byDate[row.record_date] = (byDate[row.record_date] || 0) + 1;
+    byEmployee.set(row.employee_id, (byEmployee.get(row.employee_id) || 0) + 1);
   }
-  return { data: { byStatus, byDate: Object.entries(byDate).map(([date, count]) => ({ date, count })) } };
+
+  const ranked = [...byEmployee.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const names = ranked.length
+    ? (await directClient().from('employees').select('id,name').in('id', ranked.map(([id]) => id))).data || []
+    : [];
+  const nameById = new Map<number, string>(names.map((e: any) => [e.id, e.name]));
+
+  return {
+    data: {
+      byStatus,
+      byDate: Object.entries(byDate).map(([date, count]) => ({ date, count })),
+      topOffenders: ranked.map(([id, count]) => ({ name: nameById.get(id) || `Employee ${id}`, count })),
+    },
+  };
 };

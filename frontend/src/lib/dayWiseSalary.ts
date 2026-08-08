@@ -53,6 +53,9 @@ export type DayWiseSalary = {
   lines: DayLine[];
   totalEarned: number;
   totalDeducted: number;
+  /** Leave allowance never taken, paid out at month end. Belongs to no one date. */
+  unusedLeaveDays: number;
+  unusedLeavePay: number;
   /** The per-date cuts add up to the engine's headline. False means do not show them. */
   reconciles: boolean;
 };
@@ -61,7 +64,9 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
   const rate = Number(ded?.dailySalary || 0);
   const rafttarStaff = ded?.rafttarStaff === true;
   const contracted = emp?.contracted_hours == null ? null : Number(emp.contracted_hours);
-  const halfBelow = contracted ? contracted / 2 : (rafttarStaff ? Number(ded?.halfDayHours || 4) : 7);
+  // Under four hours is half a day for everyone. The contracted shift still
+  // decides what counts as an extra shift, but no longer what counts as half one.
+  const halfBelow = Number(ded?.halfDayHours || 4);
   const shift = contracted || 8;
   const lateAfterMinutes = Number(ded?.lateAfterMinutes || 570);
 
@@ -89,17 +94,23 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
       isPaidLeave: false,
     };
 
+    const hours = row.work_hours === null || row.work_hours === undefined ? null : Number(row.work_hours);
+
     // A Rafttar Sunday is a paid weekly off — credited whether or not anyone
-    // punched, and it never reaches the absence rules below.
+    // punched, and it never reaches the absence rules below. Coming in anyway
+    // means the off was worked rather than taken, and earns a second day's pay.
     if (rafttarStaff && isSunday(row.recordDate)) {
-      line.credit = 1;
-      line.why = 'Paid weekly off';
+      const attended = (row.time_in != null || Number(row.work_hours || 0) > 0)
+        && !['absent', 'holiday', 'paid leave'].includes(status);
+      const extra = !attended ? 0 : hours !== null && hours < halfBelow ? 0.5 : 1;
+      line.credit = 1 + extra;
+      line.earned = line.credit * rate;
+      line.why = extra ? 'Worked on weekly off — extra day paid' : 'Paid weekly off';
       lines.push(line);
       continue;
     }
 
     const workingDay = !['absent', 'weekend', 'holiday', 'paid leave'].includes(status);
-    const hours = row.work_hours === null || row.work_hours === undefined ? null : Number(row.work_hours);
 
     if (workingDay && hours !== null) {
       if (rafttarStaff) {
@@ -188,5 +199,9 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
   // month, while the modal only has the rows of one import.
   const reconciles = Math.abs(totalDeducted - Number(ded?.lopAmount || 0)) <= 1;
 
-  return { lines: clean, totalEarned, totalDeducted, reconciles };
+  // Unused leave has no date to sit on — it is the allowance that was never
+  // drawn — so it travels beside the lines for the caller to show as a footer.
+  const unusedLeaveDays = Number(ded?.unusedLeaveDays || 0);
+
+  return { lines: clean, totalEarned, totalDeducted, unusedLeaveDays, unusedLeavePay: unusedLeaveDays * rate, reconciles };
 }

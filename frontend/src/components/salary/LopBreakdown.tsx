@@ -43,12 +43,26 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
   if (Number(ded.lateDeductionCount || 0) > 0) summary.push({ label: 'Late arrivals', amount: Number(ded.lateDeduction || 0), detail: `${ded.lateOccurrences} late ÷ ${ded.lateEvery}` });
   if (Number(ded.excessPaidLeave || 0) > 0) summary.push({ label: 'Leave beyond the allowance', amount: Number(ded.excessLeaveDeduction || 0), detail: `${ded.excessPaidLeave} × ${money(rate)}` });
 
+  // An entitled off that was worked rather than taken is paid for. Stated as its
+  // own section because it is the only thing that ever adds to the pay.
+  const additions: Array<{ label: string; detail: string; amount: number }> = [];
+  if (Number(ded.workedWeeklyOffs || 0) > 0) additions.push({ label: 'Weekly offs worked', amount: Number(ded.workedWeeklyOffPay || 0), detail: `${ded.workedWeeklyOffs} × ${money(rate)}` });
+  if (Number(ded.unusedLeaveDays || 0) > 0) additions.push({ label: 'Leave not availed', amount: Number(ded.unusedLeavePay || 0), detail: `${ded.unusedLeaveDays} of ${ded.leaveLimit} × ${money(rate)}` });
+  const extraPayment = Number(ded.extraPayment || 0);
+  const netPayable = Math.max(0, Number(salary || 0) - headline + extraPayment);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
           <div>
-            <h3 className="font-semibold text-slate-800">Why {money(headline)} was deducted</h3>
+            <h3 className="font-semibold text-slate-800">
+              {headline > 0
+                ? <>Why {money(headline)} was deducted</>
+                : extraPayment > 0
+                  ? <>Why {money(extraPayment)} was added</>
+                  : <>How this month's pay was worked out</>}
+            </h3>
             <p className="mt-0.5 text-sm text-slate-500">{emp.name} · {month}</p>
           </div>
           <button onClick={onClose} className="text-xl leading-none text-slate-400 hover:text-slate-600">×</button>
@@ -60,8 +74,11 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
 
           <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[13px] text-slate-600">
             {ded.rafttarStaff
-              ? <>Rafttar: every Sunday is a paid weekly off, plus <b>2</b> paid leaves.</>
+              ? <>Rafttar: every Sunday is a paid weekly off, plus <b>{ded.leaveLimit}</b> paid leaves.</>
               : <>Hospital: Sundays are working days, but <b>{ded.leaveLimit}</b> paid leaves a month — a Sunday taken off counts as one of them.</>}
+            {' '}Under <b>4 hours</b> worked is half a day. An off that was worked rather
+            than taken — a weekly off come in on, or leave still unspent at month end —
+            is paid at a day's pay each.
           </div>
 
           {isLoading && <p className="mt-4 text-center text-[13px] text-slate-400">Loading the dates…</p>}
@@ -87,10 +104,6 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
                   <td className="pt-2 font-semibold text-slate-700" colSpan={2}>Total deducted</td>
                   <td className="pt-2 text-right font-semibold text-red-600">{money(headline)}</td>
                 </tr>
-                <tr>
-                  <td className="pt-1 font-semibold text-slate-700" colSpan={2}>Net payable</td>
-                  <td className="pt-1 text-right font-semibold text-emerald-700">{money(Math.max(0, Number(salary || 0) - headline))}</td>
-                </tr>
               </tbody>
             </table>
           )}
@@ -109,10 +122,6 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
                     <td className="pt-2 font-semibold text-slate-700">Total deducted</td>
                     <td className="pt-2 text-right font-semibold text-red-600">{money(headline)}</td>
                   </tr>
-                  <tr>
-                    <td className="pt-1 font-semibold text-slate-700">Net payable</td>
-                    <td className="pt-1 text-right font-semibold text-emerald-700">{money(Math.max(0, Number(salary || 0) - headline))}</td>
-                  </tr>
                 </tbody>
               </table>
               {!reconciles && charges.length > 0 && (
@@ -121,6 +130,29 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
                 </p>
               )}
             </>
+          )}
+
+          {!isLoading && (
+            <table className="mt-4 w-full border-t border-slate-200 pt-2 text-[13px] tabular-nums">
+              <tbody>
+                {additions.map(l => (
+                  <tr key={l.label}>
+                    <td className="py-1.5 pr-2 align-top"><div className="font-medium text-slate-700">{l.label}</div><div className="text-[12px] text-slate-400">{l.detail}</div></td>
+                    <td className="py-1.5 text-right align-top font-medium text-emerald-600">+{money(l.amount)}</td>
+                  </tr>
+                ))}
+                {additions.length > 0 && (
+                  <tr>
+                    <td className="pt-2 font-semibold text-slate-700">Total added for offs worked</td>
+                    <td className="pt-2 text-right font-semibold text-emerald-600">+{money(extraPayment)}</td>
+                  </tr>
+                )}
+                <tr className="border-t border-slate-200">
+                  <td className="pt-2 font-semibold text-slate-700">Net payable</td>
+                  <td className="pt-2 text-right font-semibold text-emerald-700">{money(netPayable)}</td>
+                </tr>
+              </tbody>
+            </table>
           )}
 
           {Number(ded.missedSwipeDays || 0) > 0 && (

@@ -108,6 +108,7 @@ export default function SalaryPage() {
     total: rows.length,
     attendance: rows.filter(row => row.hasAttendance).length,
     lop: rows.filter(row => row.hasLop).length,
+    extraPay: rows.filter(row => Number(row.deduction?.extraPayment || 0) > 0).length,
     missingSalary: rows.filter(row => !row.hasSalary).length,
   }), [rows]);
 
@@ -117,12 +118,13 @@ export default function SalaryPage() {
     const body = printable.map(({ emp, config: cfg, deduction: ded }) => {
       const salary = Number(cfg?.basicSalary || 0);
       const lop = Number(ded?.lopAmount || 0);
-      const net = Math.max(0, salary - lop);
-      return `<tr><td>${emp.name || ''}</td><td>${companyOf(emp)}</td><td>${money(salary)}</td><td>${ded?.lopDays ?? 0}</td><td>${money(lop)}</td><td>${money(net)}</td></tr>`;
+      const extra = Number(ded?.extraPayment || 0);
+      const net = Math.max(0, salary - lop + extra);
+      return `<tr><td>${emp.name || ''}</td><td>${companyOf(emp)}</td><td>${money(salary)}</td><td>${ded?.lopDays ?? 0}</td><td>${money(lop)}</td><td>${ded?.extraPayableDays ?? 0}</td><td>${money(extra)}</td><td>${money(net)}</td></tr>`;
     }).join('');
     const popup = window.open('', '_blank', 'width=1100,height=750');
     if (!popup) return;
-    popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+3),th:nth-child(n+3){text-align:right}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick="window.print()">Print</button><table><thead><tr><th>Employee</th><th>Company</th><th>Salary (₹)</th><th>Loss of Pay (Days)</th><th>Loss of Pay (₹)</th><th>Net Payable (₹)</th></tr></thead><tbody>${body || '<tr><td colspan="6">No salaried employees found</td></tr>'}</tbody></table></body></html>`);
+    popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+3),th:nth-child(n+3){text-align:right}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick="window.print()">Print</button><table><thead><tr><th>Employee</th><th>Company</th><th>Salary (₹)</th><th>Loss of Pay (Days)</th><th>Loss of Pay (₹)</th><th>Extra Days</th><th>Extra Pay (₹)</th><th>Net Payable (₹)</th></tr></thead><tbody>${body || '<tr><td colspan="8">No salaried employees found</td></tr>'}</tbody></table></body></html>`);
     popup.document.close();
     popup.focus();
     setShowPrintOptions(false);
@@ -145,7 +147,7 @@ export default function SalaryPage() {
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Employees</p>
           <p className="mt-0.5 text-lg font-bold text-slate-800">{summary.total}</p>
@@ -157,6 +159,10 @@ export default function SalaryPage() {
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Has loss of pay</p>
           <p className="mt-0.5 text-lg font-bold text-red-600">{summary.lop}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Has extra pay</p>
+          <p className="mt-0.5 text-lg font-bold text-emerald-600">{summary.extraPay}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Missing salary</p>
@@ -204,7 +210,7 @@ export default function SalaryPage() {
             column pushed off-screen is visible rather than silently cut off. */}
         <div className="relative">
         <div className="w-full overflow-x-auto pb-2">
-        <table className="w-full min-w-[960px] table-auto text-[10px] tabular-nums sm:text-[11px]">
+        <table className="w-full min-w-[1120px] table-auto text-[10px] tabular-nums sm:text-[11px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="z-10 bg-slate-50 px-2 py-2.5 text-left font-semibold text-slate-600 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">Employee</th>
@@ -216,6 +222,8 @@ export default function SalaryPage() {
               <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Paid<br />Leave</th>
               <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-1.5">Loss of Pay<br />Days</th>
               <th className="px-1 py-2.5 text-right font-semibold text-slate-600 sm:px-2">Loss of Pay<br />Amount</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-emerald-700 sm:px-1.5">Extra<br />Days</th>
+              <th className="px-1 py-2.5 text-right font-semibold text-emerald-700 sm:px-2">Extra Pay<br />Amount</th>
               <th className="px-1 py-2.5 text-right font-semibold text-emerald-700 sm:px-2">Net<br />Payable</th>
             </tr>
           </thead>
@@ -224,7 +232,8 @@ export default function SalaryPage() {
               const { emp, config: cfg, deduction: ded, hasAttendance, hasSalary } = row;
               const currentSalary = Number(cfg?.basicSalary || 0);
               const liveLopAmount = ded ? Number(ded.lopAmount || 0) : null;
-              const netPayable = currentSalary > 0 ? Math.max(0, currentSalary - (liveLopAmount || 0)) : null;
+              const liveExtraPayment = ded ? Number(ded.extraPayment || 0) : 0;
+              const netPayable = currentSalary > 0 ? Math.max(0, currentSalary - (liveLopAmount || 0) + liveExtraPayment) : null;
               return (
                 <tr key={emp.id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="z-[1] max-w-0 overflow-hidden bg-white px-2 py-2.5 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
@@ -263,6 +272,17 @@ export default function SalaryPage() {
                         className="rounded px-1.5 py-0.5 underline decoration-dotted underline-offset-2 hover:bg-red-50"
                         title="Show why this amount was cut">{formatINR(liveLopAmount || 0)}</button>
                     ) : liveLopAmount !== null ? formatINR(liveLopAmount) : Number(currentSalary) > 0 ? '₹0' : '—'}
+                  </td>
+                  <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5"
+                    title={ded ? `${Number(ded.workedWeeklyOffs || 0)} weekly off(s) worked + ${Number(ded.unusedLeaveDays || 0)} leave day(s) not availed` : undefined}>
+                    {ded && Number(ded.extraPayableDays || 0) > 0 ? Number(ded.extraPayableDays).toFixed(Number(ded.extraPayableDays) % 1 ? 1 : 0) : ded ? 0 : '—'}
+                  </td>
+                  <td className="whitespace-nowrap px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-2">
+                    {ded && liveExtraPayment > 0 ? (
+                      <button type="button" onClick={() => setLopExplain({ ded, emp, row, salary: currentSalary })}
+                        className="rounded px-1.5 py-0.5 underline decoration-dotted underline-offset-2 hover:bg-emerald-50"
+                        title="Show why this amount was added">{formatINR(liveExtraPayment)}</button>
+                    ) : ded ? '₹0' : '—'}
                   </td>
                   <td className="whitespace-nowrap px-1 py-2.5 text-right font-semibold text-emerald-700 sm:px-2">
                     {netPayable !== null ? formatINR(netPayable) : '—'}

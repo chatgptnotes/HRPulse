@@ -36,7 +36,6 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
   const [draftId, setDraftId] = useState<number | null>(null);
   const [tab, setTab] = useState<'draft' | 'records'>(initialTab);
   const [saving, setSaving] = useState(false);
-  const [sending, setSending] = useState(false);
 
   const { data: draft } = useQuery({
     queryKey: ['draft', uploadId, employeeId],
@@ -67,21 +66,6 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
       qc.invalidateQueries({ queryKey: ['draft', uploadId, employeeId] });
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleSend = async () => {
-    if (!draftId) return;
-    // Auto-save first
-    await api.updateDraft(draftId, { subject, body });
-    setSending(true);
-    try {
-      await api.sendEmail(draftId);
-      onSent();
-    } catch (err) {
-      alert('Send failed: ' + String(err));
-    } finally {
-      setSending(false);
     }
   };
 
@@ -186,9 +170,14 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                     return (
                       <tr key={i} className="border-t border-slate-100">
                         <td className="px-3 py-2 text-slate-700">{r.recordDate}</td>
+                        {/* A Rafttar Sunday is never the raw imported status: it is
+                            either a rest day taken or an off that was worked, and the
+                            two are worth telling apart on a sheet the employee sees. */}
                         <td className="px-3 py-2">{includeSundays && isSunday(r.recordDate) && String(r.status || '').trim().toLowerCase() === 'absent'
                           ? <StatusBadge label="Paid weekly off" small />
-                          : <StatusBadge label={r.status} small />}</td>
+                          : includeSundays && isSunday(r.recordDate) && line?.why === 'Worked on weekly off — extra day paid'
+                            ? <StatusBadge label="Worked weekly off" small />
+                            : <StatusBadge label={r.status} small />}</td>
                         <td className="px-3 py-2 text-slate-500">{r.timeIn || '—'}</td>
                         <td className="px-3 py-2 text-slate-500">{r.timeOut || '—'}</td>
                         {showMoney && (
@@ -251,8 +240,8 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
               <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm text-brand-700 bg-brand-50 border border-brand-200 rounded-lg hover:bg-brand-100 font-medium">
                 {saving ? 'Saving...' : 'Save Draft'}
               </button>
-              <button onClick={handleSend} disabled={sending || !draftId} className="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg font-medium">
-                {sending ? 'Sending...' : 'Send Email'}
+              <button disabled title={`Sending email ${api.NOT_MIGRATED}`} className="px-4 py-2 text-sm text-white bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium">
+                Send Email
               </button>
             </>}
           </div>
