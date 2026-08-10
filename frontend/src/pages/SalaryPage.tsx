@@ -25,7 +25,7 @@ export default function SalaryPage() {
   // Which employee's LOP is being explained, if any.
   const [lopExplain, setLopExplain] = useState<any | null>(null);
 
-  const openAttendance = (row: any, filter: { statuses: string[]; label: string; includeSundays?: boolean; note?: string } | null = null) => {
+  const openAttendance = (row: any, filter: { statuses: string[]; label: string; includeSundays?: boolean; note?: string; filterMinCredit?: number } | null = null) => {
     if (!latestUpload?.id) return;
     setAttendanceFilter(filter);
     setAttendanceRow(row);
@@ -334,7 +334,12 @@ export default function SalaryPage() {
                     {ded && Number(ded.extraPayableDays || 0) > 0 ? (
                       <button
                         type="button"
-                        onClick={() => openAttendance(row, { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'HALF_DAY'], label: 'Extra Pay Dates', note: 'Dates that contributed to extra pay. Includes overtime shifts (1.5x or 2x credit), weekly offs worked, and unused leave payout.' })}
+                        onClick={() => openAttendance(row, {
+                          statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'HALF_DAY'],
+                          label: 'Extra Pay Dates',
+                          note: 'Dates with overtime shifts (1.5x or 2x credit) or extra pay. Shows only days where credit earned was >= 1.5 days.',
+                          filterMinCredit: 1.5
+                        })}
                         className="rounded px-1.5 py-0.5 font-medium text-emerald-700 hover:bg-emerald-50 hover:underline"
                         title="View extra pay dates"
                       >
@@ -419,6 +424,7 @@ export default function SalaryPage() {
           filterLabel={attendanceFilter?.label}
           includeSundays={attendanceFilter?.includeSundays}
           filterNote={attendanceFilter?.note}
+          filterMinCredit={attendanceFilter?.filterMinCredit}
           deduction={attendanceRow.deduction}
           employee={attendanceRow.emp}
           monthlySalary={Number(attendanceRow.config?.basicSalary || 0)}

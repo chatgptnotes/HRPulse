@@ -22,6 +22,8 @@ interface Props {
   includeSundays?: boolean;
   /** Optional line under the heading explaining what the list represents. */
   filterNote?: string;
+  /** Show only records where calculated day credit >= this value (for extra pay filtering). */
+  filterMinCredit?: number;
   /** Pass all three to show what each day earned and cost. The Dashboard opens
    *  this modal without them and keeps the plain attendance table. */
   deduction?: any;
@@ -29,7 +31,7 @@ interface Props {
   monthlySalary?: number;
 }
 
-export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false, filterStatuses, filterLabel, includeSundays = false, filterNote, deduction, employee, monthlySalary }: Props) {
+export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false, filterStatuses, filterLabel, includeSundays = false, filterNote, filterMinCredit, deduction, employee, monthlySalary }: Props) {
   const qc = useQueryClient();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -98,9 +100,21 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
     () => new Map((salaryData?.lines || []).map(l => [l.date, l])),
     [salaryData],
   );
+
+  // Additional filtering by credit (for extra pay dates)
+  // Must be after lineByDate is calculated
+  const creditFilteredRecords = useMemo(
+    () => filterMinCredit && salaryData
+      ? visibleRecords.filter((r: any) => {
+          const line = lineByDate.get(String(r.recordDate).slice(0, 10));
+          return line && line.credit >= filterMinCredit;
+        })
+      : visibleRecords,
+    [visibleRecords, lineByDate, filterMinCredit, salaryData]
+  );
   const lineFor = (r: any) => lineByDate.get(String(r.recordDate).slice(0, 10));
-  const visibleEarned = visibleRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.earned || 0), 0);
-  const visibleDeducted = visibleRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.deducted || 0), 0);
+  const visibleEarned = creditFilteredRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.earned || 0), 0);
+  const visibleDeducted = creditFilteredRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.deducted || 0), 0);
   const money = (value: number) => formatINR(Math.round(value * 100) / 100);
 
   return (
@@ -124,7 +138,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
               onClick={() => setTab(t as any)}
               className={`pb-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
             >
-              {t === 'draft' ? 'Email Draft' : `${filterLabel || 'Attendance Records'} (${visibleRecords.length})`}
+              {t === 'draft' ? 'Email Draft' : `${filterLabel || 'Attendance Records'} (${creditFilteredRecords.length})`}
             </button>
           ))}
         </div>
