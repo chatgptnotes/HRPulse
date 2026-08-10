@@ -122,7 +122,8 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
 
     // The ladder still shows an extra shift as 1.5 or 2 days of duty, but a day
     // is only ever worth a day's pay — the engine caps it the same way.
-    line.earned = Math.min(line.credit, 1) * rate;
+    // For half-day, we credit full day and let deduction reduce it (not double-penalize)
+    line.earned = line.credit < 1 ? rate : Math.min(line.credit, 1) * rate;
     lines.push(line);
   }
 
