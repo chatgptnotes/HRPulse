@@ -285,9 +285,42 @@ export default function SalaryPage() {
                       </button>
                     ) : (ded?.absentDays ?? '—')}
                   </td>
-                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">{ded?.halfDays ?? '—'}</td>
-                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">{ded?.lateOccurrences ?? '—'}</td>
-                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">{ded ? `${ded.paidLeaveUsed}/${ded.leaveLimit}` : '—'}</td>
+                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">
+                    {ded && Number(ded.halfDays || 0) > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => openAttendance(row, { statuses: ['HALF_DAY'], label: 'Half-Day Dates', note: 'Days with less than half the shift hours worked. Half pay is deducted for these days.' })}
+                        className="rounded px-1.5 py-0.5 font-medium text-slate-600 hover:bg-amber-50 hover:underline"
+                        title="View half-day dates"
+                      >
+                        {ded.halfDays}
+                      </button>
+                    ) : (ded?.halfDays ?? '—')}
+                  </td>
+                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">
+                    {ded && Number(ded.lateOccurrences || 0) > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => openAttendance(row, { statuses: ['Late Coming', 'LATE'], label: 'Late Coming Dates', note: 'Days with arrival after the grace period. 4-6 late days/month = 0.5 day LOP, 7+ days = 1 day LOP.' })}
+                        className="rounded px-1.5 py-0.5 font-medium text-slate-600 hover:bg-orange-50 hover:underline"
+                        title="View late coming dates"
+                      >
+                        {ded.lateOccurrences}
+                      </button>
+                    ) : (ded?.lateOccurrences ?? '—')}
+                  </td>
+                  <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">
+                    {ded && Number(ded.paidLeaveUsed || 0) > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => openAttendance(row, { statuses: ['Paid Leave', 'Sick Leave', 'Casual Leave'], label: 'Paid Leave Dates', note: 'Paid leave days taken. These are covered by the monthly leave allowance.' })}
+                        className="rounded px-1.5 py-0.5 font-medium text-slate-600 hover:bg-green-50 hover:underline"
+                        title="View paid leave dates"
+                      >
+                        {`${ded.paidLeaveUsed}/${ded.leaveLimit}`}
+                      </button>
+                    ) : (ded ? `${ded.paidLeaveUsed}/${ded.leaveLimit}` : '—')}
+                  </td>
                   <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">{ded?.lopDays ? ded.lopDays.toFixed(1) : '—'}</td>
                   <td className="whitespace-nowrap px-1 py-2.5 text-right font-medium text-red-600 sm:px-2">
                     {ded && Number(ded.lopAmount || 0) > 0 ? (
@@ -298,7 +331,16 @@ export default function SalaryPage() {
                   </td>
                   <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5"
                     title={ded ? `${Number(ded.workedWeeklyOffs || 0)} weekly off(s) worked + ${Number(ded.unusedLeaveDays || 0)} leave day(s) not availed` : undefined}>
-                    {ded && Number(ded.extraPayableDays || 0) > 0 ? Number(ded.extraPayableDays).toFixed(Number(ded.extraPayableDays) % 1 ? 1 : 0) : ded ? 0 : '—'}
+                    {ded && Number(ded.extraPayableDays || 0) > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => openAttendance(row, { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'HALF_DAY'], label: 'Extra Pay Dates', note: 'Dates that contributed to extra pay. Includes overtime shifts (1.5x or 2x credit), weekly offs worked, and unused leave payout.' })}
+                        className="rounded px-1.5 py-0.5 font-medium text-emerald-700 hover:bg-emerald-50 hover:underline"
+                        title="View extra pay dates"
+                      >
+                        {Number(ded.extraPayableDays).toFixed(Number(ded.extraPayableDays) % 1 ? 1 : 0)}
+                      </button>
+                    ) : ded ? 0 : '—'}
                   </td>
                   <td className="whitespace-nowrap px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-2">
                     {ded && liveExtraPayment > 0 ? (
