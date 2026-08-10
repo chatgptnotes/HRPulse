@@ -93,7 +93,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
     () => (deduction && employee && Number(deduction.dailySalary || 0) > 0 ? buildDayWiseSalary(records, deduction, employee) : null),
     [records, deduction, employee],
   );
-  const showMoney = !!salaryData && salaryData.reconciles;
+  const showMoney = !!salaryData;
   const lineByDate = useMemo(
     () => new Map((salaryData?.lines || []).map(l => [l.date, l])),
     [salaryData],
