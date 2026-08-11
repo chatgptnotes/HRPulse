@@ -249,7 +249,6 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                           const statusLower = String(r.status || '').trim().toLowerCase();
                           // Check if we're in "protected only" mode (viewing paid leave dates)
                           const isProtectedOnlyView = showProtectedOnly && wanted?.includes('absent');
-                          console.log('Status check:', { statusLower, showProtectedOnly, wanted, isProtectedOnlyView });
                           // Half day: detected by credit === 0.5 or why text containing 'half'
                           if (line?.credit === 0.5 || line?.why?.toLowerCase().includes('half') || statusLower.includes('half')) {
                             return <StatusBadge label="Half Day" small />;
