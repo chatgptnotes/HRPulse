@@ -41,6 +41,7 @@ export interface EmployeeDeduction {
   lopAmount: number;
   ruleMatch: RuleMatch | null;
   ruleLop: RuleLopBreakdown | null;
+  leaveLimit: number;
 }
 
 export interface DeductionContext {
@@ -83,16 +84,28 @@ export async function computeDeductionsForUpload(uploadId: number): Promise<Empl
     const payrollRecords = emp.attendanceRecords.filter(record => isPayrollDeductibleDate(record.recordDate));
     const counts = countStatuses(payrollRecords);
     const basicSalary = Number(emp.salaryConfigs[0]?.basicSalary ?? 0);
+
+    // Determine if employee is Rafttar/IT staff for leave limit calculation
+    const rafttarStaff = /rafttar/i.test(`${emp.organisation || ''} ${emp.entity || ''} ${emp.department || ''}`);
+    const isIt = /\bit\b|information technology/i.test(`${emp.department || ''} ${emp.organisation || ''} ${emp.entity || ''}`);
+    // IT staff get 6 paid leaves (4 Sundays + 2 extra), non-IT get 4 (including Sundays)
+    const leaveLimit = rafttarStaff || isIt ? 6 : 4;
+
+    // Calculate protected absences (covered by allowance) vs chargeable (unpaid)
+    const protectedAbsent = Math.min(counts.absentDays, Math.max(0, leaveLimit - counts.paidLeaveDays));
+    counts.protectedAbsentDays = protectedAbsent;
+    counts.chargeableAbsentDays = Math.max(0, counts.absentDays - protectedAbsent);
+
     const { baseLopDays } = calculateLOP({
       basicSalary,
-      absentDays: counts.absentDays,
+      absentDays: counts.chargeableAbsentDays, // Use only unpaid absences for LOP calculation
       missedSwipeDays: counts.missedSwipeDays,
       halfDays: counts.halfDays,
       workingDays: context.workingDays,
       missedSwipeWeight: context.missedSwipeWeight,
       halfDayWeight: context.halfDayWeight,
     });
-    return { emp, counts, basicSalary, baseLopDays };
+    return { emp, counts, basicSalary, baseLopDays, leaveLimit };
   });
 
   // Phase 2 — evaluate rules against the base figures.
@@ -114,13 +127,13 @@ export async function computeDeductionsForUpload(uploadId: number): Promise<Empl
   const matchByEmployee = new Map(matches.map(m => [m.employeeId, m]));
 
   // Phase 3 — apply rule penalties and recompute.
-  return base.map(({ emp, counts, basicSalary }) => {
+  return base.map(({ emp, counts, basicSalary, leaveLimit }) => {
     const ruleMatch = matchByEmployee.get(emp.id) ?? null;
     const ruleLop = ruleMatch ? computeRuleLop(ruleMatch.triggeredRules) : null;
 
     const result = calculateLOP({
       basicSalary,
-      absentDays: counts.absentDays,
+      absentDays: counts.chargeableAbsentDays, // Use only unpaid absences for LOP calculation
       missedSwipeDays: counts.missedSwipeDays,
       halfDays: counts.halfDays,
       workingDays: context.workingDays,
@@ -142,6 +155,7 @@ export async function computeDeductionsForUpload(uploadId: number): Promise<Empl
       lopAmount: result.lopAmount,
       ruleMatch,
       ruleLop,
+      leaveLimit,
     };
   });
 }

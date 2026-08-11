@@ -21,11 +21,11 @@ export default function SalaryPage() {
   // deduction and the salary to show what each day was worth.
   const [attendanceRow, setAttendanceRow] = useState<any | null>(null);
   // Which attendance statuses the details modal should list. null = all records.
-  const [attendanceFilter, setAttendanceFilter] = useState<{ statuses: string[]; label: string; includeSundays?: boolean; note?: string } | null>(null);
+  const [attendanceFilter, setAttendanceFilter] = useState<{ statuses: string[]; label: string; includeSundays?: boolean; note?: string; skipProtected?: boolean; showProtectedOnly?: boolean; protectedCount?: number; filterMinCredit?: number } | null>(null);
   // Which employee's LOP is being explained, if any.
   const [lopExplain, setLopExplain] = useState<any | null>(null);
 
-  const openAttendance = (row: any, filter: { statuses: string[]; label: string; includeSundays?: boolean; note?: string; filterMinCredit?: number } | null = null) => {
+  const openAttendance = (row: any, filter: { statuses: string[]; label: string; includeSundays?: boolean; note?: string; skipProtected?: boolean; showProtectedOnly?: boolean; protectedCount?: number; filterMinCredit?: number } | null = null) => {
     if (!latestUpload?.id) return;
     setAttendanceFilter(filter);
     setAttendanceRow(row);
@@ -264,7 +264,7 @@ export default function SalaryPage() {
                     <p className="font-medium text-slate-700">{currentSalary > 0 ? formatINR(currentSalary) : '—'}</p>
                     {!hasSalary && <p className="mt-1 text-[10px] font-medium text-amber-600">Missing salary</p>}
                   </td>
-                  <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5"><button type="button" onClick={() => openAttendance(row, { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'HALF_DAY'], label: 'Present Dates', includeSundays: ded?.rafttarStaff === true, note: 'A long shift counts as more than one day and a short one as half, so the days credited need not equal the number of dates listed.' })} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View the dates this employee was present">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
+                  <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5"><button type="button" onClick={() => openAttendance(row, { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving'], label: 'Present Dates', includeSundays: ded?.rafttarStaff === true, note: 'A long shift counts as more than one day and a short one as half, so the days credited need not equal the number of dates listed.' })} className="rounded px-1.5 py-0.5 hover:bg-emerald-50 hover:underline" title="View the dates this employee was present">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
                   <td className="px-1 py-2.5 text-right font-medium text-emerald-700 sm:px-1.5" title={ded ? `${Number(ded.attendedDays || 0)} attended + ${Number(ded.paidOffDays || 0)} paid off, of ${ded.daysInMonth} days` : undefined}>
                     {ded ? Number(ded.payableDays || 0).toFixed(Number(ded.payableDays || 0) % 1 ? 1 : 0) : '—'}
                     {daysMissing > 0 && (
@@ -277,9 +277,9 @@ export default function SalaryPage() {
                     {ded && Number(ded.absentDays || 0) > 0 ? (
                       <button
                         type="button"
-                        onClick={() => openAttendance(row, { statuses: ['Absent'], label: 'Absent Dates' })}
+                        onClick={() => openAttendance(row, { statuses: ['Absent'], label: 'Absent Dates', skipProtected: true, protectedCount: ded.protectedAbsentDays || 0 })}
                         className="rounded px-1.5 py-0.5 font-medium text-red-600 hover:bg-red-50 hover:underline"
-                        title="View the dates this employee was absent"
+                        title="View the dates this employee was absent (unpaid beyond allowance)"
                       >
                         {ded.absentDays}
                       </button>
@@ -310,16 +310,16 @@ export default function SalaryPage() {
                     ) : (ded?.lateOccurrences ?? '—')}
                   </td>
                   <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">
-                    {ded && Number(ded.paidLeaveUsed || 0) > 0 ? (
+                    {ded && Number(ded.protectedAbsentDays || 0) > 0 ? (
                       <button
                         type="button"
-                        onClick={() => openAttendance(row, { statuses: ['Paid Leave', 'Sick Leave', 'Casual Leave'], label: 'Paid Leave Dates', note: 'Paid leave days taken. These are covered by the monthly leave allowance.' })}
+                        onClick={() => openAttendance(row, { statuses: ['Absent'], label: 'Paid Leave Dates', note: 'Paid leave days taken. These are covered by the monthly leave allowance.', showProtectedOnly: true, protectedCount: ded.protectedAbsentDays || 0 })}
                         className="rounded px-1.5 py-0.5 font-medium text-slate-600 hover:bg-green-50 hover:underline"
                         title="View paid leave dates"
                       >
-                        {`${ded.paidLeaveUsed}/${ded.leaveLimit}`}
+                        {ded.protectedAbsentDays}/{ded.leaveLimit}
                       </button>
-                    ) : (ded ? `${ded.paidLeaveUsed}/${ded.leaveLimit}` : '—')}
+                    ) : (ded?.leaveLimit ? `0/${ded.leaveLimit}` : '—')}
                   </td>
                   <td className="px-1 py-2.5 text-right text-slate-600 sm:px-1.5">{ded?.lopDays ? ded.lopDays.toFixed(1) : '—'}</td>
                   <td className="whitespace-nowrap px-1 py-2.5 text-right font-medium text-red-600 sm:px-2">
@@ -408,7 +408,7 @@ export default function SalaryPage() {
           month={month}
           uploadId={latestUpload?.id ?? null}
           onClose={() => setLopExplain(null)}
-          onSeeDates={() => { const row = lopExplain.row; setLopExplain(null); openAttendance(row, { statuses: ['Absent'], label: 'Absent Dates' }); }}
+          onSeeDates={() => { const row = lopExplain.row; const ded = lopExplain.ded; setLopExplain(null); openAttendance(row, { statuses: ['Absent'], label: 'Absent Dates', skipProtected: true, protectedCount: ded?.protectedAbsentDays || 0 }); }}
         />
       )}
 

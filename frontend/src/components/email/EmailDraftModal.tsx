@@ -24,6 +24,12 @@ interface Props {
   filterNote?: string;
   /** Show only records where calculated day credit >= this value (for extra pay filtering). */
   filterMinCredit?: number;
+  /** When true, exclude the first N absent records (they're protected by allowance). */
+  skipProtected?: boolean;
+  /** When true, show ONLY the first N absent records (the protected ones as paid leave). */
+  showProtectedOnly?: boolean;
+  /** How many absent records to skip (from the start, chronological order). */
+  protectedCount?: number;
   /** Pass all three to show what each day earned and cost. The Dashboard opens
    *  this modal without them and keeps the plain attendance table. */
   deduction?: any;
@@ -31,7 +37,7 @@ interface Props {
   monthlySalary?: number;
 }
 
-export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false, filterStatuses, filterLabel, includeSundays = false, filterNote, filterMinCredit, deduction, employee, monthlySalary }: Props) {
+export default function EmailDraftModal({ uploadId, employeeId, employeeName, employeeEmail, onClose, onSent, initialTab = 'draft', recordsOnly = false, filterStatuses, filterLabel, includeSundays = false, filterNote, filterMinCredit, skipProtected = false, showProtectedOnly = false, protectedCount = 0, deduction, employee, monthlySalary }: Props) {
   const qc = useQueryClient();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -80,11 +86,35 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
     const date = new Date(`${String(value || '').slice(0, 10)}T00:00:00Z`);
     return !Number.isNaN(date.getTime()) && date.getUTCDay() === 0;
   };
-  const visibleRecords = wanted
+  // For half-day filtering, we need salary data first, so defer filtering
+  const shouldDeferFilter = wanted?.includes('half_day');
+  const visibleRecords = (wanted && !shouldDeferFilter)
     ? baseRecords.filter((r: any) =>
         wanted.includes(String(r.status || '').trim().toLowerCase())
         || (includeSundays && isSunday(r.recordDate)))
     : baseRecords;
+
+  // When skipProtected is true and filtering for 'Absent' status,
+  // exclude the first N absent records (chronological order) as they're protected by allowance
+  let finalRecords = visibleRecords;
+  if ((skipProtected || showProtectedOnly) && wanted?.includes('absent') && protectedCount > 0) {
+    const absentRecords = visibleRecords.filter((r: any) =>
+      String(r.status || '').trim().toLowerCase() === 'absent'
+    );
+    const protectedDates = new Set(
+      absentRecords
+        .sort((a: any, b: any) => String(a.recordDate).localeCompare(String(b.recordDate)))
+        .slice(0, protectedCount)
+        .map((r: any) => String(r.recordDate))
+    );
+    if (skipProtected) {
+      // Exclude protected dates (for Absent Days column)
+      finalRecords = visibleRecords.filter((r: any) => !protectedDates.has(String(r.recordDate)));
+    } else if (showProtectedOnly) {
+      // Show ONLY protected dates (for Paid Leave column)
+      finalRecords = visibleRecords.filter((r: any) => protectedDates.has(String(r.recordDate)));
+    }
+  }
 
   // What each day was worth. Attributed over the whole month — the totals below
   // then cover only the rows actually on screen, so a filtered list (Absent
@@ -101,16 +131,34 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
     [salaryData],
   );
 
-  // Additional filtering by credit (for extra pay dates)
+  // Additional filtering by credit (for extra pay dates) and half-day detection
   // Must be after lineByDate is calculated
   const creditFilteredRecords = useMemo(
-    () => filterMinCredit && salaryData
-      ? visibleRecords.filter((r: any) => {
+    () => {
+      let base = finalRecords;
+      // For half-day filtering, apply the filter now that we have lineByDate
+      if (shouldDeferFilter) {
+        if (salaryData) {
+          // Use salary data to detect half days by credit or why text
+          base = base.filter((r: any) => {
+            const line = lineByDate.get(String(r.recordDate).slice(0, 10));
+            return line?.credit === 0.5 || line?.why?.toLowerCase().includes('half') || String(r.status || '').trim().toLowerCase().includes('half');
+          });
+        } else {
+          // Fallback: filter by status containing 'half' when no salary data
+          base = base.filter((r: any) => String(r.status || '').trim().toLowerCase().includes('half'));
+        }
+      }
+      // Then apply credit filter if specified
+      if (filterMinCredit && salaryData) {
+        base = base.filter((r: any) => {
           const line = lineByDate.get(String(r.recordDate).slice(0, 10));
           return line && line.credit >= filterMinCredit;
-        })
-      : visibleRecords,
-    [visibleRecords, lineByDate, filterMinCredit, salaryData]
+        });
+      }
+      return base;
+    },
+    [finalRecords, lineByDate, filterMinCredit, salaryData, shouldDeferFilter, skipProtected, protectedCount]
   );
   const lineFor = (r: any) => lineByDate.get(String(r.recordDate).slice(0, 10));
   const visibleEarned = creditFilteredRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.earned || 0), 0);
@@ -179,19 +227,43 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleRecords.map((r: any, i: number) => {
+                  {creditFilteredRecords.map((r: any, i: number) => {
                     const line = lineFor(r);
                     return (
                       <tr key={i} className="border-t border-slate-100">
                         <td className="px-3 py-2 text-slate-700">{r.recordDate}</td>
                         {/* A Rafttar Sunday is never the raw imported status: it is
                             either a rest day taken or an off that was worked, and the
-                            two are worth telling apart on a sheet the employee sees. */}
-                        <td className="px-3 py-2">{includeSundays && isSunday(r.recordDate) && String(r.status || '').trim().toLowerCase() === 'absent'
-                          ? <StatusBadge label="Paid weekly off" small />
-                          : includeSundays && isSunday(r.recordDate) && line?.why === 'Worked on weekly off — extra day paid'
-                            ? <StatusBadge label="Worked weekly off" small />
-                            : <StatusBadge label={r.status} small />}</td>
+                            two are worth telling apart on a sheet the employee sees.
+                            Similarly, an absent day with earnings is a paid leave,
+                            and a day with half-day attendance should show Half Day. */}
+                        <td className="px-3 py-2">{(() => {
+                          // Rafttar Sundays: paid weekly off or worked weekly off
+                          if (includeSundays && isSunday(r.recordDate) && String(r.status || '').trim().toLowerCase() === 'absent') {
+                            return <StatusBadge label="Paid weekly off" small />;
+                          }
+                          if (includeSundays && isSunday(r.recordDate) && line?.why === 'Worked on weekly off — extra day paid') {
+                            return <StatusBadge label="Worked weekly off" small />;
+                          }
+                          // Determine display label based on salary attribution
+                          const statusLower = String(r.status || '').trim().toLowerCase();
+                          // Check if we're in "protected only" mode (viewing paid leave dates)
+                          const isProtectedOnlyView = showProtectedOnly && wanted?.includes('absent');
+                          console.log('Status check:', { statusLower, showProtectedOnly, wanted, isProtectedOnlyView });
+                          // Half day: detected by credit === 0.5 or why text containing 'half'
+                          if (line?.credit === 0.5 || line?.why?.toLowerCase().includes('half') || statusLower.includes('half')) {
+                            return <StatusBadge label="Half Day" small />;
+                          }
+                          // For protected only view, show Paid Leave for everything
+                          if (isProtectedOnlyView) {
+                            return <StatusBadge label="Paid Leave" small />;
+                          }
+                          // Paid absence: if absent but earned money, show as Paid Leave
+                          const displayLabel = (line && statusLower === 'absent' && line.earned > 0)
+                            ? 'Paid Leave'
+                            : r.status;
+                          return <StatusBadge label={displayLabel} small />;
+                        })()}</td>
                         <td className="px-3 py-2 text-slate-500">{r.timeIn || '—'}</td>
                         <td className="px-3 py-2 text-slate-500">{r.timeOut || '—'}</td>
                         {showMoney && (
@@ -207,10 +279,10 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                       </tr>
                     );
                   })}
-                  {showMoney && visibleRecords.length > 0 && (
+                  {showMoney && creditFilteredRecords.length > 0 && (
                     <tr className="border-t border-slate-200">
                       <td className="px-3 pt-2 font-semibold text-slate-700" colSpan={4}>
-                        Total for the {visibleRecords.length} {visibleRecords.length === 1 ? 'date' : 'dates'} listed
+                        Total for the {creditFilteredRecords.length} {creditFilteredRecords.length === 1 ? 'date' : 'dates'} listed
                       </td>
                       <td className="px-3 pt-2 text-right font-semibold text-slate-800">{money(visibleEarned)}</td>
                       <td className="px-3 pt-2 text-right font-semibold text-red-600">{money(visibleDeducted)}</td>
@@ -218,7 +290,7 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                   )}
                 </tbody>
               </table>
-              {visibleRecords.length === 0 && (
+              {creditFilteredRecords.length === 0 && (
                 <p className="py-8 text-center text-sm text-slate-400">No matching attendance dates for this employee.</p>
               )}
               {showMoney && (

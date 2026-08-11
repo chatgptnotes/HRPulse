@@ -50,7 +50,10 @@ router.get('/deductions/:uploadId', async (req: Request, res: Response) => {
     employeeId: d.employeeId,
     employeeName: d.employeeName,
     basicSalary: d.basicSalary,
-    absentDays: d.counts.absentDays,
+    absentDays: d.counts.chargeableAbsentDays, // Unpaid absences only (beyond paid leave allowance)
+    paidLeaveDays: d.counts.paidLeaveDays, // Days of paid leave taken
+    protectedAbsentDays: d.counts.protectedAbsentDays, // Absences covered by allowance
+    leaveLimit: d.leaveLimit,
     missedSwipeDays: d.counts.missedSwipeDays,
     halfDays: d.counts.halfDays,
     lateComingDays: d.counts.lateComingDays,
