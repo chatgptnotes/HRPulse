@@ -163,6 +163,8 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
   const lineFor = (r: any) => lineByDate.get(String(r.recordDate).slice(0, 10));
   const visibleEarned = creditFilteredRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.earned || 0), 0);
   const visibleDeducted = creditFilteredRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.deducted || 0), 0);
+  const visibleOvertimeHours = creditFilteredRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.overtimeHours || 0), 0);
+  const visibleOvertimePay = creditFilteredRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.overtimePay || 0), 0);
   const money = (value: number) => formatINR(Math.round(value * 100) / 100);
 
   return (
@@ -221,9 +223,11 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                     <th className="text-left px-3 py-2 text-xs font-semibold text-slate-500 rounded-l">Date</th>
                     <th className="text-left px-3 py-2 text-xs font-semibold text-slate-500">Status</th>
                     <th className="text-left px-3 py-2 text-xs font-semibold text-slate-500">Time In</th>
-                    <th className={`text-left px-3 py-2 text-xs font-semibold text-slate-500 ${showMoney ? '' : 'rounded-r'}`}>Time Out</th>
+                    <th className={`text-left px-3 py-2 text-xs font-semibold text-slate-500 ${!showMoney ? 'rounded-r' : ''}`}>Time Out</th>
                     {showMoney && <th className="text-right px-3 py-2 text-xs font-semibold text-slate-500">Earned</th>}
-                    {showMoney && <th className="text-right px-3 py-2 text-xs font-semibold text-slate-500 rounded-r">Deducted</th>}
+                    {showMoney && <th className="text-right px-3 py-2 text-xs font-semibold text-slate-500">Deducted</th>}
+                    {showMoney && <th className="text-right px-3 py-2 text-xs font-semibold text-slate-500">OT Hours</th>}
+                    {showMoney && <th className="text-right px-3 py-2 text-xs font-semibold text-slate-500 rounded-r">OT Payment</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -275,6 +279,16 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                             {line?.deducted ? money(line.deducted) : '—'}
                           </td>
                         )}
+                        {showMoney && (
+                          <td className="px-3 py-2 text-right text-slate-600">
+                            {line?.overtimeHours ? `${line.overtimeHours.toFixed(1)} hrs` : '—'}
+                          </td>
+                        )}
+                        {showMoney && (
+                          <td className="px-3 py-2 text-right font-medium text-emerald-600">
+                            {line?.overtimePay ? money(line.overtimePay) : '—'}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -285,6 +299,12 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                       </td>
                       <td className="px-3 pt-2 text-right font-semibold text-slate-800">{money(visibleEarned)}</td>
                       <td className="px-3 pt-2 text-right font-semibold text-red-600">{money(visibleDeducted)}</td>
+                      <td className="px-3 pt-2 text-right font-medium text-slate-700">
+                        {visibleOvertimeHours > 0 ? `${visibleOvertimeHours.toFixed(1)} hrs` : '—'}
+                      </td>
+                      <td className="px-3 pt-2 text-right font-semibold text-emerald-700">
+                        {visibleOvertimePay > 0 ? money(visibleOvertimePay) : '—'}
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -303,6 +323,12 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
                   <p className="mt-2 text-[12px] leading-snug text-slate-400">
                     A day's pay is salary ÷ 30, so the daily column need not add up to the monthly salary. Net payable above is authoritative.
                   </p>
+                </div>
+              )}
+              {showMoney && salaryData && salaryData.totalOvertimePay > 0 && (
+                <div className="mt-4 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 text-[13px]">
+                  <div className="flex justify-between py-0.5"><span className="font-medium text-slate-700">Total Overtime Hours</span><span className="font-semibold text-slate-800">{salaryData.totalOvertimeHours.toFixed(1)} hrs</span></div>
+                  <div className="flex justify-between py-0.5"><span className="font-medium text-slate-700">Total Overtime Payment</span><span className="font-semibold text-emerald-700">{money(salaryData.totalOvertimePay)}</span></div>
                 </div>
               )}
               {salaryData && !salaryData.reconciles && (

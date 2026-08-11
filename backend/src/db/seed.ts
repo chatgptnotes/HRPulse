@@ -10,7 +10,9 @@ const DEFAULT_SETTINGS: [string, string][] = [
   ['company_name', process.env.COMPANY_NAME || 'Your Company'],
   ['hr_name', process.env.HR_NAME || 'HR Department'],
   ['working_days', '30'],
-  ['missed_swipe_weight', '0.5'],
+  // POLICY: Missed swipes are for tracking/display only and never result in salary deduction.
+  // This setting must remain 0 to prevent unintended deductions from employee pay.
+  ['missed_swipe_weight', '0'],
   // Fraction of a day's pay lost for a biometric HALF_DAY.
   ['half_day_lop_weight', '0.5'],
 ];

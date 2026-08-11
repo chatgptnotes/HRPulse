@@ -20,6 +20,7 @@ export const MISSED_SWIPE_STATUSES = ['Missed Swipe'];
 export const LATE_STATUSES = ['Late Coming', 'LATE'];
 export const EARLY_LEAVING_STATUSES = ['Early Leaving'];
 export const HALF_DAY_STATUSES = ['HALF_DAY'];
+export const PAID_LEAVE_STATUSES = ['Paid Leave', 'Casual Leave', 'Sick Leave', 'CL', 'SL', 'PL'];
 
 /**
  * Payroll uses a fixed 30-day month. The 31st remains in attendance history,
@@ -33,6 +34,7 @@ export function isPayrollDeductibleDate(date: Date | string): boolean {
 /** Every exception status, for `in` filters and `includes` checks. */
 export const FLAGGED_STATUSES = [
   ...ABSENT_STATUSES,
+  ...PAID_LEAVE_STATUSES,
   ...MISSED_SWIPE_STATUSES,
   ...LATE_STATUSES,
   ...EARLY_LEAVING_STATUSES,
@@ -41,6 +43,11 @@ export const FLAGGED_STATUSES = [
 
 export interface AttendanceCounts {
   absentDays: number;
+  paidLeaveDays: number;
+  /** Absences covered by paid leave allowance (should NOT show in Absent Days column) */
+  protectedAbsentDays: number;
+  /** Unpaid absences beyond allowance (what "Absent Days" should show) */
+  chargeableAbsentDays: number;
   missedSwipeDays: number;
   lateComingDays: number;
   earlyLeavingDays: number;
@@ -61,6 +68,13 @@ function bucketFor(status: string): keyof Omit<AttendanceCounts, 'flaggedTotal' 
   switch (status.toUpperCase().replace(/[\s_-]/g, '')) {
     case 'ABSENT':
       return 'absentDays';
+    case 'PAIDLEAVE':
+    case 'CASUALLEAVE':
+    case 'SICKLEAVE':
+    case 'CL':
+    case 'SL':
+    case 'PL':
+      return 'paidLeaveDays';
     case 'MISSEDSWIPE':
     case 'INCOMPLETE':
       return 'missedSwipeDays';
@@ -87,6 +101,9 @@ function bucketFor(status: string): keyof Omit<AttendanceCounts, 'flaggedTotal' 
 export function countStatuses(records: Array<{ status: string }>): AttendanceCounts {
   const counts: AttendanceCounts = {
     absentDays: 0,
+    paidLeaveDays: 0,
+    protectedAbsentDays: 0,
+    chargeableAbsentDays: 0,
     missedSwipeDays: 0,
     lateComingDays: 0,
     earlyLeavingDays: 0,
@@ -108,7 +125,8 @@ export function countStatuses(records: Array<{ status: string }>): AttendanceCou
   }
 
   counts.flaggedTotal =
-    counts.absentDays +
+    counts.chargeableAbsentDays +
+    counts.paidLeaveDays +
     counts.missedSwipeDays +
     counts.lateComingDays +
     counts.earlyLeavingDays +

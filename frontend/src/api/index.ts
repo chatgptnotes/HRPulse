@@ -718,9 +718,23 @@ export const getSalaryDeductions = async (uploadId: number) => {
     return Number.isNaN(parsed.getTime()) ? null : parsed.getHours() * 60 + parsed.getMinutes();
   };
   const grouped = new Map<number, any>();
+  const allStatuses = new Set<string>();
+  const noPunchRecords: any[] = [];
   for (const row of payrollRows as any[]) {
+    // Track all unique status values
+    if (row.status) allStatuses.add(row.status);
+    // Check for no-punch records (no time_in)
+    const hasNoPunch = !row.time_in || row.time_in === '' || row.time_in === null;
+    if (hasNoPunch && row.status && !['weekend', 'holiday'].includes(String(row.status || '').toLowerCase())) {
+      noPunchRecords.push({
+        employeeId: row.employee_id,
+        date: row.record_date,
+        status: row.status,
+        work_hours: row.work_hours
+      });
+    }
     const employee = employeeMap.get(row.employee_id) || {};
-    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, attendedDays: 0, datesSeen: new Set<string>(), absentDays: 0, absentSunday: 0, absentNonSunday: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, extraDays: 0, workedWeeklyOffs: 0, overtimeEligibleDays: 0, itRecords: 0 };
+    const item = grouped.get(row.employee_id) || { employeeId: row.employee_id, employeeName: employee.name || '', employeeEmail: employee.email || '', department: employee.department || '', organisation: employee.organisation || '', entity: employee.entity || '', eligibleForPaidLeaves: employee.eligible_for_paid_leaves === true, presentDays: 0, attendedDays: 0, datesSeen: new Set<string>(), absentDays: 0, totalAbsentDays: 0, absentSunday: 0, absentNonSunday: 0, halfDays: 0, missedSwipeDays: 0, lateOccurrences: 0, paidLeaveUsed: 0, overtimeHours: 0, extraDays: 0, workedWeeklyOffs: 0, overtimeEligibleDays: 0, itRecords: 0, overtimePayableDays: 0, overtimePayment: 0 };
     // Days-up pay cannot notice a date that was never imported, so the spread of
     // dates is tracked here and checked against the month below.
     item.datesSeen.add(String(row.record_date).slice(0, 10));
@@ -788,6 +802,14 @@ export const getSalaryDeductions = async (uploadId: number) => {
         dayCredit = credit;
         if (credit > 1) item.extraDays += credit - 1;
         if (credit === 0.5) item.halfDays++;
+        // Calculate overtime payment for hospital staff (not Rafttar)
+        // Overtime > 4 hours threshold, proportional to daily rate (hours/8)
+        const scheduledShift = shift;
+        const overtimeHours = Math.max(0, hours - scheduledShift);
+        if (overtimeHours > 4) {
+          const overtimeDays = overtimeHours / 8;
+          item.overtimePayableDays = (item.overtimePayableDays || 0) + overtimeDays;
+        }
       }
     } else if (statusIsOneOf(status, ['Missed Swipe'])) {
       // They were here — the punch out is simply missing. Credit the duty and
@@ -809,7 +831,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
     if (status === 'half_day' || status === 'half day') { item.presentDays += 0.5; dayCredit += 0.5; }
     item.attendedDays += Math.min(dayCredit, 1);
     if (status === 'absent') {
-      item.absentDays++;
+      item.totalAbsentDays++;
       // A hospital Sunday absence is always chargeable; the monthly
       // allowance only ever covers non-Sunday absences.
       if (isSunday) item.absentSunday++; else item.absentNonSunday++;
@@ -835,9 +857,11 @@ export const getSalaryDeductions = async (uploadId: number) => {
     // outright. One pool serves both groups: Rafttar's Sunday is credited as a
     // paid weekly off above and never reaches this branch as absence, so their
     // absentSunday stays nil and absentDays is their non-Sunday count.
-    const protectedAbsentDays = Math.min(item.absentDays, Math.max(0, leaveLimit - item.paidLeaveUsed));
-    const chargeableAbsentDays = Math.max(0, item.absentDays - protectedAbsentDays);
+    const protectedAbsentDays = Math.min(item.totalAbsentDays, Math.max(0, leaveLimit - item.paidLeaveUsed));
+    const chargeableAbsentDays = Math.max(0, item.totalAbsentDays - protectedAbsentDays);
     const excessPaidLeave = Math.max(0, item.paidLeaveUsed - leaveLimit);
+    // Update absentDays to show only chargeable absences (unpaid beyond allowance)
+    item.absentDays = chargeableAbsentDays;
     // Lateness is recorded but never charged, so the count is carried through at
     // nil to keep the shape of the row stable for callers.
     const lateDeductionCount = 0;
@@ -852,17 +876,18 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const unusedLeaveDays = Math.max(0, leaveLimit - item.paidLeaveUsed - protectedAbsentDays);
     const workedWeeklyOffPay = item.workedWeeklyOffs * dailySalary;
     const unusedLeavePay = unusedLeaveDays * dailySalary;
+    // Overtime payment for hospital staff (not Rafttar) - proportional to daily rate
+    const overtimePayment = !rafttarStaff ? (item.overtimePayableDays || 0) * dailySalary : 0;
     const extraPayableDays = item.workedWeeklyOffs + unusedLeaveDays;
-    const extraPayment = workedWeeklyOffPay + unusedLeavePay;
+    const extraPayment = workedWeeklyOffPay + unusedLeavePay + overtimePayment;
     // An extra *shift* is still not an unavailed *off*: extraDays and
     // overtimeHours remain measured and unpaid, and are not part of extraPayment.
-    const displayedPaidLeave = item.paidLeaveUsed + protectedAbsentDays;
 
     // Pay is counted up from the days owed rather than down from the salary.
     // Days attended, plus the offs the monthly allowance covers, at a day's pay
     // each. The allowance is one pool: leave taken draws on it first, and what
     // is left shields absences.
-    const paidOffDays = Math.min(item.paidLeaveUsed + item.absentDays, leaveLimit);
+    const paidOffDays = Math.min(item.paidLeaveUsed + item.totalAbsentDays, leaveLimit);
     const payableDays = item.attendedDays + paidOffDays;
     // Thirty days of pay is the month's ceiling however long the month runs, so
     // a thirty-one day month with perfect attendance still pays the salary and
@@ -880,8 +905,19 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const { datesSeen: _datesSeen, ...counts } = item;
     // The individual amounts travel with the totals so the salary sheet can
     // explain, line by line, how the pay was arrived at.
-    return { ...counts, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: displayedPaidLeave, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, daysInMonth, daysCovered, paidOffDays, payableDays, basePay, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, unusedLeaveDays, workedWeeklyOffPay, unusedLeavePay, extraPayableDays, extraPayment, netPayable: basePay + extraPayment, dailySalary, totalLopAmount, basicSalary };
+    return { ...counts, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: item.paidLeaveUsed, paidLeaveDays: item.paidLeaveUsed, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, daysInMonth, daysCovered, paidOffDays, payableDays, basePay, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, unusedLeaveDays, workedWeeklyOffPay, unusedLeavePay, extraPayableDays, extraPayment, overtimePayment, netPayable: basePay + extraPayment, dailySalary, totalLopAmount, basicSalary };
   });
+  // Debug logging to identify no-punch records and all status values
+  console.log('📋 All unique status values in database:', Array.from(allStatuses).sort());
+  console.log('🚫 No-punch records (excluding weekend/holiday):', noPunchRecords.length, 'records');
+  if (noPunchRecords.length > 0) {
+    console.log('Sample no-punch records:', noPunchRecords.slice(0, 10));
+    const statusCounts = noPunchRecords.reduce((acc, r) => {
+      acc[r.status] = (acc[r.status] || 0) + 1;
+      return acc;
+    }, {});
+    console.log('No-punch records by status:', statusCounts);
+  }
   // Deductions are derived on every read, so there is nothing to cache back to
   // the database. The previous write-back also stored an undefined
   // half_day_deduction, because that value never made it onto the result rows.

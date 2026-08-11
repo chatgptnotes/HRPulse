@@ -33,6 +33,10 @@ export type DayLine = {
   deducted: number;
   /** Why the cut happened, or why an absence cost nothing. '' when ordinary. */
   why: string;
+  /** Overtime hours worked on this date (hospital staff only). */
+  overtimeHours?: number;
+  /** Overtime payment for this date (hospital staff only). */
+  overtimePay?: number;
 };
 
 export type DayWiseSalary = {
@@ -44,6 +48,10 @@ export type DayWiseSalary = {
   unusedLeavePay: number;
   /** The per-date cuts add up to the engine's headline. False means do not show them. */
   reconciles: boolean;
+  /** Total overtime hours for hospital staff. */
+  totalOvertimeHours: number;
+  /** Total overtime payment for hospital staff. */
+  totalOvertimePay: number;
 };
 
 export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseSalary {
@@ -106,6 +114,15 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
           : hours < halfBelow ? 0.5
           : 1;
         if (line.credit === 0.5) line.isHalf = true;
+        // Calculate overtime for hospital staff (not Rafttar)
+        // Overtime > 4 hours threshold, proportional to daily rate (hours/8)
+        const scheduledShift = shift;
+        const overtimeHours = Math.max(0, hours - scheduledShift);
+        if (overtimeHours > 4) {
+          line.overtimeHours = overtimeHours;
+          const overtimeDays = overtimeHours / 8;
+          line.overtimePay = overtimeDays * rate;
+        }
       }
     } else if (canonicalStatus(status) === 'Missed Swipe' || ['normal', 'present', 'late', 'late coming', 'early leaving'].includes(status)) {
       // Present, but with no usable punch span to measure. Full duty.
@@ -171,6 +188,8 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
   const clean: DayLine[] = lines.map(({ isAbsent: _a, isHalf: _h, isPaidLeave: _p, ...line }) => line);
   const totalEarned = clean.reduce((sum, l) => sum + l.earned, 0);
   const totalDeducted = clean.reduce((sum, l) => sum + l.deducted, 0);
+  const totalOvertimeHours = clean.reduce((sum, l) => sum + (l.overtimeHours || 0), 0);
+  const totalOvertimePay = clean.reduce((sum, l) => sum + (l.overtimePay || 0), 0);
 
   // A per-date list that disagrees with the headline would be worse than none.
   // It can happen legitimately: the engine walks every record in the calendar
@@ -181,5 +200,5 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
   // drawn — so it travels beside the lines for the caller to show as a footer.
   const unusedLeaveDays = Number(ded?.unusedLeaveDays || 0);
 
-  return { lines: clean, totalEarned, totalDeducted, unusedLeaveDays, unusedLeavePay: unusedLeaveDays * rate, reconciles };
+  return { lines: clean, totalEarned, totalDeducted, unusedLeaveDays, unusedLeavePay: unusedLeaveDays * rate, reconciles, totalOvertimeHours, totalOvertimePay };
 }

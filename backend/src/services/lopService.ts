@@ -57,6 +57,8 @@ export function calculateLOP(input: LopInput): LopResult {
     ruleLopDays = 0,
   } = input;
 
+  // Missed swipes are for tracking/display only and never result in salary deduction.
+  // The missed_swipe_weight setting must remain 0 to prevent unintended deductions.
   const baseLopDays =
     absentDays +
     missedSwipeDays * missedSwipeWeight +
