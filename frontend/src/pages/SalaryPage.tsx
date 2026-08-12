@@ -356,7 +356,7 @@ export default function SalaryPage() {
                   <td className="z-[1] max-w-0 overflow-hidden bg-white px-4 py-4 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
                     <button type="button" onClick={() => openAttendance(row)} className="flex w-full items-start gap-3 text-left group" title="Open attendance details">
                       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white text-xs font-bold shadow-md ring-2 ring-purple-100">
-                        {emp.name ? emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'NA'}
+                        {emp.name ? emp.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : 'NA'}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="break-words font-bold text-sm leading-tight text-slate-800 group-hover:text-purple-700 transition-colors" title={emp.name}>{emp.name}</p>
