@@ -27,37 +27,37 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   return (
     <aside
       className={clsx(
-        'flex flex-col min-h-screen bg-slate-900 transition-all duration-200 flex-shrink-0',
-        collapsed ? 'w-16' : 'w-16 sm:w-60'
+        'flex flex-col min-h-screen bg-gradient-to-b from-[#081329] to-[#0a1933] transition-all duration-200 flex-shrink-0 shadow-2xl',
+        collapsed ? 'w-16' : 'w-16 sm:w-64'
       )}
     >
       {/* Logo */}
-      <div className={clsx('flex items-center h-16 border-b border-slate-800', collapsed ? 'justify-center px-2' : 'px-5 gap-3')}>
+      <div className={clsx('flex items-center h-16 border-b border-white/10', collapsed ? 'justify-center px-2' : 'px-5 gap-3')}>
         {!collapsed && (
           <div className="hidden items-center gap-2.5 flex-1 min-w-0 sm:flex">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-              <span className="material-icons text-white text-base">corporate_fare</span>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/30">
+              <span className="material-icons text-white text-lg">corporate_fare</span>
             </div>
             <div className="min-w-0">
-            <div className="font-bold text-white text-sm leading-tight">HRPulse</div>
-              <div className="text-xs text-slate-400">Attendance AI</div>
+            <div className="font-bold text-white text-base leading-tight">HRPulse</div>
+              <div className="text-xs text-slate-400">Premium HR Suite</div>
             </div>
           </div>
         )}
         {!collapsed && (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 sm:hidden">
-            <span className="material-icons text-white text-base">corporate_fare</span>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg sm:hidden">
+            <span className="material-icons text-white text-lg">corporate_fare</span>
           </div>
         )}
         {collapsed && (
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <span className="material-icons text-white text-base">corporate_fare</span>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+            <span className="material-icons text-white text-lg">corporate_fare</span>
           </div>
         )}
         {!collapsed && (
           <button
             onClick={onToggle}
-            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0"
+            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0"
           >
             <span className="material-icons text-lg">chevron_left</span>
           </button>
@@ -67,16 +67,16 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       {collapsed && (
         <button
           onClick={onToggle}
-          className="mx-auto mt-2 p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+          className="mx-auto mt-2 p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors"
         >
           <span className="material-icons text-lg">menu</span>
         </button>
       )}
 
       {/* Nav */}
-      <nav className="flex-1 py-4 px-3 space-y-0.5">
+      <nav className="flex-1 py-4 px-3 space-y-1">
         {!collapsed && (
-          <p className="hidden text-xs font-semibold text-slate-500 uppercase tracking-widest px-2 pb-2 sm:block">Menu</p>
+          <p className="hidden text-xs font-semibold text-slate-500 uppercase tracking-widest px-3 pb-2 sm:block">Main Menu</p>
         )}
         {links.map(l => (
           <NavLink
@@ -89,8 +89,8 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
                 collapsed && 'justify-center px-2',
                 isActive
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30 relative overflow-hidden'
+                  : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
               )
             }
           >
@@ -105,7 +105,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       </nav>
 
       {/* Bottom */}
-      <div className="px-3 pb-4 border-t border-slate-800 pt-3 space-y-0.5">
+      <div className="px-3 pb-4 border-t border-white/10 pt-3 space-y-1">
         {bottomLinks.map(l => (
           <NavLink
             key={l.to}
@@ -117,8 +117,8 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
                 collapsed && 'justify-center px-2',
                 isActive
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30'
+                  : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
               )
             }
           >
@@ -132,23 +132,28 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
         ))}
         {!collapsed && (
           <div className="hidden px-3 pt-3 items-center gap-2 sm:flex">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-slate-500">Supabase · Vercel</span>
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50" />
+            <span className="text-xs text-slate-400">System Online</span>
           </div>
         )}
 
-        <div className="mt-auto pt-4 border-t border-slate-800">
+        <div className="mt-auto pt-4 border-t border-white/10">
           {!collapsed && user && (
-            <div className="hidden px-3 pb-2 sm:block">
-              <p className="truncate text-sm font-medium text-slate-200">{user.name}</p>
-              <p className="truncate text-xs text-slate-500">{user.email}</p>
+            <div className="hidden px-3 pb-3 items-center gap-3 sm:flex">
+              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-sm font-semibold shadow-lg shadow-purple-500/30">
+                {user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+                <p className="truncate text-xs text-slate-400">Administrator</p>
+              </div>
             </div>
           )}
           <button
             onClick={logout}
             title={collapsed ? 'Sign out' : undefined}
             className={clsx(
-              'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all hover:bg-slate-800 hover:text-slate-100',
+              'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all hover:bg-white/10 hover:text-slate-100',
               collapsed && 'justify-center px-2'
             )}
           >
