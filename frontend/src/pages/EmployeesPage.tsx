@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEmployees, updateEmployee, mergeEmployees, getShiftOptions, getEmployeeShiftAssignments, saveEmployeeShiftAssignment, getDerivedShiftTimings, getAllShiftAssignments, type EmployeeShiftAssignment, type ShiftOption, type DerivedTimings } from '../api';
 import TablePagination, { PAGE_SIZE } from '../components/TablePagination';
+import TimePicker from '../components/TimePicker';
 
 interface Employee {
   id: number;
@@ -112,7 +113,7 @@ export default function EmployeesPage() {
   });
   const departments = Array.from(new Set(employees.map(employee => employee.department).filter(Boolean))) as string[];
   const departmentOptions = Array.from(new Set([
-    'Nursing', 'OT', 'Ward', 'IT', 'HR', 'Accounts', 'Administration',
+    'Nursing', 'OT', 'Ward', 'Rafttar', 'HR', 'Accounts', 'Administration',
     'Reception', 'Pharmacy', 'Laboratory', 'Housekeeping', ...departments,
   ])).sort((a, b) => a.localeCompare(b));
   const visibleEmployees = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -156,7 +157,7 @@ export default function EmployeesPage() {
     setEditing(emp);
     setOpenActionMenu(null);
     setForm({
-      name: emp.name, email: emp.email || '', department: emp.department || '', employeeNumber: emp.employeeId || '',
+      name: emp.name, email: emp.email || '', department: emp.department || 'Rafttar', employeeNumber: emp.employeeId || '',
       mobile: emp.mobile || '', designation: emp.actualDesignation || emp.designation || '', biometricName: emp.biometricName || '', branch: emp.branch || emp.entity || '', status: emp.status || 'Active',
       basicSalary: emp.basicSalary ? String(emp.basicSalary) : '', shiftTimings: { morning: { start: emp.shiftTimings?.morning?.start || '', end: emp.shiftTimings?.morning?.end || '' }, evening: { start: emp.shiftTimings?.evening?.start || '', end: emp.shiftTimings?.evening?.end || '' }, night: { start: emp.shiftTimings?.night?.start || '', end: emp.shiftTimings?.night?.end || '' } },
       eligibleForPaidLeaves: emp.eligibleForPaidLeaves !== false, eligibleForOvertime: emp.eligibleForOvertime === true,
@@ -290,8 +291,8 @@ export default function EmployeesPage() {
                 <div className="space-y-4">
                   <label className="block"><span className="mb-1.5 block text-sm font-medium text-slate-700">Shift name</span><input value={workTimeForm.name} onChange={e => setWorkTimeForm(prev => ({ ...prev, name: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400" placeholder="e.g. Front desk morning" /></label>
                   <div className="grid grid-cols-2 gap-3">
-                    <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Start time</span><input type="time" value={workTimeForm.startTime} onChange={e => setWorkTimeForm(prev => ({ ...prev, startTime: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
-                    <label><span className="mb-1.5 block text-sm font-medium text-slate-700">End time</span><input type="time" value={workTimeForm.endTime} onChange={e => setWorkTimeForm(prev => ({ ...prev, endTime: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
+                    <TimePicker value={workTimeForm.startTime} onChange={value => setWorkTimeForm(prev => ({ ...prev, startTime: value }))} label="Start time" />
+                    <TimePicker value={workTimeForm.endTime} onChange={value => setWorkTimeForm(prev => ({ ...prev, endTime: value }))} label="End time" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Role target</span><input value={workTimeForm.roleTarget} onChange={e => setWorkTimeForm(prev => ({ ...prev, roleTarget: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
@@ -337,9 +338,53 @@ export default function EmployeesPage() {
                 ].map(f => <div key={f.key} className={f.span ? 'sm:col-span-2' : ''}><label className="mb-1.5 block text-xs font-medium text-slate-700">{f.label}</label><input type={f.type} value={form[f.key as keyof EditForm] as string} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" /></div>)}
                 <div><label className="mb-1.5 block text-xs font-medium text-slate-700">Department</label><input list="employee-departments" value={form.department} onChange={e => setForm(prev => ({ ...prev, department: e.target.value }))} placeholder="Select or type a department" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" /><datalist id="employee-departments">{departmentOptions.map(department => <option key={department} value={department} />)}</datalist><p className="mt-1 text-[10px] text-slate-400">Choose a department or type a new one.</p></div>
                 <div><label className="mb-1.5 block text-xs font-medium text-slate-700">Status</label><select value={form.status} onChange={e => setForm(prev => ({ ...prev, status: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300"><option>Active</option><option>Inactive</option></select></div>
-                <div className="sm:col-span-2"><p className="mb-2 text-xs font-semibold text-slate-700">Shift timings</p><div className="grid gap-2 sm:grid-cols-3">{(['morning', 'evening', 'night'] as const).map(shift => <div key={shift} className="rounded-lg border border-slate-200 p-2"><p className="text-xs font-medium capitalize text-slate-700">{shift} Shift</p><label className="mt-1 block text-[10px] text-slate-500">Start<input type="time" value={form.shiftTimings[shift].start} onChange={e => setForm(prev => ({ ...prev, shiftTimings: { ...prev.shiftTimings, [shift]: { ...prev.shiftTimings[shift], start: e.target.value } } }))} className="mt-0.5 w-full rounded border border-slate-200 px-2 py-1 text-xs" /></label><label className="mt-1 block text-[10px] text-slate-500">End<input type="time" value={form.shiftTimings[shift].end} onChange={e => setForm(prev => ({ ...prev, shiftTimings: { ...prev.shiftTimings, [shift]: { ...prev.shiftTimings[shift], end: e.target.value } } }))} className="mt-0.5 w-full rounded border border-slate-200 px-2 py-1 text-xs" /></label></div>)}</div><p className="mt-2 text-[11px] text-slate-400">The upload automatically matches the closest configured shift to the punch-in time. A Night Shift can end after midnight.</p></div>
+                <div className="sm:col-span-2 space-y-4">
+                  <p className="text-xs font-semibold text-slate-700">Shift timings</p>
+                  <div className="space-y-3">
+                    {([
+                      { key: 'morning', label: 'Morning Shift', icon: 'wb_sunny', color: 'amber' },
+                      { key: 'evening', label: 'Evening Shift', icon: 'wb_twilight', color: 'indigo' },
+                      { key: 'night', label: 'Night Shift', icon: 'nightlight', color: 'slate' }
+                    ] as const).map((shift) => (
+                      <div key={shift.key} className="rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            shift.color === 'amber' ? 'bg-amber-100' :
+                            shift.color === 'indigo' ? 'bg-indigo-100' :
+                            'bg-slate-200'
+                          }`}>
+                            <span className={`material-icons text-sm ${
+                              shift.color === 'amber' ? 'text-amber-600' :
+                              shift.color === 'indigo' ? 'text-indigo-600' :
+                              'text-slate-600'
+                            }`}>{shift.icon}</span>
+                          </div>
+                          <p className="text-sm font-semibold text-slate-800">{shift.label}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 p-4">
+                          <TimePicker
+                            value={form.shiftTimings[shift.key].start}
+                            onChange={value => setForm(prev => ({ ...prev, shiftTimings: { ...prev.shiftTimings, [shift.key]: { ...prev.shiftTimings[shift.key], start: value } } }))}
+                            label="Start Time"
+                          />
+                          <TimePicker
+                            value={form.shiftTimings[shift.key].end}
+                            onChange={value => setForm(prev => ({ ...prev, shiftTimings: { ...prev.shiftTimings, [shift.key]: { ...prev.shiftTimings[shift.key], end: value } } }))}
+                            label="End Time"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 flex gap-2 items-start">
+                    <span className="material-icons text-amber-500 text-sm mt-0.5">info</span>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      The upload automatically matches the closest configured shift to the punch-in time. A Night Shift can end after midnight.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="mt-5 space-y-4">{/(^|[^a-z])it([^a-z]|$)|information technology/i.test(form.department) ? <div><p className="mb-2 text-xs font-medium text-slate-700">IT paid leave (2 days per month)</p><div className="grid grid-cols-2 gap-2">{[true, false].map(value => <button type="button" key={String(value)} onClick={() => setForm(prev => ({ ...prev, eligibleForPaidLeaves: value }))} className={`rounded-lg border py-2 text-sm font-medium ${form.eligibleForPaidLeaves === value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500'}`}>{value ? 'Yes' : 'No'}</button>)}</div><p className="mt-2 text-[11px] text-slate-400">IT employees always receive Sunday offs. Select Yes only for employees who should also receive two paid leaves each month.</p></div> : <div><p className="text-xs font-medium text-slate-700">Paid leaves</p><p className="mt-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">Non-IT employees work on Sundays and automatically receive 4 paid leaves per month.</p></div>}<div><p className="mb-2 text-xs font-medium text-slate-700">Eligible for Overtime</p><div className="grid grid-cols-2 gap-2">{[true, false].map(value => <button type="button" key={String(value)} onClick={() => setForm(prev => ({ ...prev, eligibleForOvertime: value }))} className={`rounded-lg border py-2 text-sm font-medium ${form.eligibleForOvertime === value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500'}`}>{value ? 'Yes' : 'No'}</button>)}</div></div></div>
+              <div className="mt-5 space-y-4">{/(^|[^a-z])it([^a-z]|$)|information technology/i.test(form.department) || /rafttar/i.test(form.department) ? <div><p className="mb-2 text-xs font-medium text-slate-700">IT paid leave (2 days per month)</p><div className="grid grid-cols-2 gap-2">{[true, false].map(value => <button type="button" key={String(value)} onClick={() => setForm(prev => ({ ...prev, eligibleForPaidLeaves: value }))} className={`rounded-lg border py-2 text-sm font-medium ${form.eligibleForPaidLeaves === value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500'}`}>{value ? 'Yes' : 'No'}</button>)}</div><p className="mt-2 text-[11px] text-slate-400">IT employees always receive Sunday offs. Select Yes only for employees who should also receive two paid leaves each month.</p></div> : <div><p className="text-xs font-medium text-slate-700">Paid leaves</p><p className="mt-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">Non-IT employees work on Sundays and automatically receive 4 paid leaves per month.</p></div>}<div><p className="mb-2 text-xs font-medium text-slate-700">Eligible for Overtime</p><div className="grid grid-cols-2 gap-2">{[true, false].map(value => <button type="button" key={String(value)} onClick={() => setForm(prev => ({ ...prev, eligibleForOvertime: value }))} className={`rounded-lg border py-2 text-sm font-medium ${form.eligibleForOvertime === value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500'}`}>{value ? 'Yes' : 'No'}</button>)}</div></div></div>
             </div>
             <div className="flex gap-3 px-6 py-4 border-t border-slate-100">
               <button

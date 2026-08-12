@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api';
+import PasswordField from '../components/PasswordField';
 
 export default function SettingsPage() {
   const qc = useQueryClient();
@@ -183,13 +184,22 @@ function Field({ label, value, onChange, type = 'text', placeholder }: { label: 
   return (
     <div>
       <label className="text-sm font-medium text-slate-600 block mb-1">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-      />
+      {type === 'password' ? (
+        <PasswordField
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500/30"
+        />
+      ) : (
+        <input
+          type={type}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+        />
+      )}
     </div>
   );
 }
