@@ -689,6 +689,13 @@ export const getSalaryDeductions = async (uploadId: number) => {
     contractedMap.set(row.id, row.contracted_hours == null ? null : Number(row.contracted_hours));
     employeeMap.set(row.id, row);
   }
+  // Fetch management adjustments for this upload
+  const adjustments = await client.from('salary_management_adjustments').select('employee_id,amount,remarks').eq('upload_id', uploadId);
+  if (adjustments.error && adjustments.error.code !== 'PGRST116') throw new Error(adjustments.error.message);
+  const adjustmentMap = new Map<number, { amount: number; remarks: string }>(
+    (adjustments.data || []).map((a: any) => [a.employee_id, { amount: Number(a.amount), remarks: a.remarks }])
+  );
+
   const [{ data: activeRules, error: rulesError }, { data: settings, error: settingsError }] = await Promise.all([
     client.from('attendance_rules').select('rule_type,conditions,actions,description,name').eq('is_active', true),
     client.from('settings').select('key,value'),
@@ -903,9 +910,13 @@ export const getSalaryDeductions = async (uploadId: number) => {
     // quietly paying less than the person is owed.
     const daysCovered = item.datesSeen.size;
     const { datesSeen: _datesSeen, ...counts } = item;
+    // Management adjustment (bonus or deduction) from admin
+    const mgmtAdjustment = adjustmentMap.get(item.employeeId);
+    const managementAdjustment = mgmtAdjustment ? mgmtAdjustment.amount : 0;
+    const managementAdjustmentRemarks = mgmtAdjustment ? mgmtAdjustment.remarks : null;
     // The individual amounts travel with the totals so the salary sheet can
     // explain, line by line, how the pay was arrived at.
-    return { ...counts, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: item.paidLeaveUsed, paidLeaveDays: item.paidLeaveUsed, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, daysInMonth, daysCovered, paidOffDays, payableDays, basePay, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, unusedLeaveDays, workedWeeklyOffPay, unusedLeavePay, extraPayableDays, extraPayment, overtimePayment, netPayable: basePay + extraPayment, dailySalary, totalLopAmount, basicSalary };
+    return { ...counts, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: item.paidLeaveUsed, paidLeaveDays: item.paidLeaveUsed, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, daysInMonth, daysCovered, paidOffDays, payableDays, basePay, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, unusedLeaveDays, workedWeeklyOffPay, unusedLeavePay, extraPayableDays, extraPayment, overtimePayment, managementAdjustment, managementAdjustmentRemarks, netPayable: basePay + extraPayment + managementAdjustment, dailySalary, totalLopAmount, basicSalary };
   });
   // Debug logging to identify no-punch records and all status values
   console.log('📋 All unique status values in database:', Array.from(allStatuses).sort());
@@ -922,6 +933,49 @@ export const getSalaryDeductions = async (uploadId: number) => {
   // the database. The previous write-back also stored an undefined
   // half_day_deduction, because that value never made it onto the result rows.
   return { data: result };
+};
+
+// Management Adjustments
+export const getManagementAdjustments = async (uploadId: number) => {
+  const { data, error } = await directClient()
+    .from('salary_management_adjustments')
+    .select('employee_id,amount,remarks,created_at,updated_at')
+    .eq('upload_id', uploadId);
+  return directResult(data || [], error);
+};
+
+export const saveManagementAdjustment = async (
+  employeeId: number,
+  uploadId: number,
+  amount: number,
+  remarks: string
+) => {
+  const { data, error } = await directClient()
+    .from('salary_management_adjustments')
+    .upsert({
+      employee_id: employeeId,
+      upload_id: uploadId,
+      amount: amount,
+      remarks: remarks.trim(),
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'employee_id,upload_id' })
+    .select()
+    .single();
+  return directResult(data, error);
+};
+
+export const deleteManagementAdjustment = async (
+  employeeId: number,
+  uploadId: number
+) => {
+  const { data, error } = await directClient()
+    .from('salary_management_adjustments')
+    .delete()
+    .eq('employee_id', employeeId)
+    .eq('upload_id', uploadId)
+    .select()
+    .single();
+  return directResult(data, error);
 };
 
 // Settings

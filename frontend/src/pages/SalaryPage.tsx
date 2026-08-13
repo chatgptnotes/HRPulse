@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import * as api from '../api';
 import EmailDraftModal from '../components/email/EmailDraftModal';
 import LopBreakdown from '../components/salary/LopBreakdown';
+import ManagementAdjustmentModal from '../components/salary/ManagementAdjustmentModal';
+import CalculationDetailsModal from '../components/salary/CalculationDetailsModal';
 import { formatINR } from '../lib/dayWiseSalary';
 import TablePagination, { PAGE_SIZE } from '../components/TablePagination';
 
 export default function SalaryPage() {
+  const qc = useQueryClient();
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [month, setMonth] = useState(currentMonth);
   const monthWasSelected = useRef(false);
@@ -24,6 +27,10 @@ export default function SalaryPage() {
   const [attendanceFilter, setAttendanceFilter] = useState<{ statuses: string[]; label: string; includeSundays?: boolean; note?: string; skipProtected?: boolean; showProtectedOnly?: boolean; protectedCount?: number; filterMinCredit?: number } | null>(null);
   // Which employee's LOP is being explained, if any.
   const [lopExplain, setLopExplain] = useState<any | null>(null);
+  // Management adjustment modal state
+  const [managementAdjustmentRow, setManagementAdjustmentRow] = useState<any | null>(null);
+  // Calculation details modal state
+  const [calculationDetailsRow, setCalculationDetailsRow] = useState<any | null>(null);
 
   const openAttendance = (row: any, filter: { statuses: string[]; label: string; includeSundays?: boolean; note?: string; skipProtected?: boolean; showProtectedOnly?: boolean; protectedCount?: number; filterMinCredit?: number } | null = null) => {
     if (!latestUpload?.id) return;
@@ -122,21 +129,31 @@ export default function SalaryPage() {
   const printSalarySheet = (company: string) => {
     const printable = rows.filter(row => row.hasSalary && row.hasAttendance && (company === 'All' || companyOf(row.emp) === company));
     const money = (value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+    // Check if any employee has management adjustments
+    const hasManagementAdjustments = printable.some(row => Number(row.deduction?.managementAdjustment || 0) !== 0);
     const body = printable.map(({ emp, config: cfg, deduction: ded }, index) => {
       const salary = Number(cfg?.basicSalary || 0);
       const lop = Number(ded?.lopAmount || 0);
       const extra = Number(ded?.extraPayment || 0);
+      const mgmt = Number(ded?.managementAdjustment || 0);
       const grossSalary = salary + extra;
       const net = Number(ded?.netPayable || 0);
       const employeeId = emp.employee_number || emp.employeeNumber || emp.employeeId || emp.id || '-';
       const designation = emp.designation || '-';
       const daysPresent = ded?.presentDays ?? 0;
       const duties = ded?.extraPayableDays ?? 0;
+      if (hasManagementAdjustments) {
+        return `<tr><td>${index + 1}</td><td>${emp.name || ''}</td><td>${employeeId}</td><td>${designation}</td><td>${money(salary)}</td><td>${daysPresent}</td><td>${duties}</td><td>${money(grossSalary)}</td><td>${money(lop)}</td><td>${mgmt !== 0 ? (mgmt > 0 ? '+' : '') + money(mgmt) : '—'}</td><td>${money(net)}</td></tr>`;
+      }
       return `<tr><td>${index + 1}</td><td>${emp.name || ''}</td><td>${employeeId}</td><td>${designation}</td><td>${money(salary)}</td><td>${daysPresent}</td><td>${duties}</td><td>${money(grossSalary)}</td><td>${money(lop)}</td><td>${money(net)}</td></tr>`;
     }).join('');
+    const headerRow = hasManagementAdjustments
+      ? '<tr><th>S.No</th><th>Employee Name</th><th>Employee ID</th><th>Designation</th><th>Monthly Salary</th><th>Days Present</th><th>Duties</th><th>Gross Salary</th><th>Deductions</th><th>Management Decision</th><th>Net Salary</th></tr>'
+      : '<tr><th>S.No</th><th>Employee Name</th><th>Employee ID</th><th>Designation</th><th>Monthly Salary</th><th>Days Present</th><th>Duties</th><th>Gross Salary</th><th>Deductions</th><th>Net Salary</th></tr>';
+    const colspan = hasManagementAdjustments ? 11 : 10;
     const popup = window.open('', '_blank', 'width=1100,height=750');
     if (!popup) return;
-    popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+5),th:nth-child(n+5){text-align:right}td:nth-child(6),td:nth-child(7),th:nth-child(6),th:nth-child(7){text-align:center}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick=window.print()>Print</button><table><thead><tr><th>S.No</th><th>Employee Name</th><th>Employee ID</th><th>Designation</th><th>Monthly Salary</th><th>Days Present</th><th>Duties</th><th>Gross Salary</th><th>Deductions</th><th>Net Salary</th></tr></thead><tbody>${body || '<tr><td colspan=10>No salaried employees found</td></tr>'}</tbody></table></body></html>`);
+    popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+5),th:nth-child(n+5){text-align:right}td:nth-child(6),td:nth-child(7),th:nth-child(6),th:nth-child(7){text-align:center}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick=window.print()>Print</button><table><thead>${headerRow}</thead><tbody>${body || `<tr><td colspan=${colspan}>No salaried employees found</td></tr>`}</tbody></table></body></html>`);
     popup.document.close();
     popup.focus();
     setShowPrintOptions(false);
@@ -336,6 +353,7 @@ export default function SalaryPage() {
               <th className="px-3 py-4 text-right font-bold text-red-600">Loss of Pay<br />Amount</th>
               <th className="px-3 py-4 text-right font-bold text-emerald-700">Extra<br />Days</th>
               <th className="px-3 py-4 text-right font-bold text-emerald-700">Extra Pay<br />Amount</th>
+              <th className="px-3 py-4 text-right font-bold text-blue-700">Management<br />Decision</th>
               <th className="px-3 py-4 text-right font-bold text-emerald-700">Net<br />Payable</th>
             </tr>
           </thead>
@@ -461,8 +479,37 @@ export default function SalaryPage() {
                         title="Show why this amount was added">{formatINR(liveExtraPayment)}</button>
                     ) : ded ? <span className="font-bold">₹0</span> : '—'}
                   </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setManagementAdjustmentRow(row)}
+                      className={`rounded-lg px-2 py-1.5 font-bold hover:bg-blue-50 hover:underline transition-all ${
+                        ded?.managementAdjustment
+                          ? ded.managementAdjustment > 0
+                            ? 'text-emerald-600 underline decoration-dotted underline-offset-2'
+                            : 'text-red-600 underline decoration-dotted underline-offset-2'
+                          : 'text-blue-600'
+                      }`}
+                      title={ded?.managementAdjustment ? `Management adjustment: ${ded.managementAdjustmentRemarks || 'No remarks'}` : 'Add management adjustment'}
+                    >
+                      {ded?.managementAdjustment ? formatINR(ded.managementAdjustment) : '—'}
+                    </button>
+                    {ded?.managementAdjustmentRemarks && (
+                      <p className="mt-1 text-[10px] text-slate-500 truncate max-w-[120px]" title={ded.managementAdjustmentRemarks}>
+                        {ded.managementAdjustmentRemarks}
+                      </p>
+                    )}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-4 text-right font-black text-emerald-700 text-sm">
-                    {netPayable !== null ? formatINR(netPayable) : '—'}
+                    {netPayable !== null ? (
+                      <button
+                        onClick={() => setCalculationDetailsRow(row)}
+                        className="rounded-lg px-2 py-1.5 hover:bg-emerald-50 hover:underline transition-all"
+                        title="View detailed calculation breakdown"
+                      >
+                        {formatINR(netPayable)}
+                      </button>
+                    ) : '—'}
                   </td>
                 </tr>
               );
@@ -549,6 +596,41 @@ export default function SalaryPage() {
           monthlySalary={Number(attendanceRow.config?.basicSalary || 0)}
           onClose={() => { setAttendanceRow(null); setAttendanceFilter(null); }}
           onSent={() => { setAttendanceRow(null); setAttendanceFilter(null); }}
+        />
+      )}
+
+      {managementAdjustmentRow && latestUpload?.id && (
+        <ManagementAdjustmentModal
+          uploadId={latestUpload.id}
+          employeeId={managementAdjustmentRow.emp.id}
+          employeeName={managementAdjustmentRow.emp.name || ''}
+          currentAdjustment={managementAdjustmentRow.deduction?.managementAdjustment || 0}
+          currentRemarks={managementAdjustmentRow.deduction?.managementAdjustmentRemarks || ''}
+          onClose={() => setManagementAdjustmentRow(null)}
+          onSave={() => {
+            setManagementAdjustmentRow(null);
+            qc.invalidateQueries({ queryKey: ['deductions', latestUpload!.id] });
+          }}
+        />
+      )}
+
+      {calculationDetailsRow && (
+        <CalculationDetailsModal
+          isOpen={!!calculationDetailsRow}
+          onClose={() => setCalculationDetailsRow(null)}
+          employeeName={calculationDetailsRow.emp.name || ''}
+          employeeId={calculationDetailsRow.emp.employee_number || calculationDetailsRow.emp.employeeNumber || calculationDetailsRow.emp.employeeId || calculationDetailsRow.emp.id || '-'}
+          designation={calculationDetailsRow.emp.designation}
+          basicSalary={Number(calculationDetailsRow.config?.basicSalary || 0)}
+          extraPayableDays={calculationDetailsRow.deduction?.extraPayableDays}
+          extraPaymentAmount={calculationDetailsRow.deduction?.extraPayment}
+          lopAmount={calculationDetailsRow.deduction?.lopAmount}
+          managementAdjustment={calculationDetailsRow.deduction?.managementAdjustment}
+          managementAdjustmentRemarks={calculationDetailsRow.deduction?.managementAdjustmentRemarks}
+          netPayable={Number(calculationDetailsRow.deduction?.netPayable || 0)}
+          perDaySalary={calculationDetailsRow.config?.basicSalary && calculationDetailsRow.deduction?.daysInMonth ? Number(calculationDetailsRow.config.basicSalary) / Number(calculationDetailsRow.deduction.daysInMonth) : undefined}
+          daysPresent={calculationDetailsRow.deduction?.presentDays}
+          totalDays={calculationDetailsRow.deduction?.daysInMonth}
         />
       )}
     </div>
