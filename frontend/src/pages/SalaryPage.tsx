@@ -88,7 +88,7 @@ export default function SalaryPage() {
     const configMap = new Map((configs as any[]).map(c => [c.employeeId, c]));
 
     // Build map of standalone management adjustments (upload_id 0 or current upload)
-    const managementMap = new Map<number, { amount: number; remarks: string }>();
+    const managementMap = new Map<number, { amount: number; remarks: string; lastUpdated?: string }>();
     for (const adj of allManagementAdjustments as any[]) {
       // Include standalone adjustments (upload_id 0) and adjustments for current upload
       if (!adj.upload_id || adj.upload_id === 0 || adj.upload_id === latestUpload?.id) {
