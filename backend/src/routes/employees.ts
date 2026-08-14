@@ -26,6 +26,43 @@ router.get('/:id', async (req: Request, res: Response) => {
   res.json(emp);
 });
 
+router.post('/', async (req: Request, res: Response) => {
+  const { name, email, department, designation, employeeNumber, mobile, branch, status, basicSalary, eligibleForPaidLeaves, eligibleForOvertime, organisation, biometricName } = req.body;
+
+  if (!name || !name.trim()) {
+    res.status(400).json({ error: 'Name is required' });
+    return;
+  }
+
+  try {
+    const emp = await prisma.employee.create({
+      data: {
+        name: name.trim(),
+        email: email?.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@hrpulse.local`,
+        department: department || 'Rafttar',
+        designation: designation || null,
+        employeeNumber: employeeNumber || null,
+        mobile: mobile || null,
+        branch: branch || null,
+        status: status || 'Active',
+        monthlySalary: basicSalary ? Number(basicSalary) : null,
+        eligibleForPaidLeaves: eligibleForPaidLeaves !== false,
+        eligibleForOvertime: eligibleForOvertime === true,
+        organisation: organisation || null,
+        biometricName: biometricName || null,
+      },
+    });
+    res.json(emp);
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      res.status(400).json({ error: 'Employee ID already exists' });
+    } else {
+      console.error('Failed to create employee:', error);
+      res.status(500).json({ error: 'Failed to create employee' });
+    }
+  }
+});
+
 router.patch('/:id', async (req: Request, res: Response) => {
   const { name, email, department, designation, employeeNumber, mobile, branch, status, shiftName, shiftStartTime, shiftEndTime, eligibleForPaidLeaves, eligibleForOvertime } = req.body;
   const emp = await prisma.employee.update({

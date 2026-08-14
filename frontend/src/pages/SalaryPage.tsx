@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import * as XLSX from 'xlsx';
 import * as api from '../api';
 import EmailDraftModal from '../components/email/EmailDraftModal';
 import LopBreakdown from '../components/salary/LopBreakdown';
@@ -20,7 +21,7 @@ export default function SalaryPage() {
   const monthWasSelected = useRef(false);
   const [toast, setToast] = useState('');
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('attendance');
+  const [filter, setFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('All');
   const [page, setPage] = useState(1);
   const [showPrintOptions, setShowPrintOptions] = useState(false);
@@ -63,6 +64,12 @@ export default function SalaryPage() {
     enabled: !!latestUpload,
   });
 
+  // Fetch all management adjustments (including standalone ones with upload_id 0)
+  const { data: allManagementAdjustments = [] } = useQuery({
+    queryKey: ['all-management-adjustments'],
+    queryFn: () => api.getAllManagementAdjustments().then(r => r.data as any[]),
+  });
+
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
   const companyOf = (emp: any) => {
@@ -79,17 +86,58 @@ export default function SalaryPage() {
   const rows = useMemo(() => {
     const deductionMap = new Map((deductions as any[]).map(d => [d.employeeId, d]));
     const configMap = new Map((configs as any[]).map(c => [c.employeeId, c]));
+
+    // Build map of standalone management adjustments (upload_id 0 or current upload)
+    const managementMap = new Map<number, { amount: number; remarks: string }>();
+    for (const adj of allManagementAdjustments as any[]) {
+      // Include standalone adjustments (upload_id 0) and adjustments for current upload
+      if (!adj.upload_id || adj.upload_id === 0 || adj.upload_id === latestUpload?.id) {
+        // If we already have an adjustment for this employee, keep the most recent one
+        const existing = managementMap.get(adj.employee_id);
+        if (!existing || new Date(adj.updated_at) > new Date(existing.lastUpdated || 0)) {
+          managementMap.set(adj.employee_id, {
+            amount: Number(adj.amount),
+            remarks: adj.remarks,
+            lastUpdated: adj.updated_at
+          });
+        }
+      }
+    }
+
     return (employees as any[]).map(emp => {
       const deduction = deductionMap.get(emp.id);
       const config = configMap.get(emp.id);
+      const mgmtAdjustment = managementMap.get(emp.id);
+
+      // Merge standalone management adjustment into deduction if exists
+      let enhancedDeduction = deduction;
+      if (mgmtAdjustment && mgmtAdjustment.amount !== 0) {
+        // If deduction exists but has no management adjustment, or if no deduction exists
+        if (!deduction || !deduction.managementAdjustment) {
+          const baseNetPayable = deduction?.netPayable || 0;
+          // For standalone adjustments (no attendance), netPayable = management adjustment amount
+          const standaloneNetPayable = !deduction ? mgmtAdjustment.amount : baseNetPayable + mgmtAdjustment.amount;
+
+          enhancedDeduction = {
+            ...deduction,
+            managementAdjustment: mgmtAdjustment.amount,
+            managementAdjustmentRemarks: mgmtAdjustment.remarks,
+            // Recalculate netPayable to include management adjustment
+            netPayable: standaloneNetPayable
+          };
+        }
+      }
+
       // An employee with only absent rows still gets a deductions entry, so
       // has attendance means at least one day actually worked.
       const hasAttendance = !!deduction && Number(deduction.presentDays || 0) > 0;
       const hasSalary = Number(config?.basicSalary || 0) > 0;
       const hasLop = Number(deduction?.lopAmount || 0) > 0;
-      return { emp, deduction, config, hasAttendance, hasSalary, hasLop };
+      const hasManagementAdjustment = mgmtAdjustment && mgmtAdjustment.amount !== 0;
+
+      return { emp, deduction: enhancedDeduction, config, hasAttendance, hasSalary, hasLop, hasManagementAdjustment };
     });
-  }, [employees, deductions, configs]);
+  }, [employees, deductions, configs, allManagementAdjustments, latestUpload?.id]);
 
   // No attendance for this month means every row would fail the default
   // With attendance filter and the whole payroll list would look empty.
@@ -181,6 +229,70 @@ export default function SalaryPage() {
     setShowPrintOptions(false);
   };
 
+  const formatDateToDDMonYY = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    const day = String(date.getDate()).padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[date.getMonth()];
+    const year = String(date.getFullYear()).slice(-2);
+    return `${day}-${month}-${year}`;
+  };
+
+  const formatAadhar = (aadhar: string | null | undefined): string => {
+    if (!aadhar) return '';
+    const cleaned = aadhar.replace(/\D/g, '');
+    if (cleaned.length !== 12) return aadhar;
+    return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}-${cleaned.slice(8)}`;
+  };
+
+  const transformSalaryForExport = (rows: any[]) => {
+    return rows.map(({ emp, config: cfg, deduction: ded }) => {
+      const employeeName = emp.name || '';
+      const employeeId = emp.employee_number || emp.employeeNumber || emp.employeeId || emp.id || '-';
+      const designation = emp.designation || '-';
+      const monthlySalary = Number(cfg?.basicSalary || 0);
+      const daysPresent = ded?.presentDays ?? 0;
+      const duties = ded?.extraPayableDays ?? 0;
+      const grossSalary = monthlySalary + Number(ded?.extraPayment || 0);
+      const deductions = Number(ded?.lopAmount || 0);
+      const netSalary = Number(ded?.netPayable || 0);
+
+      return {
+        'Employee Name': employeeName,
+        'Employee ID': employeeId,
+        'Designation': designation,
+        'Monthly Salary': monthlySalary,
+        'Days Present': daysPresent,
+        'Duties': duties,
+        'Gross Salary': grossSalary,
+        'Deductions': deductions,
+        'Net Salary': netSalary
+      };
+    });
+  };
+
+  const exportSalarySheet = () => {
+    const exportRows = filteredRows.filter(row => row.hasSalary || row.hasAttendance);
+    const transformedData = transformSalaryForExport(exportRows);
+
+    if (transformedData.length === 0) {
+      showToast('No data available to export');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(transformedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Salary Sheet');
+
+    const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
+    const filename = `Salary_Sheet_With_Employee_ID_${timestamp}.csv`;
+    XLSX.writeFile(workbook, filename);
+
+    showToast(`Exported ${transformedData.length} employees to ${filename}`);
+  };
+
   return (
     <div className="w-full min-w-0 bg-gradient-to-br from-slate-50 to-slate-100 p-5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3">
@@ -204,6 +316,16 @@ export default function SalaryPage() {
         totalExtraPay={summary.totalExtraPay}
         totalLopAmount={summary.totalLopAmount}
       /> */}
+
+      <div className="flex justify-end mb-3">
+        <button
+          onClick={() => setShowPrintOptions(true)}
+          className="flex items-center gap-2 border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          <span className="material-icons text-sm">print</span>
+          Print Salary Sheet
+        </button>
+      </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-lg shadow-slate-200/50">
         <div className="flex flex-col gap-3 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -257,11 +379,11 @@ export default function SalaryPage() {
               </button>
             )}
             <button
-              onClick={() => setShowPrintOptions(true)}
-              className="flex items-center gap-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm font-bold px-5 py-2 rounded-xl hover:from-purple-600 hover:to-indigo-700 shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 transition-all"
+              onClick={exportSalarySheet}
+              className="flex items-center gap-2 border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
             >
-              <span className="material-icons text-lg">print</span>
-              Print Salary Sheet
+              <span className="material-icons text-sm">download</span>
+              Export
             </button>
           </div>
         </div>
@@ -352,7 +474,7 @@ export default function SalaryPage() {
               return (
                 <tr key={emp.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-purple-50/40 hover:to-indigo-50/40 transition-all">
                   <td className="z-[1] min-w-[180px] max-w-0 overflow-hidden bg-white px-3 py-2.5 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
-                    <button type="button" onClick={() => setDrawerEmployee(row)} className="flex w-full items-start gap-2.5 text-left group" title="View employee details">
+                    <div onClick={() => setDrawerEmployee(row)} className="flex w-full items-start gap-2.5 text-left group cursor-pointer" title="View employee details">
                       <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white text-xs font-bold shadow-md ring-2 ring-purple-100">
                         {emp.name ? emp.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : 'NA'}
                       </div>
@@ -373,7 +495,7 @@ export default function SalaryPage() {
                           {!hasAttendance ? 'No att' : liveExtraPayment > 0 ? 'Extra pay' : ded?.lopAmount ? 'LOP' : hasSalary ? 'Loaded' : 'Pending'}
                         </span>
                       </div>
-                    </button>
+                    </div>
                   </td>
                   <td className="whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right">
                     <p className="font-bold text-slate-700 text-xs md:text-sm">{currentSalary > 0 ? formatINR(currentSalary) : '—'}</p>
@@ -589,9 +711,9 @@ export default function SalaryPage() {
         />
       )}
 
-      {managementAdjustmentRow && latestUpload?.id && (
+      {managementAdjustmentRow && (
         <ManagementAdjustmentModal
-          uploadId={latestUpload.id}
+          uploadId={latestUpload?.id || null}
           employeeId={managementAdjustmentRow.emp.id}
           employeeName={managementAdjustmentRow.emp.name || ''}
           currentAdjustment={managementAdjustmentRow.deduction?.managementAdjustment || 0}
@@ -599,7 +721,10 @@ export default function SalaryPage() {
           onClose={() => setManagementAdjustmentRow(null)}
           onSave={() => {
             setManagementAdjustmentRow(null);
-            qc.invalidateQueries({ queryKey: ['deductions', latestUpload!.id] });
+            qc.invalidateQueries({ queryKey: ['all-management-adjustments'] });
+            if (latestUpload?.id) {
+              qc.invalidateQueries({ queryKey: ['deductions', latestUpload.id] });
+            }
           }}
         />
       )}

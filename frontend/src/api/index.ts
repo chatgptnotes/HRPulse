@@ -651,6 +651,25 @@ export const getSalaryConfigs = async (month?: string) => {
 };
 export const getSalaryDeductions = async (uploadId: number) => {
   const client = directClient();
+
+  // Handle case where there's no attendance upload (uploadId is 0)
+  // Return empty salary data but still fetch management adjustments
+  if (!uploadId || uploadId === 0) {
+    // Fetch standalone management adjustments (upload_id 0)
+    const standaloneAdjustments = await client.from('salary_management_adjustments').select('employee_id,amount,remarks').eq('upload_id', 0);
+    if (standaloneAdjustments.error && standaloneAdjustments.error.code !== 'PGRST116') {
+      throw new Error(standaloneAdjustments.error.message);
+    }
+
+    const adjustmentMap = new Map<number, { amount: number; remarks: string }>(
+      (standaloneAdjustments.data || []).map((a: any) => [a.employee_id, { amount: Number(a.amount), remarks: a.remarks }])
+    );
+
+    // Return empty array since we can't calculate salary without attendance data
+    // The management adjustments will be handled separately
+    return { data: [] };
+  }
+
   const upload = await client.from('attendance_imports').select('period_month').eq('id', uploadId).single();
   if (upload.error) throw new Error(upload.error.message);
   const periodStart = `${upload.data.period_month}-01`;
@@ -689,12 +708,22 @@ export const getSalaryDeductions = async (uploadId: number) => {
     contractedMap.set(row.id, row.contracted_hours == null ? null : Number(row.contracted_hours));
     employeeMap.set(row.id, row);
   }
-  // Fetch management adjustments for this upload
-  const adjustments = await client.from('salary_management_adjustments').select('employee_id,amount,remarks').eq('upload_id', uploadId);
+  // Fetch management adjustments for this upload AND standalone adjustments (upload_id 0)
+  const [adjustments, standaloneAdjustments] = await Promise.all([
+    client.from('salary_management_adjustments').select('employee_id,amount,remarks').eq('upload_id', uploadId),
+    client.from('salary_management_adjustments').select('employee_id,amount,remarks').eq('upload_id', 0)
+  ]);
   if (adjustments.error && adjustments.error.code !== 'PGRST116') throw new Error(adjustments.error.message);
-  const adjustmentMap = new Map<number, { amount: number; remarks: string }>(
-    (adjustments.data || []).map((a: any) => [a.employee_id, { amount: Number(a.amount), remarks: a.remarks }])
-  );
+  if (standaloneAdjustments.error && standaloneAdjustments.error.code !== 'PGRST116') throw new Error(standaloneAdjustments.error.message);
+
+  // Merge both sources - upload-specific adjustments take precedence over standalone ones
+  const adjustmentMap = new Map<number, { amount: number; remarks: string }>();
+  for (const a of (standaloneAdjustments.data || [])) {
+    adjustmentMap.set(a.employee_id, { amount: Number(a.amount), remarks: a.remarks });
+  }
+  for (const a of (adjustments.data || [])) {
+    adjustmentMap.set(a.employee_id, { amount: Number(a.amount), remarks: a.remarks });
+  }
 
   const [{ data: activeRules, error: rulesError }, { data: settings, error: settingsError }] = await Promise.all([
     client.from('attendance_rules').select('rule_type,conditions,actions,description,name').eq('is_active', true),
@@ -944,17 +973,27 @@ export const getManagementAdjustments = async (uploadId: number) => {
   return directResult(data || [], error);
 };
 
+// Fetch all management adjustments (both upload-specific and standalone upload_id 0)
+export const getAllManagementAdjustments = async () => {
+  const { data, error } = await directClient()
+    .from('salary_management_adjustments')
+    .select('employee_id,upload_id,amount,remarks,created_at,updated_at')
+    .order('updated_at', { ascending: false });
+  return directResult(data || [], error);
+};
+
 export const saveManagementAdjustment = async (
   employeeId: number,
-  uploadId: number,
+  uploadId: number | null,
   amount: number,
   remarks: string
 ) => {
+  const effectiveUploadId = uploadId ?? 0; // Use 0 for adjustments without attendance upload
   const { data, error } = await directClient()
     .from('salary_management_adjustments')
     .upsert({
       employee_id: employeeId,
-      upload_id: uploadId,
+      upload_id: effectiveUploadId,
       amount: amount,
       remarks: remarks.trim(),
       updated_at: new Date().toISOString()
@@ -966,13 +1005,14 @@ export const saveManagementAdjustment = async (
 
 export const deleteManagementAdjustment = async (
   employeeId: number,
-  uploadId: number
+  uploadId: number | null
 ) => {
+  const effectiveUploadId = uploadId ?? 0; // Use 0 for adjustments without attendance upload
   const { data, error } = await directClient()
     .from('salary_management_adjustments')
     .delete()
     .eq('employee_id', employeeId)
-    .eq('upload_id', uploadId)
+    .eq('upload_id', effectiveUploadId)
     .select()
     .single();
   return directResult(data, error);
@@ -1052,6 +1092,29 @@ export const updateEmployee = async (id: number, data: { name?: string; email?: 
     eligible_for_paid_leaves: data.eligibleForPaidLeaves, eligible_for_overtime: data.eligibleForOvertime,
   }).eq('id', id).select().single();
   return directResult(saved, error);
+};
+export const createEmployee = async (data: { name: string; email?: string; department?: string; designation?: string; employeeNumber?: string; mobile?: string; branch?: string; status?: string; basicSalary?: number; eligibleForPaidLeaves?: boolean; eligibleForOvertime?: boolean; organisation?: string; biometricName?: string }) => {
+  const { data: saved, error } = await directClient().from('employees').insert({
+    name: data.name,
+    email: data.email || `${data.name.toLowerCase().replace(/\s+/g, '.')}@hrpulse.local`,
+    department: data.department || 'Rafttar',
+    designation: data.designation || null,
+    employee_number: data.employeeNumber || null,
+    mobile: data.mobile || null,
+    branch: data.branch || null,
+    status: data.status || 'Active',
+    monthly_salary: data.basicSalary || null,
+    eligible_for_paid_leaves: data.eligibleForPaidLeaves !== false,
+    eligible_for_overtime: data.eligibleForOvertime === true,
+    organisation: data.organisation || null,
+    biometric_name: data.biometricName || null,
+  }).select().single();
+  return directResult(saved, error);
+};
+
+export const deleteEmployee = async (id: number) => {
+  const { data, error } = await directClient().from('employees').delete().eq('id', id).select().single();
+  return directResult(data, error);
 };
 export interface ShiftOption {
   id: string;

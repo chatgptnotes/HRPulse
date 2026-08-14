@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getEmployees, updateEmployee, mergeEmployees, getShiftOptions, getEmployeeShiftAssignments, saveEmployeeShiftAssignment, getDerivedShiftTimings, getAllShiftAssignments, type EmployeeShiftAssignment, type ShiftOption, type DerivedTimings } from '../api';
+import { getEmployees, updateEmployee, mergeEmployees, createEmployee, getShiftOptions, getEmployeeShiftAssignments, saveEmployeeShiftAssignment, getDerivedShiftTimings, getAllShiftAssignments, type EmployeeShiftAssignment, type ShiftOption, type DerivedTimings } from '../api';
 import TablePagination, { PAGE_SIZE } from '../components/TablePagination';
 import TimePicker from '../components/TimePicker';
 
@@ -67,6 +67,7 @@ export default function EmployeesPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Employee | null>(null);
+  const [adding, setAdding] = useState(false);
   const [form, setForm] = useState<EditForm>({ name: '', email: '', department: '', employeeNumber: '', mobile: '', designation: '', biometricName: '', branch: '', status: 'Active', basicSalary: '', shiftTimings: { morning: { start: '', end: '' }, evening: { start: '', end: '' }, night: { start: '', end: '' } }, eligibleForPaidLeaves: true, eligibleForOvertime: false });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [mergeKeepId, setMergeKeepId] = useState<number | null>(null);
@@ -102,6 +103,32 @@ export default function EmployeesPage() {
       await updateEmployee(id, { ...employeeData, monthlySalary: basicSalary.trim() ? Number(basicSalary) : null });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['employees'] }); setEditing(null); },
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (data: EditForm) => createEmployee({
+      name: data.name,
+      email: data.email || undefined,
+      department: data.department,
+      designation: data.designation || undefined,
+      employeeNumber: data.employeeNumber || undefined,
+      mobile: data.mobile || undefined,
+      branch: data.branch || undefined,
+      status: data.status,
+      basicSalary: data.basicSalary ? Number(data.basicSalary) : undefined,
+      eligibleForPaidLeaves: data.eligibleForPaidLeaves,
+      eligibleForOvertime: data.eligibleForOvertime,
+      biometricName: data.biometricName || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['employees'] });
+      setAdding(false);
+      setForm({ name: '', email: '', department: '', employeeNumber: '', mobile: '', designation: '', biometricName: '', branch: '', status: 'Active', basicSalary: '', shiftTimings: { morning: { start: '', end: '' }, evening: { start: '', end: '' }, night: { start: '', end: '' } }, eligibleForPaidLeaves: true, eligibleForOvertime: false });
+    },
+    onError: (error: any) => {
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to add employee';
+      alert(errorMsg);
+    },
   });
 
   const searchText = search.trim().toLowerCase();
@@ -221,7 +248,7 @@ export default function EmployeesPage() {
             <button onClick={() => { setSearch(''); setDepartmentFilter(''); setPage(1); }} className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50"><span className="material-icons mr-1 align-middle text-sm">filter_alt</span>Filters</button>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3"><div><h2 className="text-sm font-bold text-slate-800">Employee directory</h2><p className="text-[10px] text-slate-400">{filtered.length} active employees</p></div><div className="flex items-center gap-2"><button className="rounded-md border border-slate-200 px-2.5 py-1.5 text-[10px] font-medium text-slate-600"><span className="material-icons mr-1 align-middle text-xs">download</span>Export</button>{selectedIds.length === 2 && <button onClick={() => { setMergeKeepId(selectedIds[0]); setMergeError(''); }} className="rounded-md bg-indigo-600 px-2.5 py-1.5 text-[10px] font-semibold text-white"><span className="material-icons mr-1 align-middle text-xs">merge</span>Merge names</button>}</div></div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3"><div><h2 className="text-sm font-bold text-slate-800">Employee directory</h2><p className="text-[10px] text-slate-400">{filtered.length} active employees</p></div><div className="flex items-center gap-2"><button onClick={() => { setAdding(true); setForm({ name: '', email: '', department: 'Marketing', employeeNumber: '', mobile: '', designation: '', biometricName: '', branch: '', status: 'Active', basicSalary: '', shiftTimings: { morning: { start: '', end: '' }, evening: { start: '', end: '' }, night: { start: '', end: '' } }, eligibleForPaidLeaves: false, eligibleForOvertime: false }); }} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 px-3 py-1.5 text-[10px] font-semibold text-white hover:from-purple-600 hover:to-indigo-700 shadow-md transition-all"><span className="material-icons text-sm align-middle">add_circle</span>Add Employee</button><button className="rounded-md border border-slate-200 px-2.5 py-1.5 text-[10px] font-medium text-slate-600"><span className="material-icons mr-1 align-middle text-xs">download</span>Export</button>{selectedIds.length === 2 && <button onClick={() => { setMergeKeepId(selectedIds[0]); setMergeError(''); }} className="rounded-md bg-indigo-600 px-2.5 py-1.5 text-[10px] font-semibold text-white"><span className="material-icons mr-1 align-middle text-xs">merge</span>Merge names</button>}</div></div>
         {isLoading ? <div className="p-12 text-center text-sm text-slate-400"><span className="material-icons mr-2 animate-spin align-middle">sync</span>Loading employees...</div> : filtered.length === 0 ? <div className="p-12 text-center text-sm text-slate-400">No employees match the current filters.</div> : <div className="overflow-x-auto"><table className="w-full min-w-[1180px] text-left tabular-nums"><thead className="border-b border-slate-200 bg-slate-50 text-[9px] font-bold uppercase tracking-wide text-slate-400"><tr><th className="w-10 px-4 py-3"><input type="checkbox" aria-label="Select all visible employees" checked={visibleEmployees.length > 0 && visibleEmployees.every(e => selectedIds.includes(e.id))} onChange={() => setSelectedIds(visibleEmployees.every(e => selectedIds.includes(e.id)) ? [] : visibleEmployees.slice(0, 2).map(e => e.id))} /></th><th className="px-3 py-3">Employee</th><th className="px-3 py-3">Emp ID</th><th className="px-3 py-3">Mobile</th><th className="px-3 py-3">Department</th><th className="px-3 py-3">Branch</th><th className="px-3 py-3">Biometric Name</th><th className="px-3 py-3">Shift</th><th className="px-3 py-3">Timing</th><th className="px-3 py-3">Basic Salary</th><th className="px-3 py-3">Paid Leaves</th><th className="px-3 py-3">Overtime</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Edit</th></tr></thead><tbody className="divide-y divide-slate-100">{visibleEmployees.map((emp, i) => <tr key={emp.id} className="group hover:bg-slate-50/70"><td className="px-4 py-2.5"><input type="checkbox" checked={selectedIds.includes(emp.id)} onChange={() => setSelectedIds(ids => ids.includes(emp.id) ? ids.filter(id => id !== emp.id) : ids.length < 2 ? [...ids, emp.id] : ids)} /></td><td className="px-3 py-2.5"><button type="button" onClick={() => openEdit(emp)} className="flex items-center gap-2 text-left"><div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${AVATAR_COLORS[i % AVATAR_COLORS.length]} text-[9px] font-bold text-white`}>{emp.photoUrl ? <img src={emp.photoUrl} alt="" className="h-full w-full rounded-full object-cover" /> : initials(emp.name)}</div><div className="max-w-[180px]"><p className="truncate text-[11px] font-semibold text-slate-700 hover:text-indigo-600">{emp.name}</p><p className="truncate text-[9px] text-slate-400">{emp.email || '—'}</p></div></button></td><td className="px-3 py-2.5 text-[10px] text-slate-600">{emp.employeeId || '—'}</td><td className="px-3 py-2.5 text-[10px] text-slate-600">{emp.mobile || '—'}</td><td className="px-3 py-2.5"><span className="rounded bg-indigo-50 px-1.5 py-1 text-[9px] font-medium text-indigo-600">{emp.department || '—'}</span></td><td className="px-3 py-2.5 text-[10px] text-slate-600">{emp.branch || emp.entity || '—'}</td><td className="px-3 py-2.5 text-[10px] text-slate-600">{emp.designation || emp.name}</td><td className="px-3 py-2.5"><button type="button" onClick={() => openWorkTimes(emp)} className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100" title="Assign a shift / work time">M / E / N</button></td><td className="max-w-[190px] px-3 py-2.5 text-[9px] leading-4">{(() => { const t = timings(emp); return <span className={t.inferred ? 'text-slate-300 italic' : 'text-slate-600'} title={t.source}>{t.text}{t.inferred ? ' (standard)' : ''}</span>; })()}</td><td className="px-3 py-2.5 text-[10px] font-medium text-slate-700">{emp.basicSalary ? `₹${emp.basicSalary.toLocaleString('en-IN')}` : '—'}</td><td className="px-3 py-2.5 text-[10px] text-emerald-600">{emp.eligibleForPaidLeaves !== false ? 'Eligible' : 'No'}</td><td className="px-3 py-2.5 text-[10px] text-indigo-600">{emp.eligibleForOvertime ? 'Eligible' : 'No'}</td><td className="px-3 py-2.5"><span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-medium text-emerald-600">{emp.status || 'Active'}</span></td><td className="px-3 py-2.5"><button type="button" onClick={() => openEdit(emp)} className="rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold text-indigo-600 hover:bg-indigo-100"><span className="material-icons mr-1 align-middle text-xs">edit</span>Edit</button></td></tr>)}</tbody></table></div>}
         <TablePagination total={filtered.length} page={page} pageSize={PAGE_SIZE} onPageChange={setPage} noun="employees" />
       </section>
@@ -318,13 +345,13 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {/* Edit Modal */}
-      {editing && (
+      {/* Edit/Add Modal */}
+      {(editing || adding) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-              <div><h3 className="text-base font-bold text-slate-800">Edit Employee</h3><p className="mt-0.5 text-xs text-slate-400">Update this employee record</p></div>
-              <button onClick={() => setEditing(null)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+              <div><h3 className="text-base font-bold text-slate-800">{adding ? 'Add Employee' : 'Edit Employee'}</h3><p className="mt-0.5 text-xs text-slate-400">{adding ? 'Create a new employee record' : 'Update this employee record'}</p></div>
+              <button onClick={() => { setEditing(null); setAdding(false); }} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
                 <span className="material-icons text-xl text-slate-400">close</span>
               </button>
             </div>
@@ -394,12 +421,12 @@ export default function EmployeesPage() {
                 Cancel
               </button>
               <button
-                onClick={() => mutation.mutate({ id: editing.id, data: form })}
-                disabled={mutation.isPending}
+                onClick={() => adding ? addMutation.mutate(form) : mutation.mutate({ id: editing!.id, data: form })}
+                disabled={mutation.isPending || addMutation.isPending}
                 className="flex-1 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-60 transition-all"
                 style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}
               >
-                {mutation.isPending ? 'Saving...' : 'Save Changes'}
+                {mutation.isPending || addMutation.isPending ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

@@ -3,7 +3,7 @@ import * as api from '../../api';
 import { formatINR } from '../../lib/dayWiseSalary';
 
 interface Props {
-  uploadId: number;
+  uploadId: number | null;
   employeeId: number;
   employeeName: string;
   currentAdjustment: number;
@@ -97,6 +97,14 @@ export default function ManagementAdjustmentModal({
               <span className="font-semibold">How it works:</span> Enter a positive amount for bonuses (extra pay) or a negative amount for deductions. The adjustment will be added to the Net Payable.
             </p>
           </div>
+
+          {!uploadId && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+              <p className="text-sm text-amber-700">
+                <span className="font-semibold">⚠️ No attendance data:</span> This adjustment is being saved without an attendance upload. Salary calculations (absent days, LOP, etc.) require attendance data to be uploaded first.
+              </p>
+            </div>
+          )}
 
           {/* Amount Field */}
           <div>
