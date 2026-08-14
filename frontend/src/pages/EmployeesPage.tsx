@@ -44,7 +44,7 @@ interface EditForm {
 
 interface FormField {
   label: string;
-  key: keyof EditForm;
+  key: string;
   type: string;
   span?: boolean;
   placeholder?: string;
@@ -374,7 +374,7 @@ export default function EmployeesPage() {
                   { label: 'Biometric Name', key: 'biometricName', type: 'text', placeholder: 'Optional biometric name' },
                   { label: 'Branch', key: 'branch', type: 'text', placeholder: 'Optional branch' },
                   { label: 'Monthly Salary (INR)', key: 'basicSalary', type: 'number', placeholder: 'Optional salary' },
-                ].map((f: FormField) => <div key={f.key} className={f.span ? 'sm:col-span-2' : ''}><label className="mb-1.5 block text-xs font-medium text-slate-700">{f.label}</label><input type={f.type} value={form[f.key] as string} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" /></div>)}
+                ].map(f => <div key={f.key} className={f.span ? 'sm:col-span-2' : ''}><label className="mb-1.5 block text-xs font-medium text-slate-700">{f.label}</label><input type={f.type} value={form[f.key as keyof EditForm] as string} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" /></div>)}
                 <div><label className="mb-1.5 block text-xs font-medium text-slate-700">Department</label><input list="employee-departments" value={form.department} onChange={e => setForm(prev => ({ ...prev, department: e.target.value }))} placeholder="Select or type a department" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" /><datalist id="employee-departments">{departmentOptions.map(department => <option key={department} value={department} />)}</datalist><p className="mt-1 text-[10px] text-slate-400">Choose a department or type a new one.</p></div>
                 <div><label className="mb-1.5 block text-xs font-medium text-slate-700">Status</label><select value={form.status} onChange={e => setForm(prev => ({ ...prev, status: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300"><option>Active</option><option>Inactive</option></select></div>
                 <div className="sm:col-span-2 space-y-4">
