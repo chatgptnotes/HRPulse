@@ -274,7 +274,15 @@ export default function SalaryPage() {
   };
 
   const exportSalarySheet = () => {
-    const exportRows = filteredRows.filter(row => row.hasSalary || row.hasAttendance);
+    // Include all filtered employees (what user is viewing) PLUS all employees with net salary > 0
+    const netSalaryEmployeeIds = new Set(
+      rows.filter(row => Number(row.deduction?.netPayable || 0) > 0).map(row => row.emp.id)
+    );
+
+    // Combine filtered rows with any net salary employees not already included
+    const exportRowsSet = new Map([...filteredRows, ...rows.filter(row => netSalaryEmployeeIds.has(row.emp.id))].map(row => [row.emp.id, row]));
+    const exportRows = Array.from(exportRowsSet.values());
+
     const transformedData = transformSalaryForExport(exportRows);
 
     if (transformedData.length === 0) {
