@@ -8,6 +8,10 @@ import ManagementAdjustmentModal from '../components/salary/ManagementAdjustment
 import CalculationDetailsModal from '../components/salary/CalculationDetailsModal';
 import { formatINR } from '../lib/dayWiseSalary';
 import TablePagination, { PAGE_SIZE } from '../components/TablePagination';
+import PayrollSummaryBar from '../components/salary/PayrollSummaryBar';
+import DepartmentPillFilters from '../components/salary/DepartmentPillFilters';
+import EmployeeDrawer from '../components/salary/EmployeeDrawer';
+import SalaryStatsGrid from '../components/salary/SalaryStatsGrid';
 
 export default function SalaryPage() {
   const qc = useQueryClient();
@@ -20,6 +24,8 @@ export default function SalaryPage() {
   const [companyFilter, setCompanyFilter] = useState('All');
   const [page, setPage] = useState(1);
   const [showPrintOptions, setShowPrintOptions] = useState(false);
+  const [departmentPill, setDepartmentPill] = useState('All');
+  const [drawerEmployee, setDrawerEmployee] = useState<any | null>(null);
   // The whole payroll row, not just the employee: the details modal needs the
   // deduction and the salary to show what each day was worth.
   const [attendanceRow, setAttendanceRow] = useState<any | null>(null);
@@ -101,6 +107,17 @@ export default function SalaryPage() {
       const normalizedSearchable = searchable.replace(/[^a-z0-9]+/g, '');
       if (query && !searchable.includes(query) && !normalizedSearchable.includes(normalizedQuery)) return false;
       if (companyFilter !== 'All' && companyOf(row.emp) !== companyFilter) return false;
+      if (departmentPill !== 'All') {
+        const empDept = (row.emp.department || '').toLowerCase();
+        const org = (row.emp.organisation || row.emp.organization || '').toLowerCase();
+        if (departmentPill === 'Doctors' && !/(doctor|dr\.|physician|medical)/i.test(empDept + ' ' + org)) return false;
+        if (departmentPill === 'Nursing' && !/(nurse|nursing|staff)/i.test(empDept + ' ' + org)) return false;
+        if (departmentPill === 'Administration' && !/(admin|management|director)/i.test(empDept)) return false;
+        if (departmentPill === 'Accounts' && !/(account|finance)/i.test(empDept)) return false;
+        if (departmentPill === 'Marketing' && !/(market|sales)/i.test(empDept)) return false;
+        if (departmentPill === 'HR' && !/(hr|human)/i.test(empDept)) return false;
+        if (departmentPill === 'IT' && !/\bit\b|information technology/i.test(empDept + ' ' + org)) return false;
+      }
       if (filter === 'attendance') return noAttendanceData ? true : row.hasAttendance;
       if (filter === 'missing-attendance') return !row.hasAttendance;
       if (filter === 'lop') return row.hasLop;
@@ -108,15 +125,15 @@ export default function SalaryPage() {
       if (filter === 'payable') return row.hasSalary;
       return true;
     }).sort((a, b) => Number(b.hasSalary) - Number(a.hasSalary));
-  }, [rows, search, filter, companyFilter, noAttendanceData]);
+  }, [rows, search, filter, companyFilter, departmentPill, noAttendanceData]);
 
   // Changing what is being looked for starts the reading again from the top;
   // staying on page 7 of a freshly narrowed list shows an empty table.
-  useEffect(() => { setPage(1); }, [search, filter, companyFilter, month]);
+  useEffect(() => { setPage(1); }, [search, filter, companyFilter, departmentPill, month]);
   const visibleRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const hasActiveFilters = Boolean(search.trim()) || filter !== 'attendance' || companyFilter !== 'All';
-  const clearFilters = () => { setSearch(''); setFilter('attendance'); setCompanyFilter('All'); };
+  const hasActiveFilters = Boolean(search.trim()) || filter !== 'attendance' || companyFilter !== 'All' || departmentPill !== 'All';
+  const clearFilters = () => { setSearch(''); setFilter('attendance'); setCompanyFilter('All'); setDepartmentPill('All'); };
 
   const summary = useMemo(() => ({
     total: rows.length,
@@ -124,6 +141,11 @@ export default function SalaryPage() {
     lop: rows.filter(row => row.hasLop).length,
     extraPay: rows.filter(row => Number(row.deduction?.extraPayment || 0) > 0).length,
     missingSalary: rows.filter(row => !row.hasSalary).length,
+    // Payroll financial summary
+    totalPayroll: rows.reduce((sum, row) => sum + Number(row.config?.basicSalary || 0), 0),
+    netPayable: rows.reduce((sum, row) => sum + Number(row.deduction?.netPayable || 0), 0),
+    totalExtraPay: rows.reduce((sum, row) => sum + Number(row.deduction?.extraPayment || 0), 0),
+    totalLopAmount: rows.reduce((sum, row) => sum + Number(row.deduction?.lopAmount || 0), 0),
   }), [rows]);
 
   const printSalarySheet = (company: string) => {
@@ -161,109 +183,45 @@ export default function SalaryPage() {
 
   return (
     <div className="w-full min-w-0 bg-gradient-to-br from-slate-50 to-slate-100 p-5 sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3">
         <div>
-          <div className="flex items-center gap-4">
+          {/* <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-xl shadow-purple-500/30">
               <span className="material-icons text-2xl">payments</span>
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">Salary & Loss of Pay</h1>
           </div>
-          <p className="text-sm text-slate-500 mt-2.5 ml-16">Salary is calculated automatically from Employee Master and attendance records.</p>
-        </div>
-        <div className="flex items-center gap-3 self-start sm:self-auto">
-          <button onClick={() => setShowPrintOptions(true)} className="flex items-center gap-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm font-bold px-6 py-3 rounded-xl hover:from-purple-600 hover:to-indigo-700 shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 transition-all">
-            <span className="material-icons text-lg">print</span>
-            Print Salary Sheet
-          </button>
+          <p className="text-sm text-slate-500 mt-2.5 ml-16">Salary is calculated automatically from Employee Master and attendance records.</p> */}
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute top-0 right-0 h-24 w-24 -translate-y-1/2 translate-x-1/2 rounded-full bg-gradient-to-br from-indigo-50 to-purple-50 opacity-50 transition-all group-hover:scale-150"></div>
-          <div className="relative flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30">
-              <span className="material-icons text-3xl">groups</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Employees</p>
-              <p className="mt-1 text-3xl font-bold text-slate-800 tabular-nums">{summary.total}</p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">Total Employees</p>
-            </div>
-          </div>
-        </div>
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm hover:shadow-xl hover:shadow-emerald-200/50 hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute top-0 right-0 h-24 w-24 -translate-y-1/2 translate-x-1/2 rounded-full bg-gradient-to-br from-emerald-50 to-green-50 opacity-50 transition-all group-hover:scale-150"></div>
-          <div className="relative flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/30">
-              <span className="material-icons text-3xl">how_to_reg</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Attendance</p>
-              <p className="mt-1 text-3xl font-bold text-emerald-600 tabular-nums">{summary.attendance}</p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">Present Employees</p>
-            </div>
-          </div>
-        </div>
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm hover:shadow-xl hover:shadow-red-200/50 hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute top-0 right-0 h-24 w-24 -translate-y-1/2 translate-x-1/2 rounded-full bg-gradient-to-br from-red-50 to-rose-50 opacity-50 transition-all group-hover:scale-150"></div>
-          <div className="relative flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30">
-              <span className="material-icons text-3xl">money_off</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Has Loss of Pay</p>
-              <p className="mt-1 text-3xl font-bold text-red-600 tabular-nums">{summary.lop}</p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">Employees</p>
-            </div>
-          </div>
-        </div>
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm hover:shadow-xl hover:shadow-teal-200/50 hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute top-0 right-0 h-24 w-24 -translate-y-1/2 translate-x-1/2 rounded-full bg-gradient-to-br from-teal-50 to-cyan-50 opacity-50 transition-all group-hover:scale-150"></div>
-          <div className="relative flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/30">
-              <span className="material-icons text-3xl">payments</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Has Extra Pay</p>
-              <p className="mt-1 text-3xl font-bold text-teal-600 tabular-nums">{summary.extraPay}</p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">Employees</p>
-            </div>
-          </div>
-        </div>
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm hover:shadow-xl hover:shadow-amber-200/50 hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute top-0 right-0 h-24 w-24 -translate-y-1/2 translate-x-1/2 rounded-full bg-gradient-to-br from-amber-50 to-orange-50 opacity-50 transition-all group-hover:scale-150"></div>
-          <div className="relative flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30">
-              <span className="material-icons text-3xl">error_outline</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Missing Salary</p>
-              <p className="mt-1 text-3xl font-bold text-amber-600 tabular-nums">{summary.missingSalary}</p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">Employees</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* <SalaryStatsGrid summary={summary} /> */}
+
+      {/* Payroll Summary Bar */}
+      {/* <PayrollSummaryBar
+        totalPayroll={summary.totalPayroll}
+        netPayable={summary.netPayable}
+        totalExtraPay={summary.totalExtraPay}
+        totalLopAmount={summary.totalLopAmount}
+      /> */}
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-lg shadow-slate-200/50">
-        <div className="flex flex-col gap-4 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-sm">
             <span className="material-icons pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">search</span>
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search employee name, email or ID..."
-              className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-sm"
+              className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-12 pr-4 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-sm"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <select
                 value={filter}
                 onChange={e => setFilter(e.target.value)}
-                className="appearance-none rounded-xl border border-slate-300 bg-white py-3 pl-4 pr-12 text-sm font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer hover:border-purple-400 shadow-sm"
+                className="appearance-none rounded-xl border border-slate-300 bg-white py-2 pl-4 pr-12 text-sm font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer hover:border-purple-400 shadow-sm"
               >
                 <option value="attendance">All Employees</option>
                 <option value="all">All Employees</option>
@@ -278,7 +236,7 @@ export default function SalaryPage() {
               <select
                 value={companyFilter}
                 onChange={e => setCompanyFilter(e.target.value)}
-                className="appearance-none rounded-xl border border-slate-300 bg-white py-3 pl-4 pr-12 text-sm font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer hover:border-purple-400 shadow-sm"
+                className="appearance-none rounded-xl border border-slate-300 bg-white py-2 pl-4 pr-12 text-sm font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer hover:border-purple-400 shadow-sm"
               >
                 <option value="All">All Departments</option>
                 <option value="Rafttar">Rafttar</option>
@@ -292,12 +250,19 @@ export default function SalaryPage() {
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:from-slate-200 hover:to-slate-300 transition-all shadow-sm"
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:from-slate-200 hover:to-slate-300 transition-all shadow-sm"
               >
                 <span className="material-icons text-lg">close</span>
                 Clear Filters
               </button>
             )}
+            <button
+              onClick={() => setShowPrintOptions(true)}
+              className="flex items-center gap-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm font-bold px-5 py-2 rounded-xl hover:from-purple-600 hover:to-indigo-700 shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 transition-all"
+            >
+              <span className="material-icons text-lg">print</span>
+              Print Salary Sheet
+            </button>
           </div>
         </div>
         {noAttendanceData && (
@@ -326,6 +291,12 @@ export default function SalaryPage() {
                 {companyFilter}
               </span>
             )}
+            {departmentPill !== 'All' && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 px-3 py-1.5 text-sm font-semibold text-purple-700 shadow-sm">
+                <span className="material-icons text-sm">domain</span>
+                {departmentPill}
+              </span>
+            )}
             <button
               onClick={clearFilters}
               className="ml-auto rounded-lg bg-slate-200 px-3 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-300 transition-colors"
@@ -334,27 +305,36 @@ export default function SalaryPage() {
             </button>
           </div>
         )}
+
+        {/* Department Quick Filter Pills - COMMENTED OUT */}
+        {/* <div className="border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white px-5 py-3">
+          <DepartmentPillFilters
+            selected={departmentPill}
+            onSelect={setDepartmentPill}
+          />
+        </div> */}
+
         {/* A fade on the right edge whenever the table is wider than its box, so a
             column pushed off-screen is visible rather than silently cut off. */}
         <div className="relative">
-        <div className="w-full overflow-x-auto pb-2">
-        <table className="w-full min-w-[1280px] table-auto text-xs tabular-nums sm:text-sm">
+        <div className="w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100 hover:scrollbar-thumb-slate-400">
+        <table className="w-full table-auto text-xs md:text-sm tabular-nums">
           <thead>
             <tr className="bg-gradient-to-r from-slate-50 to-slate-100 border-b-2 border-slate-200">
-              <th className="z-10 bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-4 text-left font-bold text-slate-700 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">Employee</th>
-              <th className="px-3 py-4 text-right font-bold text-slate-700">Salary<br />(₹)</th>
-              <th className="px-3 py-4 text-right font-bold text-emerald-700">Present<br />Days</th>
-              <th className="px-3 py-4 text-right font-bold text-emerald-700">Payable<br />Days</th>
-              <th className="px-3 py-4 text-right font-bold text-slate-700">Absent<br />Days</th>
-              <th className="px-3 py-4 text-right font-bold text-slate-700">Half<br />Days</th>
-              <th className="px-3 py-4 text-right font-bold text-slate-700">Late<br />Count</th>
-              <th className="px-3 py-4 text-right font-bold text-slate-700">Paid<br />Leave</th>
-              <th className="px-3 py-4 text-right font-bold text-slate-700">Loss of Pay<br />Days</th>
-              <th className="px-3 py-4 text-right font-bold text-red-600">Loss of Pay<br />Amount</th>
-              <th className="px-3 py-4 text-right font-bold text-emerald-700">Extra<br />Days</th>
-              <th className="px-3 py-4 text-right font-bold text-emerald-700">Extra Pay<br />Amount</th>
-              <th className="px-3 py-4 text-right font-bold text-blue-700">Management<br />Decision</th>
-              <th className="px-3 py-4 text-right font-bold text-emerald-700">Net<br />Payable</th>
+              <th className="z-10 min-w-[200px] bg-gradient-to-br from-slate-50 to-slate-100 px-3 py-2.5 text-left font-bold text-slate-700 text-xs md:text-sm md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">Employee</th>
+              <th className="min-w-[100px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-slate-700">Salary<br />(₹)</th>
+              <th className="min-w-[90px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">Present<br />Days</th>
+              <th className="min-w-[90px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">Payable<br />Days</th>
+              <th className="hidden sm:table-cell min-w-[90px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-slate-700">Absent<br />Days</th>
+              <th className="hidden lg:table-cell min-w-[80px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-slate-700">Half<br />Days</th>
+              <th className="hidden md:table-cell min-w-[80px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-slate-700">Late<br />Count</th>
+              <th className="hidden md:table-cell min-w-[90px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-slate-700">Paid<br />Leave</th>
+              <th className="hidden sm:table-cell min-w-[110px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-slate-700">Loss of Pay<br />Days</th>
+              <th className="min-w-[100px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-red-600">LOP<br />Amt</th>
+              <th className="min-w-[90px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">Extra<br />Days</th>
+              <th className="hidden sm:table-cell min-w-[110px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">Extra Pay<br />Amount</th>
+              <th className="hidden md:table-cell min-w-[120px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-blue-700">Management<br />Decision</th>
+              <th className="min-w-[110px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">Net<br />Payable</th>
             </tr>
           </thead>
           <tbody>
@@ -371,90 +351,100 @@ export default function SalaryPage() {
               const daysMissing = ded ? Math.max(0, Number(ded.daysInMonth || 0) - Number(ded.daysCovered || 0)) : 0;
               return (
                 <tr key={emp.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-purple-50/40 hover:to-indigo-50/40 transition-all">
-                  <td className="z-[1] max-w-0 overflow-hidden bg-white px-4 py-4 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
-                    <button type="button" onClick={() => openAttendance(row)} className="flex w-full items-start gap-3 text-left group" title="Open attendance details">
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white text-xs font-bold shadow-md ring-2 ring-purple-100">
+                  <td className="z-[1] min-w-[180px] max-w-0 overflow-hidden bg-white px-3 py-2.5 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
+                    <button type="button" onClick={() => setDrawerEmployee(row)} className="flex w-full items-start gap-2.5 text-left group" title="View employee details">
+                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white text-xs font-bold shadow-md ring-2 ring-purple-100">
                         {emp.name ? emp.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : 'NA'}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="break-words font-bold text-sm leading-tight text-slate-800 group-hover:text-purple-700 transition-colors" title={emp.name}>{emp.name}</p>
-                        {emp.email && <p className="break-all text-xs leading-tight text-slate-500" title={emp.email}>{emp.email}</p>}
-                        <span className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${!hasAttendance ? 'bg-slate-100 text-slate-500' : ded?.lopAmount ? 'bg-gradient-to-r from-red-50 to-rose-50 text-red-600 ring-1 ring-red-100' : liveExtraPayment > 0 ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 ring-1 ring-blue-100' : hasSalary ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-600 ring-1 ring-amber-100'}`}>
-                          {!hasAttendance ? 'No attendance' : liveExtraPayment > 0 ? 'Extra pay added' : ded?.lopAmount ? 'Loss of pay calculated' : hasSalary ? 'Attendance loaded' : 'Salary pending'}
+                        <div className="flex items-center gap-2">
+                          <p className="break-words font-bold text-sm leading-tight text-slate-800 group-hover:text-purple-700 transition-colors" title={emp.name}>{emp.name}</p>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); openAttendance(row); }}
+                            className="p-1 hover:bg-purple-50 rounded-full transition-colors"
+                            title="View attendance details"
+                          >
+                            <span className="material-icons text-sm text-purple-600">calendar_today</span>
+                          </button>
+                        </div>
+                        {emp.email && <p className="break-all text-xs leading-tight text-slate-500 truncate" title={emp.email}>{emp.email}</p>}
+                        <span className={`mt-1 sm:mt-2 inline-flex items-center gap-0.5 sm:gap-1.5 rounded-full px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-[8px] sm:text-[10px] font-bold uppercase tracking-wide ${!hasAttendance ? 'bg-slate-100 text-slate-500' : ded?.lopAmount ? 'bg-gradient-to-r from-red-50 to-rose-50 text-red-600 ring-1 ring-red-100' : liveExtraPayment > 0 ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 ring-1 ring-blue-100' : hasSalary ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-600 ring-1 ring-emerald-100' : 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-600 ring-1 ring-amber-100'}`}>
+                          {!hasAttendance ? 'No att' : liveExtraPayment > 0 ? 'Extra pay' : ded?.lopAmount ? 'LOP' : hasSalary ? 'Loaded' : 'Pending'}
                         </span>
                       </div>
                     </button>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-right">
-                    <p className="font-bold text-slate-700">{currentSalary > 0 ? formatINR(currentSalary) : '—'}</p>
-                    {!hasSalary && <p className="mt-1 text-[10px] font-bold text-amber-600">Missing salary</p>}
+                  <td className="whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right">
+                    <p className="font-bold text-slate-700 text-xs md:text-sm">{currentSalary > 0 ? formatINR(currentSalary) : '—'}</p>
+                    {!hasSalary && <p className="mt-0.5 sm:mt-1 text-[8px] sm:text-[10px] font-bold text-amber-600 hidden sm:block">Missing salary</p>}
                   </td>
-                  <td className="px-3 py-4 text-right font-bold text-emerald-700"><button type="button" onClick={() => openAttendance(row, { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving'], label: 'Present Dates', includeSundays: ded?.rafttarStaff === true, note: 'A long shift counts as more than one day and a short one as half, so the days credited need not equal the number of dates listed.' })} className="rounded-lg px-2 py-1.5 hover:bg-emerald-50 hover:underline font-bold transition-all" title="View the dates this employee was present">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
-                  <td className="px-3 py-4 text-right font-bold text-emerald-700" title={ded ? `${Number(ded.attendedDays || 0)} attended + ${Number(ded.paidOffDays || 0)} paid off, of ${ded.daysInMonth} days` : undefined}>
+                  <td className="whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700"><button type="button" onClick={() => openAttendance(row, { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving'], label: 'Present Dates', includeSundays: ded?.rafttarStaff === true, note: 'A long shift counts as more than one day and a short one as half, so the days credited need not equal the number of dates listed.' })} className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 hover:bg-emerald-50 hover:underline font-bold transition-all text-xs md:text-sm" title="View the dates this employee was present">{ded ? Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0) : '—'}</button></td>
+                  <td className="whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700" title={ded ? `${Number(ded.attendedDays || 0)} attended + ${Number(ded.paidOffDays || 0)} paid off, of ${ded.daysInMonth} days` : undefined}>
                     <span className="font-bold">{ded ? Number(ded.payableDays || 0).toFixed(Number(ded.payableDays || 0) % 1 ? 1 : 0) : '—'}</span>
                     {daysMissing > 0 && (
-                      <p className="mt-1 text-[10px] font-bold text-amber-600" title={`${daysMissing} date${daysMissing === 1 ? '' : 's'} of this month were never imported, so they cannot be paid for. Re-import the month before paying.`}>
+                      <p className="mt-0.5 sm:mt-1 text-[8px] sm:text-[10px] font-bold text-amber-600" title={`${daysMissing} date${daysMissing === 1 ? '' : 's'} of this month were never imported, so they cannot be paid for. Re-import the month before paying.`}>
                         {daysMissing} missing
                       </p>
                     )}
                   </td>
-                  <td className="px-3 py-4 text-right text-slate-600">
+                  <td className="hidden sm:table-cell whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right text-slate-600 text-xs md:text-sm">
                     {ded && Number(ded.absentDays || 0) > 0 ? (
                       <button
                         type="button"
                         onClick={() => openAttendance(row, { statuses: ['Absent'], label: 'Absent Dates', skipProtected: true, protectedCount: ded.protectedAbsentDays || 0 })}
-                        className="rounded-lg px-2 py-1.5 font-bold text-red-600 hover:bg-red-50 hover:underline transition-all"
+                        className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 font-bold text-red-600 hover:bg-red-50 hover:underline transition-all text-xs md:text-sm"
                         title="View the dates this employee was absent (unpaid beyond allowance)"
                       >
                         {ded.absentDays}
                       </button>
                     ) : (ded?.absentDays ?? '—')}
                   </td>
-                  <td className="px-3 py-4 text-right text-slate-600">
+                  <td className="hidden lg:table-cell whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right text-slate-600 text-xs md:text-sm">
                     {ded && Number(ded.halfDays || 0) > 0 ? (
                       <button
                         type="button"
                         onClick={() => openAttendance(row, { statuses: ['HALF_DAY'], label: 'Half-Day Dates', note: 'Days with less than half the shift hours worked. Half pay is deducted for these days.' })}
-                        className="rounded-lg px-2 py-1.5 font-bold text-slate-600 hover:bg-amber-50 hover:underline transition-all"
+                        className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 font-bold text-slate-600 hover:bg-amber-50 hover:underline transition-all text-xs md:text-sm"
                         title="View half-day dates"
                       >
                         {ded.halfDays}
                       </button>
                     ) : (ded?.halfDays ?? '—')}
                   </td>
-                  <td className="px-3 py-4 text-right text-slate-600">
+                  <td className="hidden md:table-cell whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right text-slate-600 text-xs md:text-sm">
                     {ded && Number(ded.lateOccurrences || 0) > 0 ? (
                       <button
                         type="button"
                         onClick={() => openAttendance(row, { statuses: ['Late Coming', 'LATE'], label: 'Late Coming Dates', note: 'Days with arrival after the grace period. 4-6 late days/month = 0.5 day LOP, 7+ days = 1 day LOP.' })}
-                        className="rounded-lg px-2 py-1.5 font-bold text-slate-600 hover:bg-orange-50 hover:underline transition-all"
+                        className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 font-bold text-slate-600 hover:bg-orange-50 hover:underline transition-all text-xs md:text-sm"
                         title="View late coming dates"
                       >
                         {ded.lateOccurrences}
                       </button>
                     ) : (ded?.lateOccurrences ?? '—')}
                   </td>
-                  <td className="px-3 py-4 text-right text-slate-600">
+                  <td className="hidden md:table-cell whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right text-slate-600 text-xs md:text-sm">
                     {ded && Number(ded.protectedAbsentDays || 0) > 0 ? (
                       <button
                         type="button"
                         onClick={() => openAttendance(row, { statuses: ['Absent'], label: 'Paid Leave Dates', note: 'Paid leave days taken. These are covered by the monthly leave allowance.', showProtectedOnly: true, protectedCount: ded.protectedAbsentDays || 0 })}
-                        className="rounded-lg px-2 py-1.5 font-bold text-slate-600 hover:bg-green-50 hover:underline transition-all"
+                        className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 font-bold text-slate-600 hover:bg-green-50 hover:underline transition-all text-xs md:text-sm"
                         title="View paid leave dates"
                       >
                         {ded.protectedAbsentDays}/{ded.leaveLimit}
                       </button>
                     ) : (ded?.leaveLimit ? `0/${ded.leaveLimit}` : '—')}
                   </td>
-                  <td className="px-3 py-4 text-right text-slate-600 font-bold">{ded?.lopDays ? ded.lopDays.toFixed(1) : '—'}</td>
-                  <td className="whitespace-nowrap px-3 py-4 text-right font-bold text-red-600">
+                  <td className="hidden sm:table-cell whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right text-slate-600 font-bold text-xs md:text-sm">{ded?.lopDays ? ded.lopDays.toFixed(1) : '—'}</td>
+                  <td className="whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-red-600">
                     {ded && Number(ded.lopAmount || 0) > 0 ? (
                       <button type="button" onClick={() => setLopExplain({ ded, emp, row, salary: currentSalary })}
-                        className="rounded-lg px-2 py-1.5 underline decoration-dotted underline-offset-2 hover:bg-red-50 font-bold transition-all"
+                        className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 underline decoration-dotted underline-offset-2 hover:bg-red-50 font-bold transition-all text-xs md:text-sm"
                         title="Show why this amount was cut">{formatINR(liveLopAmount || 0)}</button>
                     ) : liveLopAmount !== null ? formatINR(liveLopAmount) : Number(currentSalary) > 0 ? '₹0' : '—'}
                   </td>
-                  <td className="px-3 py-4 text-right font-bold text-emerald-700"
+                  <td className="whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700"
                     title={ded ? `${Number(ded.workedWeeklyOffs || 0)} weekly off(s) worked + ${Number(ded.unusedLeaveDays || 0)} leave day(s) not availed` : undefined}>
                     {ded && Number(ded.extraPayableDays || 0) > 0 ? (
                       <button
@@ -465,25 +455,25 @@ export default function SalaryPage() {
                           note: 'Dates with overtime shifts (1.5x or 2x credit) or extra pay. Shows only days where credit earned was >= 1.5 days.',
                           filterMinCredit: 1.5
                         })}
-                        className="rounded-lg px-2 py-1.5 font-bold text-emerald-700 hover:bg-emerald-50 hover:underline transition-all"
+                        className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 font-bold text-emerald-700 hover:bg-emerald-50 hover:underline transition-all text-xs md:text-sm"
                         title="View extra pay dates"
                       >
                         {Number(ded.extraPayableDays).toFixed(Number(ded.extraPayableDays) % 1 ? 1 : 0)}
                       </button>
                     ) : ded ? <span className="font-bold">0</span> : '—'}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-right font-bold text-emerald-700">
+                  <td className="hidden sm:table-cell whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">
                     {ded && liveExtraPayment > 0 ? (
                       <button type="button" onClick={() => setLopExplain({ ded, emp, row, salary: currentSalary })}
-                        className="rounded-lg px-2 py-1.5 underline decoration-dotted underline-offset-2 hover:bg-emerald-50 font-bold transition-all"
+                        className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 underline decoration-dotted underline-offset-2 hover:bg-emerald-50 font-bold transition-all text-xs md:text-sm"
                         title="Show why this amount was added">{formatINR(liveExtraPayment)}</button>
                     ) : ded ? <span className="font-bold">₹0</span> : '—'}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-right">
+                  <td className="hidden md:table-cell whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right">
                     <button
                       type="button"
                       onClick={() => setManagementAdjustmentRow(row)}
-                      className={`rounded-lg px-2 py-1.5 font-bold hover:bg-blue-50 hover:underline transition-all ${
+                      className={`rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 font-bold hover:bg-blue-50 hover:underline transition-all text-xs md:text-sm ${
                         ded?.managementAdjustment
                           ? ded.managementAdjustment > 0
                             ? 'text-emerald-600 underline decoration-dotted underline-offset-2'
@@ -495,16 +485,16 @@ export default function SalaryPage() {
                       {ded?.managementAdjustment ? formatINR(ded.managementAdjustment) : '—'}
                     </button>
                     {ded?.managementAdjustmentRemarks && (
-                      <p className="mt-1 text-[10px] text-slate-500 truncate max-w-[120px]" title={ded.managementAdjustmentRemarks}>
+                      <p className="mt-0.5 sm:mt-1 text-[8px] sm:text-[10px] text-slate-500 truncate max-w-[60px] sm:max-w-[120px]" title={ded.managementAdjustmentRemarks}>
                         {ded.managementAdjustmentRemarks}
                       </p>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-right font-black text-emerald-700 text-sm">
+                  <td className="whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right font-black text-emerald-700 text-xs md:text-sm">
                     {netPayable !== null ? (
                       <button
                         onClick={() => setCalculationDetailsRow(row)}
-                        className="rounded-lg px-2 py-1.5 hover:bg-emerald-50 hover:underline transition-all"
+                        className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 hover:bg-emerald-50 hover:underline transition-all text-xs md:text-sm"
                         title="View detailed calculation breakdown"
                       >
                         {formatINR(netPayable)}
@@ -633,6 +623,14 @@ export default function SalaryPage() {
           totalDays={calculationDetailsRow.deduction?.daysInMonth}
         />
       )}
+
+      {/* Employee Drawer */}
+      <EmployeeDrawer
+        isOpen={!!drawerEmployee}
+        onClose={() => setDrawerEmployee(null)}
+        employee={drawerEmployee}
+        month={month}
+      />
     </div>
   );
 }

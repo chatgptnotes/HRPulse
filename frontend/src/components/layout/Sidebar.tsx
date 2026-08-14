@@ -25,16 +25,27 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   const { user, logout } = useAuth();
 
   return (
+    <>
+      {/* Mobile backdrop — only when the drawer is open on small screens */}
+      {!collapsed && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 sm:hidden"
+          onClick={onToggle}
+          aria-hidden="true"
+        />
+      )}
     <aside
       className={clsx(
-        'flex flex-col min-h-screen bg-gradient-to-b from-[#081329] to-[#0a1933] transition-all duration-200 flex-shrink-0 shadow-2xl',
-        collapsed ? 'w-16' : 'w-16 sm:w-64'
+        'flex flex-col bg-gradient-to-b from-[#081329] to-[#0a1933] transition-all duration-200 flex-shrink-0 shadow-2xl',
+        collapsed ? 'w-12' : 'w-64 sm:w-48',
+        'max-sm:fixed max-sm:inset-y-0 max-sm:left-0 max-sm:top-0 max-sm:z-50 max-sm:h-full sm:min-h-screen',
+        collapsed && 'max-sm:-translate-x-full max-sm:shadow-none'
       )}
     >
       {/* Logo */}
       <div className={clsx('flex items-center h-16 border-b border-white/10', collapsed ? 'justify-center px-2' : 'px-5 gap-3')}>
         {!collapsed && (
-          <div className="hidden items-center gap-2.5 flex-1 min-w-0 sm:flex">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/30">
               <span className="material-icons text-white text-lg">corporate_fare</span>
             </div>
@@ -76,7 +87,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       {/* Nav */}
       <nav className="flex-1 py-4 px-3 space-y-1">
         {!collapsed && (
-          <p className="hidden text-xs font-semibold text-slate-500 uppercase tracking-widest px-3 pb-2 sm:block">Main Menu</p>
+          <p className="block text-xs font-semibold text-slate-500 uppercase tracking-widest px-3 pb-2">Main Menu</p>
         )}
         {links.map(l => (
           <NavLink
@@ -97,7 +108,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             {({ isActive }) => (
               <>
                 <span className={clsx('material-icons text-xl flex-shrink-0 transition-transform', isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200')}>{l.icon}</span>
-                {!collapsed && <span className="hidden truncate sm:inline">{l.label}</span>}
+                {!collapsed && <span className="truncate">{l.label}</span>}
               </>
             )}
           </NavLink>
@@ -125,13 +136,13 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             {({ isActive }) => (
               <>
                 <span className={clsx('material-icons text-xl flex-shrink-0', isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200')}>{l.icon}</span>
-                {!collapsed && <span className="hidden truncate sm:inline">{l.label}</span>}
+                {!collapsed && <span className="truncate">{l.label}</span>}
               </>
             )}
           </NavLink>
         ))}
         {!collapsed && (
-          <div className="hidden px-3 pt-3 items-center gap-2 sm:flex">
+          <div className="flex px-3 pt-3 items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50" />
             <span className="text-xs text-slate-400">System Online</span>
           </div>
@@ -139,7 +150,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
 
         <div className="mt-auto pt-4 border-t border-white/10">
           {!collapsed && user && (
-            <div className="hidden px-3 pb-3 items-center gap-3 sm:flex">
+            <div className="flex px-3 pb-3 items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-sm font-semibold shadow-lg shadow-purple-500/30">
                 {user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U'}
               </div>
@@ -163,5 +174,6 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
         </div>
       </div>
     </aside>
+    </>
   );
 }

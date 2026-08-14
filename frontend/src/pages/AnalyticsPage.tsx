@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   LineChart, Line,
 } from 'recharts';
-import { getAnalyticsOverview, getAnalyticsTrends, getMonthlyComparison, getUploads } from '../api';
+import { getAnalyticsOverview, getAnalyticsTrends, getMonthlyComparison, getUploads, getEmployees, getSalaryConfigs, getSalaryDeductions } from '../api';
+import SalaryStatsGrid from '../components/salary/SalaryStatsGrid';
+import PayrollSummaryBar from '../components/salary/PayrollSummaryBar';
 
 const STATUS_COLORS: Record<string, string> = {
   Absent: '#ef4444',
@@ -50,6 +52,61 @@ export default function AnalyticsPage() {
     enabled: !!selectedUploadId,
   });
 
+  // Salary data queries
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => getEmployees().then(r => r.data as any[]),
+  });
+
+  const { data: configs = [] } = useQuery({
+    queryKey: ['salary-configs'],
+    queryFn: () => getSalaryConfigs().then(r => r.data as any[]),
+  });
+
+  const { data: salaryUploads = [] } = useQuery({
+    queryKey: ['uploads'],
+    queryFn: () => getUploads().then(r => r.data as any[]),
+  });
+
+  // Get latest upload for deductions
+  const latestUpload = salaryUploads.find((u: any) => Number(u.rowCount ?? 0) > 0) || salaryUploads[0];
+
+  const { data: deductions = [] } = useQuery({
+    queryKey: ['deductions', latestUpload?.id],
+    queryFn: () => getSalaryDeductions(latestUpload!.id).then(r => r.data as any[]),
+    enabled: !!latestUpload?.id,
+  });
+
+  // Calculate salary summary
+  const salarySummary = useMemo(() => {
+    if (!employees.length || !deductions.length || !configs.length) return null;
+
+    const deductionMap = new Map(deductions.map((d: any) => [d.employeeId, d]));
+    const configMap = new Map(configs.map((c: any) => [c.employeeId, c]));
+
+    const rows = employees.map(emp => {
+      const deduction = deductionMap.get(emp.id);
+      const config = configMap.get(emp.id);
+      const hasAttendance = deduction && Number(deduction.presentDays || 0) > 0;
+      const hasSalary = Number(config?.basicSalary || 0) > 0;
+      const hasLop = Number(deduction?.lopAmount || 0) > 0;
+      const hasExtraPay = Number(deduction?.extraPayment || 0) > 0;
+      return { emp, deduction, config, hasAttendance, hasSalary, hasLop, hasExtraPay };
+    });
+
+    return {
+      total: rows.length,
+      attendance: rows.filter(row => row.hasAttendance).length,
+      lop: rows.filter(row => row.hasLop).length,
+      extraPay: rows.filter(row => row.hasExtraPay).length,
+      missingSalary: rows.filter(row => !row.hasSalary).length,
+      totalPayroll: rows.reduce((sum, row) => sum + Number(row.config?.basicSalary || 0), 0),
+      netPayable: rows.reduce((sum, row) => sum + Number(row.deduction?.netPayable || 0), 0),
+      totalExtraPay: rows.reduce((sum, row) => sum + Number(row.deduction?.extraPayment || 0), 0),
+      totalLopAmount: rows.reduce((sum, row) => sum + Number(row.deduction?.lopAmount || 0), 0),
+    };
+  }, [employees, deductions, configs]);
+
   const pieData = trends?.byStatus
     ? Object.entries(trends.byStatus as Record<string, number>).map(([name, value]) => ({ name, value }))
     : [];
@@ -68,6 +125,19 @@ export default function AnalyticsPage() {
         <StatCard label="Emails Generated" value={overview?.totalEmails ?? '—'} icon="drafts" color="bg-amber-500" />
         <StatCard label="Emails Sent" value={overview?.totalSent ?? '—'} icon="mark_email_read" color="bg-green-500" />
       </div>
+
+      {/* Salary & Attendance Stats */}
+      {salarySummary && (
+        <>
+          <SalaryStatsGrid summary={salarySummary} />
+          <PayrollSummaryBar
+            totalPayroll={salarySummary.totalPayroll}
+            netPayable={salarySummary.netPayable}
+            totalExtraPay={salarySummary.totalExtraPay}
+            totalLopAmount={salarySummary.totalLopAmount}
+          />
+        </>
+      )}
 
       {/* Monthly comparison */}
       {monthly && monthly.length > 0 && (

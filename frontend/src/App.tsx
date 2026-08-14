@@ -21,7 +21,17 @@ function AppShell() {
   return (
     <div className="flex min-h-screen bg-slate-100">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
+      {collapsed && (
+        <button
+          onClick={() => setCollapsed(c => !c)}
+          className="fixed left-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg sm:hidden"
+          aria-label="Open menu"
+        >
+          <span className="material-icons text-lg">menu</span>
+        </button>
+      )}
       <main className="flex-1 overflow-auto min-w-0">
+        <div className="mx-auto w-full max-w-[1600px]">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/salary" element={<SalaryPage />} />
@@ -32,6 +42,7 @@ function AppShell() {
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/sops" element={<SopsPage />} />
         </Routes>
+        </div>
       </main>
     </div>
   );
