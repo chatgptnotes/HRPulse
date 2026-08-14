@@ -45,11 +45,11 @@ router.post('/', async (req: Request, res: Response) => {
         mobile: mobile || null,
         branch: branch || null,
         status: status || 'Active',
-        monthlySalary: basicSalary ? Number(basicSalary) : null,
-        eligibleForPaidLeaves: eligibleForPaidLeaves !== false,
-        eligibleForOvertime: eligibleForOvertime === true,
+        monthly_salary: basicSalary ? Number(basicSalary) : null,
+        eligible_for_paid_leaves: eligibleForPaidLeaves !== false,
+        eligible_for_overtime: eligibleForOvertime === true,
         organisation: organisation || null,
-        biometricName: biometricName || null,
+        biometric_name: biometricName || null,
       },
     });
     res.json(emp);
