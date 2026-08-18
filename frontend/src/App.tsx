@@ -13,11 +13,14 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import EmployeesPage from './pages/EmployeesPage';
 import RulesPage from './pages/RulesPage';
 import SopsPage from './pages/SopsPage';
+import RulesEngineDashboard from './pages/RulesEngineDashboard';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
 
 function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
+  const { user } = useAuth();
+
   return (
     <div className="flex min-h-screen bg-slate-100">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
@@ -31,17 +34,23 @@ function AppShell() {
         </button>
       )}
       <main className="flex-1 overflow-auto min-w-0">
-        <div className="mx-auto w-full max-w-[1600px]">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/salary" element={<SalaryPage />} />
-          <Route path="/history" element={<HistoryPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/employees" element={<EmployeesPage />} />
-          <Route path="/rules" element={<RulesPage />} />
-          <Route path="/sops" element={<SopsPage />} />
-        </Routes>
+        <div className="mx-auto w-full max-w-[1920px]">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/salary" element={<SalaryPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/employees" element={<EmployeesPage />} />
+            <Route path="/rules" element={<RulesPage />} />
+            <Route path="/sops" element={<SopsPage />} />
+            <Route
+              path="/rules-engine"
+              element={
+                user?.role === 'admin' ? <RulesEngineDashboard /> : <Navigate to="/" replace />
+              }
+            />
+          </Routes>
         </div>
       </main>
     </div>
@@ -65,6 +74,24 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+/**
+ * Gate admin-only pages behind role check
+ */
+function RequireAdmin({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-100">
+        <p className="text-sm text-slate-500">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'admin') return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 

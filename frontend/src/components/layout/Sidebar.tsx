@@ -12,6 +12,10 @@ const links = [
   { to: '/sops', label: 'SOPs', icon: 'description', end: false },
 ];
 
+const adminLinks = [
+  { to: '/rules-engine', label: 'Rules Engine', icon: 'settings_suggest', end: false },
+];
+
 const bottomLinks = [
   { to: '/settings', label: 'Settings', icon: 'settings', end: false },
 ];
@@ -113,6 +117,39 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             )}
           </NavLink>
         ))}
+
+        {/* Admin-only links */}
+        {user?.role === 'admin' && (
+          <>
+            {!collapsed && (
+              <p className="block text-xs font-semibold text-slate-500 uppercase tracking-widest px-3 pb-2 pt-4">Administration</p>
+            )}
+            {adminLinks.map(l => (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                end={l.end}
+                title={collapsed ? l.label : undefined}
+                className={({ isActive }) =>
+                  clsx(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
+                    collapsed && 'justify-center px-2',
+                    isActive
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30 relative overflow-hidden'
+                      : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <span className={clsx('material-icons text-xl flex-shrink-0 transition-transform', isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200')}>{l.icon}</span>
+                    {!collapsed && <span className="truncate">{l.label}</span>}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </>
+        )}
       </nav>
 
       {/* Bottom */}

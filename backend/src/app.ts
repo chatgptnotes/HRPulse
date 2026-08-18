@@ -15,6 +15,7 @@ import authRoutes from './routes/auth';
 import { requireAuth, requireAuthOrIngestKey } from './middleware/auth';
 import analyticsRoutes from './routes/analytics';
 import shiftRoutes from './routes/shifts';
+import rulesEngineRoutes from './routes/rulesEngine';
 
 // Local development accepts the root .env first, with .env.local and
 // backend/.env also supported. Existing process environment variables always
@@ -64,6 +65,7 @@ app.use('/api/rules', rulesRoutes);
 app.use('/api/punches', punchesRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/shifts', shiftRoutes);
+app.use('/api/rules-engine', rulesEngineRoutes);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString(), db: 'postgresql' }));
 

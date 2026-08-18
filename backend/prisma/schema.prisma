@@ -463,3 +463,329 @@ model AiInsight {
 
   @@map("ai_insights")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RULES ENGINE - Enterprise Dynamic Rule Management System
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Organize rules by business function and department
+model RuleCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  icon        String?  // For UI display (material-icons name)
+  color       String?  // For UI display (Tailwind color class)
+  parentId    Int?     @map("parent_id")  // Support hierarchical categories
+  parent      RuleCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  subcategories RuleCategory[] @relation("CategoryHierarchy")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rules       Rule[]
+
+  @@map("rule_categories")
+  @@index([isActive])
+  @@index([parentId])
+}
+
+/// Main rule definitions for all business logic
+model Rule {
+  id            Int      @id @default(autoincrement())
+  name          String
+  description   String?
+  categoryId    Int      @map("category_id")
+  category      RuleCategory @relation(fields: [categoryId], references: [id])
+
+  // Rule classification
+  ruleType      String   @map("rule_type")  // 'attendance', 'payroll', 'leave', 'hr', 'hospital', 'incentive', 'notification', 'compliance', 'custom'
+
+  // Execution control
+  isActive      Boolean  @default(true) @map("is_active")
+  priority      Int      @default(0)
+  executionMode String   @default("sync") @map("execution_mode")  // 'sync', 'async'
+
+  // Metadata
+  createdBy     String   @map("created_by")
+  modifiedBy     String?  @map("modified_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  conditions    RuleCondition[]
+  actions       RuleAction[]
+  versions      RuleVersion[]
+  approvals     RuleApproval[]
+  permissions   RulePermission[]
+  schedules     RuleSchedule[]
+  logs          RuleExecutionLog[]
+
+  @@map("rules")
+  @@index([categoryId])
+  @@index([ruleType])
+  @@index([isActive])
+  @@index([priority])
+}
+
+/// Rule conditions - IF/AND/OR logic with support for nested groups
+model RuleCondition {
+  id            Int      @id @default(autoincrement())
+  ruleId        Int      @map("rule_id")
+  rule          Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  // Condition structure for nested/grouped conditions
+  parentId      Int?     @map("parent_id")  // For nested conditions
+  parent        RuleCondition? @relation("ConditionTree", fields: [parentId], references: [id])
+  children      RuleCondition[] @relation("ConditionTree")
+
+  logicalOperator String? @map("logical_operator")  // 'AND', 'OR' - for groups
+
+  // Actual condition (leaf nodes)
+  field         String   // e.g., 'attendance.workingHours', 'employee.designation'
+  operator      String   // 'eq', 'ne', 'gt', 'lt', 'gte', 'lte', 'contains', 'notContains', 'startsWith', 'endsWith', 'in', 'notIn', 'between'
+  value         String   @db.Text  // JSON serialized value for complex types
+  valueType     String   @map("value_type")  // 'string', 'number', 'boolean', 'date', 'list', 'json'
+
+  displayOrder  Int      @map("display_order")
+
+  @@map("rule_conditions")
+  @@index([ruleId])
+  @@index([parentId])
+}
+
+/// Rule actions - THEN logic with multiple action types
+model RuleAction {
+  id            Int      @id @default(autoincrement())
+  ruleId        Int      @map("rule_id")
+  rule          Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  // Action structure for grouping
+  groupId       Int?     @map("group_id")  // For grouping multiple actions
+
+  actionType    String   @map("action_type")  // 'set', 'add', 'subtract', 'multiply', 'divide', 'sendNotification', 'approve', 'reject', 'calculate', 'validate'
+  targetField   String?  @map("target_field")  // What field to affect
+
+  // Action parameters
+  value         String?  @db.Text  // JSON serialized for complex values
+  valueType     String?  @map("value_type")  // 'fixed', 'fieldReference', 'formula', 'percentage'
+
+  formula       String?  @db.Text  // For calculation actions
+  amount        Decimal? @db.Decimal(10, 2)
+  percent       Decimal? @db.Decimal(5, 2)  @map("percent")
+
+  // Notification actions
+  notificationTemplate String?  @map("notification_template")
+  notificationRecipients String? @map("notification_recipients")  // JSON array
+
+  // Constraints
+  minValue      Decimal? @map("min_value")
+  maxValue      Decimal? @map("max_value")
+  roundTo       Int?     @map("round_to")  // Decimal places
+
+  displayOrder  Int      @map("display_order")
+
+  @@map("rule_actions")
+  @@index([ruleId])
+  @@index([groupId])
+}
+
+/// Version history with rollback capability
+model RuleVersion {
+  id            Int      @id @default(autoincrement())
+  ruleId        Int      @map("rule_id")
+  rule          Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  versionNumber Int      @map("version_number")
+
+  // Complete rule snapshot
+  name          String
+  description   String?
+  conditions    Json     // Full conditions tree
+  actions       Json     // Full actions array
+
+  // Metadata
+  changeSummary String?  @map("change_summary")
+  modifiedBy    String   @map("modified_by")
+  modifiedAt    DateTime @default(now()) @map("modified_at")
+
+  // Approval status
+  approvalStatus String? @map("approval_status")  // 'pending', 'approved', 'rejected'
+  approvedBy    String?  @map("approved_by")
+  approvedAt    DateTime? @map("approved_at")
+  rejectionReason String? @map("rejection_reason")
+
+  isRollback    Boolean  @default(false) @map("is_rollback")
+
+  @@map("rule_versions")
+  @@index([ruleId])
+  @@index([versionNumber])
+  @@unique([ruleId, versionNumber])
+}
+
+/// Approval workflow for rule changes
+model RuleApproval {
+  id            Int      @id @default(autoincrement())
+  ruleId        Int      @map("rule_id")
+  rule          Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  // Request details
+  requestedBy   String   @map("requested_by")
+  requestedAt   DateTime @default(now()) @map("requested_at")
+  requestType   String   @map("request_type")  // 'create', 'update', 'activate', 'deactivate', 'delete'
+
+  // Change details
+  changeSummary String?  @map("change_summary")
+  changes       Json?    // Detailed diff
+
+  // Approval details
+  approvalLevel Int      @default(1) @map("approval_level")
+  requiredApprovals Int  @default(1) @map("required_approvals")
+  currentApprovals Int   @default(0) @map("current_approvals")
+
+  // Status
+  status        String   @default("pending")  // 'pending', 'approved', 'rejected', 'cancelled'
+
+  // Approval chain
+  approvers     Json     // Array of required approvers
+  approvals     Json?    // Array of completed approvals
+
+  // Final decision
+  approvedBy    String?  @map("approved_by")
+  approvedAt    DateTime? @map("approved_at")
+  rejectionReason String? @map("rejection_reason")
+
+  @@map("rule_approvals")
+  @@index([ruleId])
+  @@index([status])
+  @@index([requestedBy])
+}
+
+/// Role-based access control for rules
+model RulePermission {
+  id            Int      @id @default(autoincrement())
+  ruleId        Int      @map("rule_id")
+  rule          Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  role          String   // 'admin', 'hr_manager', 'payroll_manager', 'department_head', 'viewer'
+  permissions   Json     // ['view', 'create', 'edit', 'delete', 'activate', 'test']
+
+  grantedBy     String   @map("granted_by")
+  grantedAt     DateTime @default(now()) @map("granted_at")
+
+  @@map("rule_permissions")
+  @@index([ruleId])
+  @@index([role])
+}
+
+/// Complete audit trail of rule executions
+model RuleExecutionLog {
+  id            Int      @id @default(autoincrement())
+  ruleId        Int      @map("rule_id")
+  rule          Rule     @relation(fields: [ruleId], references: [id])
+
+  // Execution context
+  employeeId    Int?     @map("employee_id")
+  entityType   String?  @map("entity_type")  // 'employee', 'attendance', 'leave', 'payroll', etc.
+  entityId      Int?     @map("entity_id")
+
+  // Execution details
+  executedAt    DateTime @default(now()) @map("executed_at")
+  executionDuration Int? @map("execution_duration")  // milliseconds
+  triggerSource String?  @map("trigger_source")  // 'manual', 'scheduled', 'api', 'batch_job'
+
+  // Input/Output
+  inputData     Json?    @map("input_data")
+  outputData    Json?    @map("output_data")
+  matchedConditions Json? @map("matched_conditions")
+  executedActions Json?  @map("executed_actions")
+
+  // Result
+  status        String   // 'success', 'failed', 'partial', 'skipped'
+  errorMessage  String?  @map("error_message")
+  errorCode     String?  @map("error_code")
+
+  // Metadata
+  executedBy    String?  @map("executed_by")  // System or user who triggered
+  batchId       String?  @map("batch_id")     // For grouping related executions
+
+  @@map("rule_execution_logs")
+  @@index([ruleId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([executedAt])
+  @@index([entityType, entityId])
+}
+
+/// Scheduled rule execution configuration
+model RuleSchedule {
+  id            Int      @id @default(autoincrement())
+  ruleId        Int      @map("rule_id")
+  rule          Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  name          String
+  description   String?
+
+  // Schedule configuration
+  scheduleType  String   @map("schedule_type")  // 'cron', 'interval', 'event'
+  cronExpression String? @map("cron_expression")
+  intervalMinutes Int?    @map("interval_minutes")
+  eventType     String?  @map("event_type")     // 'attendance_processed', 'leave_approved', etc.
+
+  // Execution settings
+  isActive      Boolean  @default(true) @map("is_active")
+  runAsynchronously Boolean @default(false) @map("run_asynchronously")
+
+  // Timezone and constraints
+  timezone      String   @default("UTC")
+  startDate     DateTime? @map("start_date")
+  endDate       DateTime? @map("end_date")
+
+  // Last/Next execution
+  lastExecutedAt DateTime? @map("last_executed_at")
+  nextExecutionAt DateTime? @map("next_execution_at")
+
+  // Metadata
+  createdBy     String   @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("rule_schedules")
+  @@index([ruleId])
+  @@index([isActive])
+  @@index([nextExecutionAt])
+}
+
+/// Track AI-generated rules with feedback loop
+model AIRuleGenerationHistory {
+  id            Int      @id @default(autoincrement())
+  ruleId        Int?     @map("rule_id")  // Null if rule wasn't saved
+
+  // Input
+  naturalLanguageQuery String @map("natural_language_query") @db.Text
+  clarifyingQuestions Json?  @map("clarifying_questions")
+  userAnswers     Json?    @map("user_answers")
+
+  // Generation details
+  aiProvider    String   @map("ai_provider")  // 'openai', 'claude', 'gemini'
+  modelUsed     String   @map("model_used")
+  tokensUsed    Int      @map("tokens_used")
+  cost          Decimal? @db.Decimal(8, 4)
+
+  // Output
+  generatedRule Json     @map("generated_rule")
+  wasModified    Boolean @default(false) @map("was_modified")
+  wasSaved       Boolean @default(false) @map("was_saved")
+
+  // Feedback
+  userRating    Int?     @map("user_rating")  // 1-5 stars
+  userFeedback  String?  @map("user_feedback") @db.Text
+
+  // Metadata
+  requestedBy   String   @map("requested_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("ai_rule_generation_history")
+  @@index([ruleId])
+  @@index([requestedBy])
+  @@index([createdAt])
+}
