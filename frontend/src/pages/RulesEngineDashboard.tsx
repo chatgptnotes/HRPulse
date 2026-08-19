@@ -1,13 +1,19 @@
 /**
  * Rules Engine Dashboard — enterprise rule management shell.
  *
- * KPI cards + navigation tabs. Each tab is a dedicated component under
- * components/rules/. All data flows through the Supabase data layer
- * (api/rulesEngine.ts) via react-query.
+ * Premium SaaS visual system (Linear / Stripe / Keka inspired):
+ *  - Inter Bold 32px page heading, refined subtitle
+ *  - KPI cards with soft circular icon backgrounds and bold 28px values
+ *  - Modern tabs with blue underline active state and smooth transitions
+ *  - Consistent 14–16px radii, subtle shadows, generous whitespace
+ *
+ * All data flows through the Supabase data layer (api/rulesEngine.ts)
+ * via react-query. Structure and functionality unchanged.
  */
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import clsx from 'clsx';
 import { fetchKpis } from '../api/rulesEngine';
 import RuleManagementTab from '../components/rules/RuleManagementTab';
 import CategoriesTab from '../components/rules/CategoriesTab';
@@ -29,17 +35,26 @@ const TABS: Array<{ id: TabId; label: string; icon: string }> = [
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
-function KpiCard({ icon, label, value, color, accent }: { icon: string; label: string; value: number; color: string; accent: string }) {
+/** Soft tinted icon chip — one per KPI, no gradients. */
+const KPI_TONES = {
+  total:    'bg-[#EFF6FF] text-[#2563EB]',
+  active:   'bg-[#DCFCE7] text-[#16A34A]',
+  inactive: 'bg-[#F3F4F6] text-[#6B7280]',
+  executed: 'bg-[#EFF6FF] text-[#2563EB]',
+  failed:   'bg-[#FEE2E2] text-[#EF4444]',
+  pending:  'bg-[#FFFBEB] text-[#F59E0B]',
+} as const;
+
+function KpiCard({ icon, label, value, tone }: { icon: string; label: string; value: number; tone: string }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/70 p-5 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all">
-      <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm`}>
-        <span className="material-icons text-white text-2xl">{icon}</span>
+    <div className="group flex items-center gap-4 rounded-[14px] border border-[#E5E7EB] bg-white p-5 shadow-[0px_2px_10px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0px_8px_20px_rgba(0,0,0,0.08)]">
+      <div className={clsx('flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105', tone)}>
+        <span className="material-icons text-[24px]">{icon}</span>
       </div>
       <div className="min-w-0">
-        <p className="text-2xl sm:text-3xl font-bold text-slate-800 leading-tight">{value.toLocaleString()}</p>
-        <p className="text-sm text-slate-500 truncate">{label}</p>
+        <p className="text-[28px] font-bold leading-none tracking-tight text-[#111827]">{value.toLocaleString()}</p>
+        <p className="mt-1.5 truncate text-[13px] text-[#6B7280]">{label}</p>
       </div>
-      <div className={`ml-auto w-1.5 h-12 rounded-full ${accent}`} aria-hidden="true" />
     </div>
   );
 }
@@ -48,13 +63,11 @@ function KpiSkeletons() {
   return (
     <>
       {[...Array(6)].map((_, i) => (
-        <div key={i} className="bg-white rounded-2xl border border-slate-200/70 p-5 animate-pulse">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-slate-200" />
-            <div className="flex-1 space-y-2.5">
-              <div className="h-7 w-16 bg-slate-200 rounded" />
-              <div className="h-3.5 w-24 bg-slate-100 rounded" />
-            </div>
+        <div key={i} className="flex items-center gap-4 rounded-[14px] border border-[#E5E7EB] bg-white p-5 shadow-[0px_2px_10px_rgba(0,0,0,0.05)]">
+          <div className="h-12 w-12 rounded-full bg-[#F3F4F6] animate-pulse" />
+          <div className="flex-1 space-y-2.5">
+            <div className="h-7 w-16 rounded bg-[#F3F4F6] animate-pulse" />
+            <div className="h-3 w-24 rounded bg-[#F8FAFC] animate-pulse" />
           </div>
         </div>
       ))}
@@ -77,77 +90,89 @@ export default function RulesEngineDashboard() {
   const migrationMissing = kpiError && /relation|does not exist|PGRST|Could not find/i.test(String((kpiError as Error).message));
 
   return (
-    <div className="w-full min-w-0 p-4 sm:p-6 lg:p-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 lg:mb-8">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-            <span className="material-icons text-white text-2xl">settings_suggest</span>
+    <div className="w-full min-w-0 bg-[#F8FAFC] p-4 sm:p-6 lg:p-10">
+      {/* ─── Header ─── */}
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:mb-10">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[16px] bg-[#2563EB] shadow-[0px_4px_12px_rgba(37,99,235,0.25)]">
+            <span className="material-icons text-white text-[28px]">settings_suggest</span>
           </div>
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Rules Engine</h1>
-            <p className="text-slate-500 text-sm sm:text-base mt-0.5">Dynamic business rule management — create, test, audit and deploy rules without code</p>
+            <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[#111827]">Rules Engine</h1>
+            <p className="mt-1 text-[14px] text-[#6B7280]">Dynamic business rule management — create, test, audit and deploy rules without code</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-slate-500 shrink-0">
-          <span className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium border border-emerald-200/60">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-3.5 py-2 text-[13px] font-medium text-[#16A34A] shadow-[0px_2px_10px_rgba(0,0,0,0.05)]">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#16A34A] opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#16A34A]" />
+            </span>
             Engine Online
           </span>
         </div>
       </div>
 
-      {/* Migration missing banner */}
+      {/* ─── Migration missing banner ─── */}
       {migrationMissing && (
-        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5 text-sm sm:text-base text-amber-900">
-          <p className="font-semibold flex items-center gap-2">
-            <span className="material-icons text-xl">warning</span>
+        <div className="mb-8 rounded-[14px] border border-[#F59E0B]/30 bg-[#FFFBEB] p-5 text-[13px] leading-relaxed text-[#92400E]">
+          <p className="flex items-center gap-2 text-[14px] font-semibold">
+            <span className="material-icons text-[20px] text-[#F59E0B]">warning</span>
             Rules Engine tables are not created yet
           </p>
-          <p className="mt-2 leading-relaxed">
-            Apply <code className="px-1.5 py-0.5 bg-amber-100 rounded text-sm">supabase/migrations/20260818_rules_engine.sql</code> in the
+          <p className="mt-2">
+            Apply <code className="rounded bg-[#F59E0B]/10 px-1.5 py-0.5 text-[12px]">supabase/migrations/20260818_rules_engine.sql</code> in the
             Supabase Dashboard → <strong>SQL Editor</strong> → paste → <strong>Run</strong>. This creates all 11 rule tables, seeds the
             16 categories and 5 starter rules. Refresh this page afterwards.
           </p>
         </div>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6 lg:mb-8">
+      {/* ─── KPI Cards ─── */}
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 lg:mb-10">
         {isLoading ? (
           <KpiSkeletons />
         ) : (
           <>
-            <KpiCard icon="rule" label="Total Rules" value={kpis?.totalRules ?? 0} color="bg-gradient-to-br from-blue-500 to-blue-600" accent="bg-blue-400" />
-            <KpiCard icon="check_circle" label="Active Rules" value={kpis?.activeRules ?? 0} color="bg-gradient-to-br from-emerald-500 to-emerald-600" accent="bg-emerald-400" />
-            <KpiCard icon="block" label="Inactive Rules" value={kpis?.inactiveRules ?? 0} color="bg-gradient-to-br from-slate-400 to-slate-500" accent="bg-slate-300" />
-            <KpiCard icon="bolt" label="Executed Today" value={kpis?.executedToday ?? 0} color="bg-gradient-to-br from-purple-500 to-purple-600" accent="bg-purple-400" />
-            <KpiCard icon="error" label="Failed Executions" value={kpis?.failedToday ?? 0} color="bg-gradient-to-br from-red-500 to-red-600" accent="bg-red-400" />
-            <KpiCard icon="pending_actions" label="Pending Approval" value={kpis?.pendingApprovals ?? 0} color="bg-gradient-to-br from-amber-500 to-amber-600" accent="bg-amber-400" />
+            <KpiCard icon="rule" label="Total Rules" value={kpis?.totalRules ?? 0} tone={KPI_TONES.total} />
+            <KpiCard icon="check_circle" label="Active Rules" value={kpis?.activeRules ?? 0} tone={KPI_TONES.active} />
+            <KpiCard icon="block" label="Inactive Rules" value={kpis?.inactiveRules ?? 0} tone={KPI_TONES.inactive} />
+            <KpiCard icon="bolt" label="Executed Today" value={kpis?.executedToday ?? 0} tone={KPI_TONES.executed} />
+            <KpiCard icon="error" label="Failed Executions" value={kpis?.failedToday ?? 0} tone={KPI_TONES.failed} />
+            <KpiCard icon="pending_actions" label="Pending Approval" value={kpis?.pendingApprovals ?? 0} tone={KPI_TONES.pending} />
           </>
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm overflow-hidden">
-        <div className="flex overflow-x-auto border-b border-slate-100 [scrollbar-width:thin]">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2.5 px-4 sm:px-5 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-purple-600 text-purple-700 bg-purple-50/50'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-              }`}
-            >
-              <span className="material-icons text-xl">{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
+      {/* ─── Tabs + content ─── */}
+      <div className="overflow-hidden rounded-[16px] border border-[#E5E7EB] bg-white shadow-[0px_2px_10px_rgba(0,0,0,0.05)]">
+        <div className="flex overflow-x-auto border-b border-[#E5E7EB] bg-white [scrollbar-width:thin]">
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={clsx(
+                  'relative flex items-center gap-2 whitespace-nowrap px-4 py-4 text-[13px] font-medium transition-colors duration-200 sm:px-5',
+                  isActive ? 'text-[#2563EB]' : 'text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]',
+                )}
+              >
+                <span className="material-icons text-[18px]">{tab.icon}</span>
+                {tab.label}
+                {/* blue underline indicator with smooth slide */}
+                <span
+                  className={clsx(
+                    'absolute inset-x-0 -bottom-px h-[2px] rounded-full transition-all duration-200',
+                    isActive ? 'bg-[#2563EB] opacity-100' : 'bg-transparent opacity-0',
+                  )}
+                />
+              </button>
+            );
+          })}
         </div>
 
-        <div className="p-4 sm:p-5 lg:p-6">
+        <div className="bg-[#F8FAFC]/60 p-4 sm:p-5 lg:p-6">
           {activeTab === 'rules' && <RuleManagementTab onChanged={kpiRefetch} />}
           {activeTab === 'categories' && <CategoriesTab onChanged={kpiRefetch} />}
           {activeTab === 'logs' && <LogsTab />}

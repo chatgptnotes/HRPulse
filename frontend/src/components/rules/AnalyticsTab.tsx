@@ -54,7 +54,7 @@ export default function AnalyticsTab() {
       ) : (
         <div className="space-y-4">
           {/* Summary strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { label: 'Total Executions', value: data.executionsByDay.reduce((a, b) => a + b.total, 0).toLocaleString(), icon: 'bolt', tone: 'text-purple-600 bg-purple-50' },
               { label: 'Failures', value: data.executionsByDay.reduce((a, b) => a + b.failed, 0).toLocaleString(), icon: 'error', tone: 'text-red-600 bg-red-50' },

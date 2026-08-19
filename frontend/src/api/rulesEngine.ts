@@ -769,7 +769,24 @@ export async function generateRuleWithAI(instruction: string, answers?: Record<s
   const client = requireClient();
   const { data, error } = await client.functions.invoke('rules-engine-ai', { body: { instruction, answers: answers ?? undefined } });
   if (error) {
-    throw new Error(`AI generator unavailable (${error.message}). Deploy the edge function: supabase functions deploy rules-engine-ai`);
+    // Surface the server's own message (FunctionsError keeps the response
+    // body in `context`) instead of always showing a generic deploy hint.
+    // The hint is only appropriate when the function genuinely does not exist.
+    const detail: any = (error as any)?.context;
+    const serverMessage =
+      detail && typeof detail === 'object' && typeof detail.error === 'string'
+        ? detail.error
+        : typeof detail === 'string' && detail.trim()
+          ? detail.trim().slice(0, 300)
+          : '';
+    const isMissing = /not found|404|failed to fetch|network/i.test(error.message);
+    throw new Error(
+      serverMessage
+        ? `AI generator error: ${serverMessage}`
+        : isMissing
+          ? `AI generator unavailable (${error.message}). Deploy the edge function: supabase functions deploy rules-engine-ai`
+          : `AI generator unavailable (${error.message})`,
+    );
   }
   if (!data || typeof data !== 'object') throw new Error('AI generator returned an unexpected response');
   if (data.status === 'clarify') return { status: 'clarify', questions: data.questions };

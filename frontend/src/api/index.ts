@@ -32,12 +32,16 @@ const HALF_DAY_HOURS = 4;
 // Lateness costs nothing anywhere any more — pay follows the days a person is
 // entitled to, and a late arrival is still a day worked. The count is kept for
 // reporting, and hidden outright for the months listed here.
-const LATE_COUNT_HIDDEN_MONTHS = new Set(['2026-07']);
+// The July 2026 late waiver was lifted so Rules Engine late-based rules
+// (e.g. "Late Arrival - Rs500 Salary Deduction") can apply and be visible.
+// Add months back here only to waive again; keep hiding display-only.
+const LATE_COUNT_HIDDEN_MONTHS = new Set<string>([]);
 
 // The status vocabulary now lives in lib/status.ts so the salary attribution can
 // use it without importing this module. Re-exported here because callers of the
 // api module have always got canonicalStatus from it.
 import { canonicalStatus, statusIsOneOf } from '../lib/status';
+import { fetchActivePayrollRules, evaluatePayrollRules, type PayrollRuleEffect } from '../lib/payrollRuleBridge';
 export { canonicalStatus, statusIsOneOf };
 
 /** Employee numbers are compared folded, so EMP-001 and emp-001 are one person. */
@@ -692,7 +696,7 @@ export const getSalaryDeductions = async (uploadId: number) => {
   const payrollRows = rows.filter((row: any) => !Number.isNaN(new Date(`${String(row.record_date).slice(0, 10)}T00:00:00Z`).getTime()));
   const ids = [...new Set(rows.map((row: any) => row.employee_id))];
   if (!ids.length) return { data: [] };
-  const salaries = await client.from('employees').select('id,name,email,department,organisation,entity,eligible_for_paid_leaves,monthly_salary,contracted_hours').in('id', ids);
+  const salaries = await client.from('employees').select('id,name,email,department,organisation,entity,designation,branch,status,eligible_for_paid_leaves,monthly_salary,contracted_hours').in('id', ids);
   if (salaries.error) throw new Error(salaries.error.message);
   const salaryMap = new Map<number, number>();
   // The contracted shift comes from the staff sheet. A completed shift is a
@@ -792,6 +796,11 @@ export const getSalaryDeductions = async (uploadId: number) => {
     // what counts as an extra shift below, but no longer what counts as half a day.
     const halfBelow = halfDayHours;
     const hours = row.work_hours === null || row.work_hours === undefined ? null : Number(row.work_hours);
+    // Monthly fuel for the Rules Engine context (attendance.workingHours).
+    if (hours !== null) {
+      item.totalWorkHours = (item.totalWorkHours || 0) + hours;
+      item.daysWithHours = (item.daysWithHours || 0) + 1;
+    }
 
     if (rafttarStaff && isSunday) {
       // The weekly off is paid whether or not they came in. If they did come in,
@@ -880,7 +889,12 @@ export const getSalaryDeductions = async (uploadId: number) => {
     if (status.includes('paid leave') || status.includes('casual leave') || status.includes('sick leave')) item.paidLeaveUsed++;
     grouped.set(row.employee_id, item);
   }
-  const result = [...grouped.values()].map(item => {
+    // Active Rules Engine rules are evaluated per employee below, so their
+  // pay effects show in the salary sheet and calculation breakdowns.
+  let payrollRules: any[] = [];
+  try { payrollRules = await fetchActivePayrollRules(); } catch (e) { console.warn('[payroll] Rules Engine unavailable, skipping rule effects:', e); }
+
+const result = [...grouped.values()].map(item => {
     const basicSalary = salaryMap.get(item.employeeId) || 0;
     const dailySalary = basicSalary / 30;
     const isIt = item.itRecords > 0 || /\bit\b|information technology/i.test(`${item.department} ${item.organisation} ${item.entity}`);
@@ -945,7 +959,30 @@ export const getSalaryDeductions = async (uploadId: number) => {
     const managementAdjustmentRemarks = mgmtAdjustment ? mgmtAdjustment.remarks : null;
     // The individual amounts travel with the totals so the salary sheet can
     // explain, line by line, how the pay was arrived at.
-    return { ...counts, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: item.paidLeaveUsed, paidLeaveDays: item.paidLeaveUsed, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, daysInMonth, daysCovered, paidOffDays, payableDays, basePay, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, unusedLeaveDays, workedWeeklyOffPay, unusedLeavePay, extraPayableDays, extraPayment, overtimePayment, managementAdjustment, managementAdjustmentRemarks, netPayable: basePay + extraPayment + managementAdjustment, dailySalary, totalLopAmount, basicSalary };
+    // Rules Engine bridge — active Rules Engine rules can adjust this row's
+    // pay (deductions and bonuses) with a per-rule breakdown for payslips.
+    const ruleOutcome = payrollRules.length
+      ? evaluatePayrollRules(payrollRules, {
+          employeeName: item.employeeName, department: item.department, organisation: item.organisation,
+          designation: employeeMap.get(item.employeeId)?.designation,
+          branch: employeeMap.get(item.employeeId)?.branch,
+          employeeStatus: employeeMap.get(item.employeeId)?.status,
+          basicSalary, dailySalary, presentDays: counts.presentDays, absentDays: counts.absentDays,
+          halfDays: counts.halfDays, missedSwipeDays: counts.missedSwipeDays,
+          lateOccurrences: counts.lateOccurrences, overtimeHours: counts.overtimeHours,
+          lopDays, lopAmount: totalLopAmount, netPayable: basePay + extraPayment + managementAdjustment,
+          leaveLimit, paidLeaveUsed: item.paidLeaveUsed, workedWeeklyOffs: item.workedWeeklyOffs,
+          avgWorkingHours: item.daysWithHours ? +(item.totalWorkHours / item.daysWithHours).toFixed(2) : 0,
+          extraPayment, overtimePayment, period: upload.data.period_month,
+        })
+      : { effects: [], totalDeduction: 0, totalBonus: 0, appliedRuleNames: [] };
+
+    return { ...counts, isIt, rafttarStaff, leaveLimit, protectedAbsentDays, chargeableAbsentDays, excessPaidLeave, paidLeaveUsed: item.paidLeaveUsed, paidLeaveDays: item.paidLeaveUsed, lateDeductionCount, lateAfterMinutes, lateEvery, halfDayHours, daysInMonth, daysCovered, paidOffDays, payableDays, basePay, lopDays, lopAmount: totalLopAmount, absenceDeduction, halfDayDeduction, lateDeduction, excessLeaveDeduction, unusedLeaveDays, workedWeeklyOffPay, unusedLeavePay, extraPayableDays, extraPayment, overtimePayment, managementAdjustment, managementAdjustmentRemarks,
+      ruleEffects: ruleOutcome.effects as PayrollRuleEffect[],
+      ruleDeductions: ruleOutcome.totalDeduction,
+      ruleBonus: ruleOutcome.totalBonus,
+      netPayable: basePay + extraPayment + managementAdjustment - ruleOutcome.totalDeduction + ruleOutcome.totalBonus,
+      dailySalary, totalLopAmount, basicSalary };
   });
   // Debug logging to identify no-punch records and all status values
   console.log('📋 All unique status values in database:', Array.from(allStatuses).sort());

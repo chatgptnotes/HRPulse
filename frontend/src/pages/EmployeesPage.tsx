@@ -325,11 +325,11 @@ export default function EmployeesPage() {
               ) : (
                 <div className="space-y-4">
                   <label className="block"><span className="mb-1.5 block text-sm font-medium text-slate-700">Shift name</span><input value={workTimeForm.name} onChange={e => setWorkTimeForm(prev => ({ ...prev, name: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400" placeholder="e.g. Front desk morning" /></label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <TimePicker value={workTimeForm.startTime} onChange={value => setWorkTimeForm(prev => ({ ...prev, startTime: value }))} label="Start time" />
                     <TimePicker value={workTimeForm.endTime} onChange={value => setWorkTimeForm(prev => ({ ...prev, endTime: value }))} label="End time" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Role target</span><input value={workTimeForm.roleTarget} onChange={e => setWorkTimeForm(prev => ({ ...prev, roleTarget: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
                     <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Grace minutes</span><input type="number" min="0" max="240" value={workTimeForm.graceMinutes} onChange={e => setWorkTimeForm(prev => ({ ...prev, graceMinutes: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
                   </div>
@@ -337,7 +337,7 @@ export default function EmployeesPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Effective from</span><input type="date" value={workTimeForm.effectiveFrom} onChange={e => setWorkTimeForm(prev => ({ ...prev, effectiveFrom: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
                 <label><span className="mb-1.5 block text-sm font-medium text-slate-700">Effective to <span className="font-normal text-slate-400">(optional)</span></span><input type="date" value={workTimeForm.effectiveTo} onChange={e => setWorkTimeForm(prev => ({ ...prev, effectiveTo: e.target.value }))} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /></label>
               </div>
@@ -400,7 +400,7 @@ export default function EmployeesPage() {
                           </div>
                           <p className="text-sm font-semibold text-slate-800">{shift.label}</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 p-4">
+                        <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
                           <TimePicker
                             value={form.shiftTimings[shift.key].start}
                             onChange={value => setForm(prev => ({ ...prev, shiftTimings: { ...prev.shiftTimings, [shift.key]: { ...prev.shiftTimings[shift.key], start: value } } }))}

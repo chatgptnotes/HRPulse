@@ -52,7 +52,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="w-full min-w-0 max-w-4xl p-4 sm:p-6">
+    <div className="w-full min-w-0 max-w-4xl px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
       <h1 className="text-xl font-bold text-slate-800 mb-1">Settings</h1>
       <p className="text-sm text-slate-500 mb-6">Configure email, templates and company information</p>
 
@@ -69,13 +69,13 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
         {tab === 'smtp' && (
           <div className="space-y-4">
             <h2 className="font-semibold text-slate-700">SMTP Configuration</h2>
 
             {/* Testing / Live mode toggle */}
-            <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
+            <div className="flex flex-col items-stretch gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center">
               <div className="flex-1">
                 <p className="text-sm font-semibold text-slate-700">
                   {settings['smtp_host'] === 'localhost' ? '🧪 Testing Mode' : '🚀 Live Mode'}
@@ -100,7 +100,7 @@ export default function SettingsPage() {
                     set('smtp_pass', '');
                   }
                 }}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap ${
+                className={`w-full px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap sm:w-auto ${
                   settings['smtp_host'] === 'localhost'
                     ? 'bg-brand-600 text-white hover:bg-brand-700'
                     : 'bg-amber-500 text-white hover:bg-amber-600'
@@ -110,7 +110,7 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="SMTP Host" value={settings['smtp_host'] || ''} onChange={v => set('smtp_host', v)} placeholder="smtp.gmail.com" />
               <Field label="Port" value={settings['smtp_port'] || '587'} onChange={v => set('smtp_port', v)} placeholder="587" />
               <Field label="Username" value={settings['smtp_user'] || ''} onChange={v => set('smtp_user', v)} placeholder="hr@company.com" />
@@ -121,7 +121,7 @@ export default function SettingsPage() {
               <label htmlFor="secure" className="text-sm text-slate-600">Use SSL/TLS (port 465)</label>
             </div>
             <p className="text-xs text-slate-400">For Gmail: use an App Password. Go to Google Account → Security → 2-Step Verification → App Passwords</p>
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-col gap-2 pt-2 sm:flex-row">
               <button onClick={saveSettings} className="bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-brand-700">Save</button>
               <button disabled title={`Testing SMTP ${api.NOT_MIGRATED}`} className="border border-slate-200 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg opacity-50 cursor-not-allowed">
                 Test Connection

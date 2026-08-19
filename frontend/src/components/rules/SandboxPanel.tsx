@@ -5,6 +5,9 @@
  *
  * Sample data can come from a chosen employee's latest attendance month or be
  * edited by hand in the JSON context box.
+ *
+ * Visual system: white card, soft icon chip, tinted result stat tiles,
+ * clean success result cards with green accents.
  */
 
 import { useMemo, useState } from 'react';
@@ -188,17 +191,19 @@ export default function SandboxPanel({ draft }: Props) {
   const matched = result?.results.filter((r) => r.matched) ?? [];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3.5">
-        <h3 className="flex items-center gap-2 text-base font-semibold text-slate-800">
-          <span className="material-icons text-xl text-purple-500">science</span>
+    <div className="rounded-[16px] border border-[#E5E7EB] bg-white p-4 shadow-[0px_2px_10px_rgba(0,0,0,0.05)] sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2.5 text-[16px] font-semibold text-[#111827]">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EFF6FF] text-[#2563EB]">
+            <span className="material-icons text-[17px]">science</span>
+          </span>
           Testing Sandbox
         </h3>
-        <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-600 font-semibold">DRY RUN</span>
+        <span className="rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[11px] font-bold text-[#2563EB]">DRY RUN</span>
       </div>
 
       {/* Employee picker */}
-      <div className="flex flex-col sm:flex-row gap-2 mb-2.5">
+      <div className="mb-2.5 flex flex-col gap-2 sm:flex-row">
         <select
           value=""
           onChange={async (e) => {
@@ -211,14 +216,14 @@ export default function SandboxPanel({ draft }: Props) {
               setRunError(err instanceof Error ? err.message : String(err));
             }
           }}
-          className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"
+          className="h-10 flex-1 cursor-pointer rounded-[10px] border border-[#E5E7EB] bg-white px-3 text-[13px] text-[#111827] transition focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/15"
         >
           <option value="">Load an employee's real data…</option>
           {employees.map((emp: any) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
         </select>
         <button
           onClick={() => setContextText(JSON.stringify(DEFAULT_CONTEXT, null, 2))}
-          className="px-3.5 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 shrink-0"
+          className="h-10 shrink-0 rounded-[10px] border border-[#E5E7EB] bg-white px-3.5 text-[13px] font-medium text-[#374151] transition-colors hover:bg-[#F8FAFC]"
           title="Reset to sample data"
         >
           Sample
@@ -230,23 +235,23 @@ export default function SandboxPanel({ draft }: Props) {
         onChange={(e) => setContextText(e.target.value)}
         rows={6}
         spellCheck={false}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-400/40 resize-y"
+        className="w-full resize-y rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2 font-mono text-[12px] text-[#374151] transition focus:border-[#2563EB] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB]/15"
       />
 
-      <div className="flex flex-col sm:flex-row gap-2 mt-2.5">
+      <div className="mt-2.5 flex flex-col gap-2 sm:flex-row">
         <button
           onClick={() => { void runTest(); }}
           disabled={running}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm font-semibold hover:shadow-lg transition-shadow disabled:opacity-60"
+          className="flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] py-2.5 text-[13px] font-semibold text-white shadow-[0px_2px_10px_rgba(37,99,235,0.3)] transition-all duration-200 hover:shadow-[0px_4px_16px_rgba(37,99,235,0.4)] active:scale-[0.99] disabled:opacity-60"
         >
-          <span className="material-icons text-lg">{running ? 'hourglass_top' : 'play_arrow'}</span>
+          <span className="material-icons text-[17px]">{running ? 'hourglass_top' : 'play_arrow'}</span>
           {testTarget ? `Test draft (${testTarget.length})` : 'Test all active rules'}
         </button>
         {result && (
           <button
             onClick={() => logMutation.mutate()}
             disabled={logMutation.isPending}
-            className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 shrink-0"
+            className="h-10 shrink-0 rounded-[10px] border border-[#E5E7EB] bg-white px-4 text-[13px] font-medium text-[#374151] transition-colors hover:bg-[#F8FAFC] disabled:opacity-50"
             title="Write this run to the execution log"
           >
             {logMutation.isPending ? 'Logging…' : 'Log results'}
@@ -254,54 +259,62 @@ export default function SandboxPanel({ draft }: Props) {
         )}
       </div>
 
-      {logNote && <p className="mt-2.5 text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3.5 py-2.5 leading-relaxed">{logNote}</p>}
-      {runError && <p className="mt-2.5 text-sm text-red-700 bg-red-50 rounded-lg px-3.5 py-2.5 leading-relaxed">{runError}</p>}
+      {logNote && (
+        <p className="mt-2.5 flex items-start gap-2 rounded-[10px] bg-[#DCFCE7] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#16A34A]">
+          <span className="material-icons mt-0.5 text-[16px]">check_circle</span>{logNote}
+        </p>
+      )}
+      {runError && (
+        <p className="mt-2.5 flex items-start gap-2 rounded-[10px] bg-[#FEE2E2] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#DC2626]">
+          <span className="material-icons mt-0.5 text-[16px]">error</span>{runError}
+        </p>
+      )}
 
       {/* Results */}
       {result && (
         <div className="mt-3 space-y-2.5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-            <div className="rounded-lg bg-slate-50 p-2.5">
-              <p className="text-lg font-bold text-slate-800">{result.totalRules}</p>
-              <p className="text-xs text-slate-500">Evaluated</p>
+          <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+            <div className="rounded-[12px] border border-[#E5E7EB] bg-[#F8FAFC] p-2.5">
+              <p className="text-[20px] font-bold leading-none text-[#111827]">{result.totalRules}</p>
+              <p className="mt-1 text-[11px] font-medium text-[#6B7280]">Evaluated</p>
             </div>
-            <div className="rounded-lg bg-emerald-50 p-2.5">
-              <p className="text-lg font-bold text-emerald-700">{result.matchedRules}</p>
-              <p className="text-xs text-emerald-600">Matched</p>
+            <div className="rounded-[12px] bg-[#DCFCE7] p-2.5">
+              <p className="text-[20px] font-bold leading-none text-[#16A34A]">{result.matchedRules}</p>
+              <p className="mt-1 text-[11px] font-medium text-[#16A34A]">Matched</p>
             </div>
-            <div className="rounded-lg bg-red-50 p-2.5">
-              <p className="text-lg font-bold text-red-600">{result.failedRules}</p>
-              <p className="text-xs text-red-500">Failed</p>
+            <div className="rounded-[12px] bg-[#FEE2E2] p-2.5">
+              <p className="text-[20px] font-bold leading-none text-[#EF4444]">{result.failedRules}</p>
+              <p className="mt-1 text-[11px] font-medium text-[#EF4444]">Failed</p>
             </div>
-            <div className="rounded-lg bg-purple-50 p-2.5">
-              <p className="text-lg font-bold text-purple-700">{result.executionTimeMs}<span className="text-xs">ms</span></p>
-              <p className="text-xs text-purple-500">Duration</p>
+            <div className="rounded-[12px] bg-[#EFF6FF] p-2.5">
+              <p className="text-[20px] font-bold leading-none text-[#2563EB]">{result.executionTimeMs}<span className="text-[11px]">ms</span></p>
+              <p className="mt-1 text-[11px] font-medium text-[#2563EB]">Duration</p>
             </div>
           </div>
 
           {matched.length === 0 ? (
-            <p className="text-sm text-slate-500 bg-slate-50 rounded-lg px-3.5 py-2.5 leading-relaxed">No rules matched this sample data. Try adjusting the context values above.</p>
+            <p className="rounded-[10px] bg-[#F8FAFC] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#6B7280]">No rules matched this sample data. Try adjusting the context values above.</p>
           ) : matched.map((r) => (
-            <div key={r.ruleId} className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5">
-              <p className="text-sm font-semibold text-slate-800 flex flex-wrap items-center gap-1.5">
-                <span className="material-icons text-emerald-600 text-base">check_circle</span>
+            <div key={r.ruleId} className="rounded-[12px] border border-[#16A34A]/25 bg-[#F0FDF4] p-3.5">
+              <p className="flex flex-wrap items-center gap-1.5 text-[13px] font-semibold text-[#111827]">
+                <span className="material-icons text-[16px] text-[#16A34A]">check_circle</span>
                 {r.ruleName}
-                <span className="text-xs text-slate-400 font-normal">{r.executionTimeMs}ms</span>
+                <span className="text-[11px] font-normal text-[#9CA3AF]">{r.executionTimeMs}ms</span>
               </p>
               <div className="mt-2 space-y-1.5">
                 {r.conditionTraces.map((t, i) => (
-                  <p key={i} className={clsx('text-xs flex items-center gap-1.5 leading-relaxed', t.matched ? 'text-emerald-800' : 'text-slate-400 line-through')}>
-                    <span className="material-icons text-sm">{t.matched ? 'check' : 'close'}</span>
+                  <p key={i} className={clsx('flex items-center gap-1.5 text-[12.5px] leading-relaxed', t.matched ? 'text-[#166534]' : 'text-[#9CA3AF] line-through')}>
+                    <span className="material-icons text-[14px]">{t.matched ? 'check' : 'close'}</span>
                     {t.label}
-                    <span className="text-slate-400">(actual: {String(t.actualValue)})</span>
+                    <span className="text-[#9CA3AF]">(actual: {String(t.actualValue)})</span>
                   </p>
                 ))}
               </div>
               {r.executedActions.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-emerald-200/70 space-y-1">
+                <div className="mt-2 space-y-1 border-t border-[#16A34A]/15 pt-2">
                   {r.executedActions.map((a, i) => (
-                    <p key={i} className="text-xs text-slate-700 flex items-center gap-1.5 leading-relaxed">
-                      <span className="material-icons text-emerald-600 text-sm">arrow_forward</span>
+                    <p key={i} className="flex items-center gap-1.5 text-[12.5px] leading-relaxed text-[#374151]">
+                      <span className="material-icons text-[14px] text-[#16A34A]">arrow_forward</span>
                       {a.description}
                     </p>
                   ))}

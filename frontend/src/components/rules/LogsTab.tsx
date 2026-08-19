@@ -198,7 +198,7 @@ export default function LogsTab() {
               <h3 className="text-lg font-bold text-slate-800">Execution #{detail.id}</h3>
               <button onClick={() => setDetail(null)} className="p-2 rounded-lg hover:bg-slate-100"><span className="material-icons text-slate-400">close</span></button>
             </div>
-            <div className="grid grid-cols-2 gap-2.5 text-sm">
+            <div className="grid grid-cols-1 gap-2.5 text-sm sm:grid-cols-2">
               {[
                 ['Rule', ruleName(detail.rule_id)],
                 ['Employee', detail.employee_name ?? (detail.employee_id ? `#${detail.employee_id}` : '—')],

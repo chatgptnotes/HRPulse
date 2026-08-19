@@ -172,9 +172,9 @@ export default function Dashboard() {
   const getDraftForEmployee = (empId: number) => (drafts as any[]).find((d: any) => d.employeeId === empId);
 
   return (
-    <div className="flex h-screen min-w-0 flex-col overflow-hidden bg-slate-100 lg:flex-row">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] min-w-0 flex-col overflow-visible bg-slate-100 lg:h-screen lg:flex-row lg:overflow-hidden">
       {/* Left Panel */}
-      <div className="flex max-h-[46vh] w-full flex-shrink-0 flex-col overflow-y-auto border-b border-slate-200/70 bg-white shadow-sm lg:max-h-none lg:w-64 lg:border-b-0 lg:border-r">
+      <div className="flex w-full flex-shrink-0 flex-col border-b border-slate-200/70 bg-white shadow-sm lg:max-h-none lg:w-64 lg:border-b-0 lg:border-r lg:overflow-y-auto">
         <div className="px-5 py-5 border-b border-slate-100">
           <h2 className="font-bold text-slate-800 text-sm">Attendance Dispatcher</h2>
           <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
@@ -443,7 +443,7 @@ export default function Dashboard() {
         ) : (
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {/* Table header */}
-            <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="hidden grid-cols-12 gap-4 px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider sm:grid">
               <div className="col-span-1 flex items-center">
                 <input
                   type="checkbox"
@@ -473,7 +473,7 @@ export default function Dashboard() {
                 <div
                   key={s.employeeId}
                   className={clsx(
-                    'grid grid-cols-12 gap-4 px-4 py-3.5 bg-white rounded-2xl border items-center transition-all shadow-sm hover:shadow-md',
+                    'flex flex-col gap-3 px-4 py-3.5 bg-white rounded-2xl border transition-all shadow-sm hover:shadow-md sm:grid sm:grid-cols-12 sm:items-center sm:gap-4',
                     isSelected
                       ? 'border-indigo-300 bg-indigo-50/50 shadow-indigo-100'
                       : 'border-slate-200/70 hover:border-slate-300'
@@ -565,7 +565,7 @@ export default function Dashboard() {
 
       {toast && (
         <div className={clsx(
-          'fixed bottom-6 right-6 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold z-50 flex items-center gap-2',
+          'fixed bottom-24 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold z-50 flex items-center gap-2',
           toast.type === 'ok' ? 'bg-emerald-600 text-white' : 'bg-red-500 text-white'
         )}>
           <span className="material-icons text-base">{toast.type === 'ok' ? 'check_circle' : 'error'}</span>

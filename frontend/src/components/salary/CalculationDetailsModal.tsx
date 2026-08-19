@@ -1,4 +1,5 @@
 import { formatINR } from '../../lib/dayWiseSalary';
+import type { PayrollRuleEffect } from '../../lib/payrollRuleBridge';
 
 interface CalculationDetailsModalProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ interface CalculationDetailsModalProps {
   lopAmount?: number | null;
   managementAdjustment?: number | null;
   managementAdjustmentRemarks?: string | null;
+  /** Rules Engine effects applied to this payslip (deductions + bonuses). */
+  ruleEffects?: PayrollRuleEffect[] | null;
   netPayable: number;
   perDaySalary?: number;
   daysPresent?: number;
@@ -30,6 +33,7 @@ export default function CalculationDetailsModal({
   lopAmount,
   managementAdjustment,
   managementAdjustmentRemarks,
+  ruleEffects,
   netPayable,
   perDaySalary,
   daysPresent,
@@ -42,10 +46,17 @@ export default function CalculationDetailsModal({
   const hasExtraDays = (extraPayableDays ?? 0) > 0;
   const hasLOP = (lopAmount ?? 0) > 0;
   const hasManagementAdjustment = (managementAdjustment ?? 0) !== 0;
+  const ruleDeductions = (ruleEffects ?? []).filter((e) => e.effect === 'deduction');
+  const ruleBonuses = (ruleEffects ?? []).filter((e) => e.effect === 'bonus');
+  const ruleInfos = (ruleEffects ?? []).filter((e) => e.effect === 'info');
+  const hasRuleEffects = ruleDeductions.length > 0 || ruleBonuses.length > 0 || ruleInfos.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4" onClick={onClose}>
+      <div
+        className="flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div>
@@ -54,16 +65,17 @@ export default function CalculationDetailsModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600 hover:text-slate-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-800"
             aria-label="Close"
           >
-            <span className="material-icons text-2xl">close</span>
+            <span className="material-icons text-2xl max-sm:hidden">close</span>
+            <span className="material-icons text-2xl sm:hidden">arrow_back</span>
           </button>
         </div>
 
         {/* Employee Info */}
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-200">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 sm:gap-4">
             <div>
               <span className="text-slate-500">Employee:</span>
               <p className="font-semibold text-slate-800 mt-0.5">{employeeName}</p>
@@ -137,6 +149,45 @@ export default function CalculationDetailsModal({
               </div>
             )}
 
+            {/* ─── Rules Engine effects (deductions + bonuses) ─── */}
+            {hasRuleEffects && (
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 overflow-hidden">
+                <div className="flex items-center gap-2 border-b border-indigo-100 bg-indigo-100/60 px-4 py-2.5">
+                  <span className="material-icons text-[18px] text-indigo-600">rule</span>
+                  <p className="text-[13px] font-bold text-indigo-900">Rules Engine — Applied in this Salary</p>
+                </div>
+                <div className="divide-y divide-indigo-100">
+                  {ruleDeductions.map((e, i) => (
+                    <div key={`d${i}`} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-red-600">{e.ruleName}</p>
+                        <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-500">{e.description}</p>
+                      </div>
+                      <span className="shrink-0 text-[13px] font-bold text-red-600">-{formatINR(e.amount)}</span>
+                    </div>
+                  ))}
+                  {ruleBonuses.map((e, i) => (
+                    <div key={`b${i}`} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-emerald-600">{e.ruleName}</p>
+                        <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-500">{e.description}</p>
+                      </div>
+                      <span className="shrink-0 text-[13px] font-bold text-emerald-600">+{formatINR(e.amount)}</span>
+                    </div>
+                  ))}
+                  {ruleInfos.map((e, i) => (
+                    <div key={`i${i}`} className="flex items-start justify-between gap-3 px-4 py-2.5 bg-slate-50/60">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-slate-600">{e.ruleName}</p>
+                        <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-500">{e.description}</p>
+                      </div>
+                      <span className="shrink-0 text-[11px] font-semibold text-slate-400">₹0</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Management Adjustment */}
             {hasManagementAdjustment && (
               <div className={`flex justify-between items-start py-3 border-b border-dashed border-slate-300`}>
@@ -168,7 +219,7 @@ export default function CalculationDetailsModal({
               <code className="text-xs text-slate-700 block">
                 Gross Salary = Basic Salary + Extra Days Bonus
                 <br />
-                Net Payable = Gross Salary - Loss of Pay {hasManagementAdjustment && '+ Management Adjustment'}
+                Net Payable = Gross Salary - Loss of Pay{hasRuleEffects && ' - Rule Deductions + Rule Bonuses'}{hasManagementAdjustment && '+ Management Adjustment'}
               </code>
             </div>
           </div>

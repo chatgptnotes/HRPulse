@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getRules, getSettings } from '../api';
+import { fetchRules as fetchEngineRules, type RuleRow as EngineRuleRow } from '../api/rulesEngine';
 import clsx from 'clsx';
 
 interface Rule {
@@ -50,6 +51,14 @@ export default function RulesPage() {
   const { data: settings = {} } = useQuery<Record<string, string>>({
     queryKey: ['settings'],
     queryFn: () => getSettings().then(r => r.data),
+  });
+
+  // Active Rules Engine rules (Administration) — these are the rules whose
+  // pay-affecting actions actually change salary / loss of pay.
+  const { data: engineRules = [] } = useQuery<EngineRuleRow[]>({
+    queryKey: ['rules-engine', 'rules', 'active-payroll-view'],
+    queryFn: () => fetchEngineRules({ status: 'active' }),
+    retry: false,
   });
 
   const activeRules = rules.filter(rule => rule.isActive);
@@ -208,6 +217,67 @@ export default function RulesPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-8">
+          {engineRules.length > 0 && (
+            <section>
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <span className="material-icons text-lg text-indigo-500">settings_suggest</span>
+                Rules Engine — Applied in Salary / Loss of Pay ({engineRules.length})
+              </h2>
+              <p className="mb-4 -mt-2 ml-7 text-xs text-slate-400">
+                Active rules created in Administration → Rules Engine. Pay-affecting actions (deductions, bonuses, LOP days) are applied to the salary calculation automatically.
+              </p>
+              <div className="flex flex-col gap-4">
+                {engineRules.map((rule) => (
+                  <div key={rule.id} className="min-w-0 overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+                    <div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-start">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-600">
+                          <span className="material-icons text-[18px]">bolt</span>
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+                              {rule.rule_categories?.name ?? rule.rule_type}
+                            </span>
+                            <span className="text-xs text-slate-500">priority {rule.priority}</span>
+                            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Applied in payroll</span>
+                          </div>
+                          <span className="mt-2 block break-words text-base font-semibold text-slate-800">{rule.name}</span>
+                          {(rule.rule_conditions ?? []).length > 0 && (
+                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                              <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">IF</span>
+                              {rule.rule_conditions!.map((cond, ci) => (
+                                <span key={cond.id} className="inline-flex items-center gap-1">
+                                  {ci > 0 && <span className="text-[10px] font-bold text-blue-600">{cond.logical_operator ?? 'AND'}</span>}
+                                  <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">{cond.field} {cond.operator} {cond.value}</code>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {(rule.rule_actions ?? []).length > 0 && (
+                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                              <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">THEN</span>
+                              {rule.rule_actions!.map((act) => (
+                                <code key={act.id} className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">
+                                  {act.action_type}{act.target_field ? ' → ' + act.target_field : ''}{act.amount ? ' ₹' + act.amount : ''}{act.percent ? ' ' + act.percent + '%' : ''}{act.value ? ' = ' + act.value : ''}
+                                </code>
+                              ))}
+                            </div>
+                          )}
+                          {rule.description && <p className="mt-2 text-sm leading-relaxed text-slate-600">{rule.description}</p>}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2 lg:justify-end">
+                        <span className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-400" title="Managed in Administration → Rules Engine">
+                          <span className="material-icons text-base">admin_panel_settings</span> Admin managed
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
           {activeRules.length > 0 && (
             <section>
               <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">

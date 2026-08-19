@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import LoginPage from './pages/LoginPage';
@@ -17,42 +17,82 @@ import RulesEngineDashboard from './pages/RulesEngineDashboard';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
 
+const PAGE_TITLES: Array<[string, string]> = [
+  ['/', 'Dispatcher'],
+  ['/analytics', 'Analytics'],
+  ['/employees', 'Employees'],
+  ['/salary', 'Salary / LOP'],
+  ['/history', 'Email History'],
+  ['/rules', 'Rules'],
+  ['/sops', 'SOPs'],
+  ['/rules-engine', 'Rules Engine'],
+  ['/settings', 'Settings'],
+];
+
+function MobileTopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
+  const location = useLocation();
+  const title = PAGE_TITLES.find(([p]) => (p === '/' ? location.pathname === '/' : location.pathname.startsWith(p)))?.[1] ?? 'HRPulse';
+  return (
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-[#E5E7EB] bg-white/90 px-3 backdrop-blur-md sm:hidden">
+      <button
+        onClick={onOpenMenu}
+        aria-label="Open menu"
+        className="flex h-10 w-10 items-center justify-center rounded-xl text-[#111827] transition-colors hover:bg-[#F3F4F6]"
+      >
+        <span className="material-icons text-[22px]">menu</span>
+      </button>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] font-semibold leading-tight text-[#111827]">{title}</p>
+        <p className="text-[11px] leading-tight text-[#6B7280]">HRPulse</p>
+      </div>
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-[11px] font-bold text-white">HR</div>
+    </header>
+  );
+}
+
 function AppShell() {
-  const [collapsed, setCollapsed] = useState(false);
+  // Start with the drawer closed on phones, open on larger screens.
+  const [collapsed, setCollapsed] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768 ? true : false,
+  );
   const { user } = useAuth();
+  const openMenu = () => setCollapsed(false);
+
+  // Keep the drawer state sensible across resizes crossing the 768px line.
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 768) setCollapsed(false);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
-      {collapsed && (
-        <button
-          onClick={() => setCollapsed(c => !c)}
-          className="fixed left-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg sm:hidden"
-          aria-label="Open menu"
-        >
-          <span className="material-icons text-lg">menu</span>
-        </button>
-      )}
-      <main className="flex-1 overflow-auto min-w-0">
-        <div className="mx-auto w-full max-w-[1920px]">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/salary" element={<SalaryPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/employees" element={<EmployeesPage />} />
-            <Route path="/rules" element={<RulesPage />} />
-            <Route path="/sops" element={<SopsPage />} />
-            <Route
-              path="/rules-engine"
-              element={
-                user?.role === 'admin' ? <RulesEngineDashboard /> : <Navigate to="/" replace />
-              }
-            />
-          </Routes>
-        </div>
-      </main>
+    <div className="flex min-h-screen bg-[#F8FAFC]">
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <MobileTopBar onOpenMenu={openMenu} />
+        <main className="flex-1 overflow-auto min-w-0">
+          <div className="mx-auto w-full max-w-[1920px]">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/salary" element={<SalaryPage />} />
+              <Route path="/history" element={<HistoryPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/employees" element={<EmployeesPage />} />
+              <Route path="/rules" element={<RulesPage />} />
+              <Route path="/sops" element={<SopsPage />} />
+              <Route
+                path="/rules-engine"
+                element={
+                  user?.role === 'admin' ? <RulesEngineDashboard /> : <Navigate to="/" replace />
+                }
+              />
+            </Routes>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
@@ -67,8 +107,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <p className="text-sm text-slate-500">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
+        <p className="text-sm text-[#6B7280]">Loading…</p>
       </div>
     );
   }
@@ -85,8 +125,8 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <p className="text-sm text-slate-500">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
+        <p className="text-sm text-[#6B7280]">Loading…</p>
       </div>
     );
   }

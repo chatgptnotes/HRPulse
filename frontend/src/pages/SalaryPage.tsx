@@ -201,26 +201,34 @@ export default function SalaryPage() {
     const money = (value: number) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
     // Check if any employee has management adjustments
     const hasManagementAdjustments = printable.some(row => Number(row.deduction?.managementAdjustment || 0) !== 0);
+    const hasRuleEffects = printable.some(row => (row.deduction?.ruleEffects || []).length > 0);
     const body = printable.map(({ emp, config: cfg, deduction: ded }, index) => {
       const salary = Number(cfg?.basicSalary || 0);
       const lop = Number(ded?.lopAmount || 0);
       const extra = Number(ded?.extraPayment || 0);
       const mgmt = Number(ded?.managementAdjustment || 0);
+      const ruleDed = Number(ded?.ruleDeductions || 0);
+      const ruleBon = Number(ded?.ruleBonus || 0);
       const grossSalary = salary + extra;
       const net = Number(ded?.netPayable || 0);
+      const ruleCell = hasRuleEffects
+        ? (ruleDed > 0 ? '-' + money(ruleDed) : '') + (ruleBon > 0 ? (ruleDed > 0 ? ' / +' : '+') + money(ruleBon) : '') || '—'
+        : '—';
       const employeeId = emp.employee_number || emp.employeeNumber || emp.employeeId || emp.id || '-';
       const designation = emp.designation || '-';
       const daysPresent = ded?.presentDays ?? 0;
       const duties = ded?.extraPayableDays ?? 0;
+      const ruleTD = hasRuleEffects ? `<td>${ruleCell}</td>` : '';
       if (hasManagementAdjustments) {
-        return `<tr><td>${index + 1}</td><td>${emp.name || ''}</td><td>${employeeId}</td><td>${designation}</td><td>${money(salary)}</td><td>${daysPresent}</td><td>${duties}</td><td>${money(grossSalary)}</td><td>${money(lop)}</td><td>${mgmt !== 0 ? (mgmt > 0 ? '+' : '') + money(mgmt) : '—'}</td><td>${money(net)}</td></tr>`;
+        return `<tr><td>${index + 1}</td><td>${emp.name || ''}</td><td>${employeeId}</td><td>${designation}</td><td>${money(salary)}</td><td>${daysPresent}</td><td>${duties}</td><td>${money(grossSalary)}</td><td>${money(lop)}</td>${ruleTD}<td>${mgmt !== 0 ? (mgmt > 0 ? '+' : '') + money(mgmt) : '—'}</td><td>${money(net)}</td></tr>`;
       }
-      return `<tr><td>${index + 1}</td><td>${emp.name || ''}</td><td>${employeeId}</td><td>${designation}</td><td>${money(salary)}</td><td>${daysPresent}</td><td>${duties}</td><td>${money(grossSalary)}</td><td>${money(lop)}</td><td>${money(net)}</td></tr>`;
+      return `<tr><td>${index + 1}</td><td>${emp.name || ''}</td><td>${employeeId}</td><td>${designation}</td><td>${money(salary)}</td><td>${daysPresent}</td><td>${duties}</td><td>${money(grossSalary)}</td><td>${money(lop)}</td>${ruleTD}<td>${money(net)}</td></tr>`;
     }).join('');
+    const ruleTH = hasRuleEffects ? '<th>Rule Adjustments</th>' : '';
     const headerRow = hasManagementAdjustments
-      ? '<tr><th>S.No</th><th>Employee Name</th><th>Employee ID</th><th>Designation</th><th>Monthly Salary</th><th>Days Present</th><th>Duties</th><th>Gross Salary</th><th>Deductions</th><th>Management Decision</th><th>Net Salary</th></tr>'
-      : '<tr><th>S.No</th><th>Employee Name</th><th>Employee ID</th><th>Designation</th><th>Monthly Salary</th><th>Days Present</th><th>Duties</th><th>Gross Salary</th><th>Deductions</th><th>Net Salary</th></tr>';
-    const colspan = hasManagementAdjustments ? 11 : 10;
+      ? `<tr><th>S.No</th><th>Employee Name</th><th>Employee ID</th><th>Designation</th><th>Monthly Salary</th><th>Days Present</th><th>Duties</th><th>Gross Salary</th><th>Deductions</th>${ruleTH}<th>Management Decision</th><th>Net Salary</th></tr>`
+      : `<tr><th>S.No</th><th>Employee Name</th><th>Employee ID</th><th>Designation</th><th>Monthly Salary</th><th>Days Present</th><th>Duties</th><th>Gross Salary</th><th>Deductions</th>${ruleTH}<th>Net Salary</th></tr>`;
+    const colspan = (hasManagementAdjustments ? 11 : 10) + (hasRuleEffects ? 1 : 0);
     const popup = window.open('', '_blank', 'width=1100,height=750');
     if (!popup) return;
     popup.document.write(`<html><head><title>Salary Sheet - ${company}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}h1{margin:0 0 4px}p{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#eef2ff}td:nth-child(n+5),th:nth-child(n+5){text-align:right}td:nth-child(6),td:nth-child(7),th:nth-child(6),th:nth-child(7){text-align:center}@media print{button{display:none}}</style></head><body><h1>Salary Sheet</h1><p>${company === 'All' ? 'All Companies' : company} · ${month}</p><button onclick=window.print()>Print</button><table><thead>${headerRow}</thead><tbody>${body || `<tr><td colspan=${colspan}>No salaried employees found</td></tr>`}</tbody></table></body></html>`);
@@ -258,6 +266,9 @@ export default function SalaryPage() {
       const grossSalary = monthlySalary + Number(ded?.extraPayment || 0);
       const deductions = Number(ded?.lopAmount || 0);
       const netSalary = Number(ded?.netPayable || 0);
+      const ruleDeductions = Number(ded?.ruleDeductions || 0);
+      const ruleBonus = Number(ded?.ruleBonus || 0);
+      const appliedRules = (ded?.ruleEffects || []).map((e: any) => e.ruleName).join('; ');
 
       return {
         'Employee Name': employeeName,
@@ -268,6 +279,9 @@ export default function SalaryPage() {
         'Duties': duties,
         'Gross Salary': grossSalary,
         'Deductions': deductions,
+        'Rule Deductions': ruleDeductions,
+        'Rule Bonus': ruleBonus,
+        'Applied Rules': appliedRules,
         'Net Salary': netSalary
       };
     });
@@ -302,16 +316,25 @@ export default function SalaryPage() {
   };
 
   return (
-    <div className="w-full min-w-0 bg-gradient-to-br from-slate-50 to-slate-100 p-5 sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3">
-        <div>
-          {/* <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-xl shadow-purple-500/30">
-              <span className="material-icons text-2xl">payments</span>
+    <div className="w-full min-w-0 bg-gradient-to-br from-slate-50 to-slate-100 px-3 py-4 sm:p-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg shadow-purple-500/30 sm:h-12 sm:w-12 sm:rounded-2xl">
+              <span className="material-icons text-xl sm:text-2xl">payments</span>
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">Salary & Loss of Pay</h1>
+            <h1 className="min-w-0 text-2xl font-bold leading-tight text-slate-800 sm:text-3xl">Salary &amp; Loss of Pay</h1>
           </div>
-          <p className="text-sm text-slate-500 mt-2.5 ml-16">Salary is calculated automatically from Employee Master and attendance records.</p> */}
+          <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:ml-14 sm:text-sm">Salary is calculated automatically from Employee Master and attendance records.</p>
+        </div>
+        <div className="flex justify-start sm:justify-end">
+          <button
+            onClick={() => setShowPrintOptions(true)}
+            className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            <span className="material-icons text-sm">print</span>
+            Print Salary Sheet
+          </button>
         </div>
       </div>
 
@@ -324,16 +347,6 @@ export default function SalaryPage() {
         totalExtraPay={summary.totalExtraPay}
         totalLopAmount={summary.totalLopAmount}
       /> */}
-
-      <div className="flex justify-end mb-3">
-        <button
-          onClick={() => setShowPrintOptions(true)}
-          className="flex items-center gap-2 border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
-        >
-          <span className="material-icons text-sm">print</span>
-          Print Salary Sheet
-        </button>
-      </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-lg shadow-slate-200/50">
         <div className="flex flex-col gap-3 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -463,6 +476,7 @@ export default function SalaryPage() {
               <th className="min-w-[100px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-red-600">LOP<br />Amt</th>
               <th className="min-w-[90px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">Extra<br />Days</th>
               <th className="hidden sm:table-cell min-w-[110px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">Extra Pay<br />Amount</th>
+              <th className="hidden md:table-cell min-w-[130px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-indigo-700">Rule<br />Adjustments</th>
               <th className="hidden md:table-cell min-w-[120px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-blue-700">Management<br />Decision</th>
               <th className="min-w-[110px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">Net<br />Payable</th>
             </tr>
@@ -598,6 +612,26 @@ export default function SalaryPage() {
                         className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 underline decoration-dotted underline-offset-2 hover:bg-emerald-50 font-bold transition-all text-xs md:text-sm"
                         title="Show why this amount was added">{formatINR(liveExtraPayment)}</button>
                     ) : ded ? <span className="font-bold">₹0</span> : '—'}
+                  </td>
+                  <td className="hidden md:table-cell whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right">
+                    {ded && (ded.ruleEffects?.length || ded.ruleDeductions || ded.ruleBonus) ? (
+                      <button
+                        type="button"
+                        onClick={() => setCalculationDetailsRow(row)}
+                        className="inline-flex flex-col items-end gap-0.5 rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 hover:bg-indigo-50 transition-all"
+                        title={(ded.ruleEffects || []).map((e: any) => e.description).join('\n') || 'Rules Engine adjustments'}
+                      >
+                        {Number(ded.ruleDeductions || 0) > 0 && (
+                          <span className="font-bold text-xs md:text-sm text-red-600">-{formatINR(ded.ruleDeductions)}</span>
+                        )}
+                        {Number(ded.ruleBonus || 0) > 0 && (
+                          <span className="font-bold text-xs md:text-sm text-emerald-600">+{formatINR(ded.ruleBonus)}</span>
+                        )}
+                        <span className="text-[8px] sm:text-[10px] font-semibold text-indigo-500">
+                          {(ded.ruleEffects || []).length} rule{(ded.ruleEffects || []).length === 1 ? '' : 's'}
+                        </span>
+                      </button>
+                    ) : ded ? <span className="text-slate-400">—</span> : '—'}
                   </td>
                   <td className="hidden md:table-cell whitespace-nowrap px-2 py-2 md:px-3 md:py-3 text-right">
                     <button
@@ -750,6 +784,7 @@ export default function SalaryPage() {
           lopAmount={calculationDetailsRow.deduction?.lopAmount}
           managementAdjustment={calculationDetailsRow.deduction?.managementAdjustment}
           managementAdjustmentRemarks={calculationDetailsRow.deduction?.managementAdjustmentRemarks}
+          ruleEffects={calculationDetailsRow.deduction?.ruleEffects}
           netPayable={Number(calculationDetailsRow.deduction?.netPayable || 0)}
           perDaySalary={calculationDetailsRow.config?.basicSalary && calculationDetailsRow.deduction?.daysInMonth ? Number(calculationDetailsRow.config.basicSalary) / Number(calculationDetailsRow.deduction.daysInMonth) : undefined}
           daysPresent={calculationDetailsRow.deduction?.presentDays}

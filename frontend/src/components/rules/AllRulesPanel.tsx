@@ -2,7 +2,7 @@
  * All Rules — enterprise rule repository panel (left side of Rule Management).
  *
  * Premium management surface for hundreds of business rules:
- *  - Prominent search + advanced filters (category / date modified)
+ *  - Prominent search + advanced filters (category)
  *  - Rules rendered as cards grouped into collapsible category accordions
  *  - Per-card execution statistics, origin badges and quick actions
  *    (edit, clone, history, test, activate/deactivate, delete)
@@ -11,6 +11,9 @@
  *
  * The panel is presentational: all mutations live in the parent
  * (RuleManagementTab) and are passed in as callbacks.
+ *
+ * Visual system: clean white cards, soft tinted badges, blue selection
+ * state, consistent 12–14px radii, subtle shadows and hover elevation.
  */
 
 import { useMemo, useState } from 'react';
@@ -44,16 +47,16 @@ export interface AllRulesPanelProps {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Status / category / origin metadata
+// Status / category / origin metadata — soft tinted badges
 // ─────────────────────────────────────────────────────────────────────────────
 
 type DerivedStatus = 'active' | 'inactive' | 'pending' | 'scheduled';
 
 const STATUS_META: Record<DerivedStatus, { label: string; chip: string; dot: string; tooltip: string }> = {
-  active:     { label: 'Active',     chip: 'bg-emerald-50 text-emerald-700 border-emerald-200',   dot: 'bg-emerald-500', tooltip: 'Rule is live and evaluated on every run' },
-  inactive:   { label: 'Inactive',   chip: 'bg-red-50 text-red-600 border-red-200',               dot: 'bg-red-500',     tooltip: 'Rule is switched off and skipped by the engine' },
-  pending:    { label: 'Pending',    chip: 'bg-orange-50 text-orange-600 border-orange-200',      dot: 'bg-orange-500',  tooltip: 'Last execution failed — pending review' },
-  scheduled:  { label: 'Scheduled',  chip: 'bg-blue-50 text-blue-600 border-blue-200',            dot: 'bg-blue-500',    tooltip: 'Runs asynchronously in the background queue' },
+  active:    { label: 'Active',    chip: 'bg-[#DCFCE7] text-[#16A34A]',   dot: 'bg-[#16A34A]', tooltip: 'Rule is live and evaluated on every run' },
+  inactive:  { label: 'Inactive',  chip: 'bg-[#FEE2E2] text-[#EF4444]',   dot: 'bg-[#EF4444]', tooltip: 'Rule is switched off and skipped by the engine' },
+  pending:   { label: 'Pending',   chip: 'bg-[#FFFBEB] text-[#F59E0B]',   dot: 'bg-[#F59E0B]', tooltip: 'Last execution failed — pending review' },
+  scheduled: { label: 'Scheduled', chip: 'bg-[#EFF6FF] text-[#2563EB]',   dot: 'bg-[#2563EB]', tooltip: 'Runs asynchronously in the background queue' },
 };
 
 function deriveStatus(rule: RuleRow, stat?: RuleStat): DerivedStatus {
@@ -64,23 +67,23 @@ function deriveStatus(rule: RuleRow, stat?: RuleStat): DerivedStatus {
 }
 
 const CATEGORY_META: Record<string, { label: string; icon: string; chip: string; bar: string }> = {
-  attendance:  { label: 'Attendance Rules',    icon: 'fingerprint',        chip: 'bg-blue-100 text-blue-700',      bar: 'bg-blue-500' },
-  payroll:     { label: 'Payroll Rules',       icon: 'payments',           chip: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500' },
-  leave:       { label: 'Leave Rules',         icon: 'event_busy',         chip: 'bg-orange-100 text-orange-700',   bar: 'bg-orange-500' },
-  hr:          { label: 'Recruitment & HR Rules', icon: 'person_search',   chip: 'bg-purple-100 text-purple-700',   bar: 'bg-purple-500' },
-  incentive:   { label: 'Incentive Rules',     icon: 'trending_up',        chip: 'bg-amber-100 text-amber-700',    bar: 'bg-amber-500' },
-  notification:{ label: 'Notification Rules',  icon: 'notifications_active', chip: 'bg-cyan-100 text-cyan-700',    bar: 'bg-cyan-500' },
-  compliance:  { label: 'Compliance Rules',    icon: 'gavel',              chip: 'bg-red-100 text-red-700',        bar: 'bg-red-500' },
-  hospital:    { label: 'Hospital Rules',      icon: 'local_hospital',     chip: 'bg-rose-100 text-rose-700',      bar: 'bg-rose-500' },
-  custom:      { label: 'Custom Rules',        icon: 'tune',               chip: 'bg-slate-100 text-slate-600',    bar: 'bg-slate-400' },
+  attendance:  { label: 'Attendance Rules',    icon: 'fingerprint',        chip: 'bg-[#EFF6FF] text-[#2563EB]',    bar: 'bg-[#2563EB]' },
+  payroll:     { label: 'Payroll Rules',       icon: 'payments',           chip: 'bg-[#DCFCE7] text-[#16A34A]',    bar: 'bg-[#16A34A]' },
+  leave:       { label: 'Leave Rules',         icon: 'event_busy',         chip: 'bg-[#FFFBEB] text-[#F59E0B]',    bar: 'bg-[#F59E0B]' },
+  hr:          { label: 'Recruitment & HR Rules', icon: 'person_search',   chip: 'bg-[#F5F3FF] text-[#7C3AED]',    bar: 'bg-[#7C3AED]' },
+  incentive:   { label: 'Incentive Rules',     icon: 'trending_up',        chip: 'bg-[#FFFBEB] text-[#F59E0B]',    bar: 'bg-[#F59E0B]' },
+  notification:{ label: 'Notification Rules',  icon: 'notifications_active', chip: 'bg-[#ECFEFF] text-[#0891B2]', bar: 'bg-[#0891B2]' },
+  compliance:  { label: 'Compliance Rules',    icon: 'gavel',              chip: 'bg-[#FEE2E2] text-[#EF4444]',    bar: 'bg-[#EF4444]' },
+  hospital:    { label: 'Hospital Rules',      icon: 'local_hospital',     chip: 'bg-[#FFF1F2] text-[#E11D48]',    bar: 'bg-[#E11D48]' },
+  custom:      { label: 'Custom Rules',        icon: 'tune',               chip: 'bg-[#F3F4F6] text-[#6B7280]',    bar: 'bg-[#9CA3AF]' },
 };
 
 const categoryMeta = (t: string) => CATEGORY_META[t] ?? CATEGORY_META.custom;
 
 const ORIGIN_META = {
-  ai:     { label: 'AI',      icon: 'auto_awesome',  chip: 'bg-violet-50 text-violet-600 border-violet-200', tooltip: 'AI-generated rule (detected from metadata)' },
-  manual: { label: 'Manual',  icon: 'person_edit',   chip: 'bg-slate-50 text-slate-500 border-slate-200',    tooltip: 'Created manually by a user' },
-  system: { label: 'System',  icon: 'settings',      chip: 'bg-blue-50 text-blue-500 border-blue-200',       tooltip: 'Seeded / system-generated rule' },
+  ai:     { label: 'AI',      icon: 'auto_awesome', chip: 'bg-[#EFF6FF] text-[#2563EB]',   tooltip: 'AI-generated rule (detected from metadata)' },
+  manual: { label: 'Manual',  icon: 'person_edit',  chip: 'bg-[#F3F4F6] text-[#6B7280]',   tooltip: 'Created manually by a user' },
+  system: { label: 'System',  icon: 'settings',     chip: 'bg-[#EFF6FF] text-[#2563EB]',   tooltip: 'Seeded / system-generated rule' },
 } as const;
 type Origin = keyof typeof ORIGIN_META;
 
@@ -95,7 +98,9 @@ function detectOrigin(rule: RuleRow): Origin {
 // Small helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const inputCls = 'border border-slate-200 rounded-lg px-2.5 py-2 text-[13px] w-full focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 bg-white text-slate-700';
+const inputCls =
+  'h-10 w-full rounded-[10px] border border-[#E5E7EB] bg-white px-3 text-[13px] text-[#111827] ' +
+  'focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/15 transition cursor-pointer';
 
 function timeAgo(iso: string | null | undefined): string {
   if (!iso) return 'Never';
@@ -158,13 +163,17 @@ function RuleCard({
   const successRate = stat && stat.count > 0 ? Math.round((stat.success / stat.count) * 100) : null;
   const priorityTier = rule.priority >= 50 ? 'High' : rule.priority >= 20 ? 'Medium' : 'Low';
 
-  const iconBtn = (title: string, icon: string, onClick: () => void, danger = false, tone = 'text-slate-500') => (
+  /** Modern soft icon button used for quick actions. */
+  const iconBtn = (title: string, icon: string, onClick: () => void, danger = false, tone = 'text-[#6B7280]') => (
     <button
       title={title}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      className={clsx('p-1.5 rounded-lg transition-colors', danger ? 'text-red-400 hover:bg-red-50 hover:text-red-600' : `${tone} hover:bg-indigo-50 hover:text-indigo-600`)}
+      className={clsx(
+        'flex h-8 w-8 items-center justify-center rounded-[8px] transition-all duration-150 active:scale-90',
+        danger ? 'text-[#EF4444] hover:bg-[#FEE2E2]' : `${tone} hover:bg-[#EFF6FF] hover:text-[#2563EB]`,
+      )}
     >
-      <span className="material-icons text-[18px] leading-none">{icon}</span>
+      <span className="material-icons text-[17px] leading-none">{icon}</span>
     </button>
   );
 
@@ -174,10 +183,10 @@ function RuleCard({
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       className={clsx(
-        'group relative rounded-xl border p-3 cursor-pointer transition-all duration-200',
+        'group relative cursor-pointer rounded-[12px] border p-3 transition-all duration-200',
         selected
-          ? 'border-blue-400 bg-blue-50/70 shadow-sm shadow-blue-100 ring-1 ring-blue-300/60'
-          : 'border-slate-200/80 bg-white hover:border-indigo-300 hover:shadow-md hover:-translate-y-px',
+          ? 'border-[#2563EB] bg-[#F5F9FF] shadow-[0px_2px_10px_rgba(37,99,235,0.10)]'
+          : 'border-[#E5E7EB] bg-white hover:-translate-y-px hover:border-[#93C5FD] hover:shadow-[0px_6px_16px_rgba(0,0,0,0.07)]',
       )}
       title={rule.description || rule.name}
     >
@@ -187,7 +196,7 @@ function RuleCard({
       <div className="flex items-start gap-2.5 pl-2">
         {/* checkbox */}
         <label
-          className="flex items-center mt-0.5 cursor-pointer shrink-0"
+          className="mt-0.5 flex shrink-0 cursor-pointer items-center"
           onClick={(e) => e.stopPropagation()}
           title="Select rule for bulk actions"
         >
@@ -195,28 +204,28 @@ function RuleCard({
             type="checkbox"
             checked={checked}
             onChange={(e) => onCheck(e.target.checked)}
-            className="w-4 h-4 rounded border-slate-300 accent-indigo-600 focus:ring-indigo-500/40 cursor-pointer"
+            className="h-4 w-4 cursor-pointer rounded border-[#D1D5DB] accent-[#2563EB]"
           />
         </label>
 
         <div className="min-w-0 flex-1">
           {/* name + status */}
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2">{rule.name}</p>
-            <span className={clsx('inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-semibold', sm.chip)} title={sm.tooltip}>
-              <span className={clsx('w-1.5 h-1.5 rounded-full', sm.dot)} />
+            <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-[#111827]">{rule.name}</p>
+            <span className={clsx('inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold', sm.chip)} title={sm.tooltip}>
+              <span className={clsx('h-1.5 w-1.5 rounded-full', sm.dot)} />
               {sm.label}
             </span>
           </div>
 
           {/* category + origin + priority */}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <span className={clsx('px-2 py-0.5 rounded-md text-[11px] font-medium', catMeta.chip)}>{catLabel}</span>
-            <span className={clsx('inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[10px] font-semibold', origin.chip)} title={origin.tooltip}>
+            <span className={clsx('rounded-md px-2 py-0.5 text-[10.5px] font-medium', catMeta.chip)}>{catLabel}</span>
+            <span className={clsx('inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold', origin.chip)} title={origin.tooltip}>
               <span className="material-icons text-[11px] leading-none">{origin.icon}</span>{origin.label}
             </span>
             <span
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 text-[10px] font-bold"
+              className="inline-flex items-center gap-0.5 rounded-md bg-[#EFF6FF] px-1.5 py-0.5 text-[10px] font-bold text-[#2563EB]"
               title={`Execution priority ${rule.priority} (${priorityTier}) — higher priority rules run first`}
             >
               P{rule.priority}
@@ -224,7 +233,7 @@ function RuleCard({
           </div>
 
           {/* meta */}
-          <p className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1 flex-wrap">
+          <p className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px] text-[#9CA3AF]">
             <span className="inline-flex items-center gap-0.5" title={`Created by ${rule.created_by}`}>
               <span className="material-icons text-[12px]">person</span>{rule.modified_by || rule.created_by}
             </span>
@@ -233,15 +242,15 @@ function RuleCard({
           </p>
 
           {/* execution stats */}
-          <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[10.5px] font-medium">
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-slate-600" title="Total executions in the last 30 days">
-              <span className="material-icons text-[12px] text-indigo-400">bolt</span>{stat?.count ?? 0} runs
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10.5px] font-medium">
+            <span className="inline-flex items-center gap-1 rounded-md border border-[#E5E7EB] bg-[#F8FAFC] px-1.5 py-0.5 text-[#6B7280]" title="Total executions in the last 30 days">
+              <span className="material-icons text-[12px] text-[#2563EB]">bolt</span>{stat?.count ?? 0} runs
             </span>
             {successRate !== null && (
               <span
                 className={clsx(
-                  'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border',
-                  successRate >= 90 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : successRate >= 60 ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-red-50 border-red-100 text-red-600',
+                  'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5',
+                  successRate >= 90 ? 'bg-[#DCFCE7] text-[#16A34A]' : successRate >= 60 ? 'bg-[#FFFBEB] text-[#F59E0B]' : 'bg-[#FEE2E2] text-[#EF4444]',
                 )}
                 title={`Success rate over ${stat?.count ?? 0} executions`}
               >
@@ -251,8 +260,8 @@ function RuleCard({
             {stat?.lastStatus && (
               <span
                 className={clsx(
-                  'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border',
-                  stat.lastStatus === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : stat.lastStatus === 'failed' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-slate-50 border-slate-100 text-slate-500',
+                  'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5',
+                  stat.lastStatus === 'success' ? 'bg-[#DCFCE7] text-[#16A34A]' : stat.lastStatus === 'failed' ? 'bg-[#FEE2E2] text-[#EF4444]' : 'bg-[#F3F4F6] text-[#6B7280]',
                 )}
                 title={`Last execution ${stat.lastExecutedAt ? new Date(stat.lastExecutedAt).toLocaleString() : ''} — ${stat.lastStatus}`}
               >
@@ -269,11 +278,11 @@ function RuleCard({
             )}
             onClick={(e) => e.stopPropagation()}
           >
-            {iconBtn('Edit rule in Visual Builder', 'edit', onEdit)}
+            {iconBtn('Edit rule in Rule Builder', 'edit', onEdit)}
             {iconBtn('Clone rule (creates inactive copy)', 'content_copy', onClone)}
             {iconBtn('View version history', 'history', onHistory)}
             {iconBtn('Test rule in Sandbox', 'science', onTest)}
-            {iconBtn(rule.is_active ? 'Deactivate rule' : 'Activate rule', rule.is_active ? 'toggle_on' : 'toggle_off', onToggle, false, rule.is_active ? 'text-emerald-500' : 'text-slate-400')}
+            {iconBtn(rule.is_active ? 'Deactivate rule' : 'Activate rule', rule.is_active ? 'toggle_on' : 'toggle_off', onToggle, false, rule.is_active ? 'text-[#16A34A]' : 'text-[#9CA3AF]')}
             {iconBtn('Delete rule', 'delete_outline', onDelete, true)}
           </div>
         </div>
@@ -294,7 +303,6 @@ export default function AllRulesPanel({
   // filters
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | string>('all');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | '7d' | '30d' | 'older'>('all');
 
   // ui state
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -313,14 +321,9 @@ export default function AllRulesPanel({
         if (!hay.includes(q)) return false;
       }
       if (categoryFilter !== 'all' && r.rule_type !== categoryFilter) return false;
-      const ageDays = (Date.now() - new Date(r.updated_at).getTime()) / 86_400_000;
-      if (dateFilter === 'today' && ageDays >= 1) return false;
-      if (dateFilter === '7d' && ageDays >= 7) return false;
-      if (dateFilter === '30d' && ageDays < 7) return false;
-      if (dateFilter === 'older' && ageDays < 30) return false;
       return true;
     }).sort((a, b) => b.priority - a.priority || a.name.localeCompare(b.name));
-  }, [rules, search, categoryFilter, dateFilter]);
+  }, [rules, search, categoryFilter]);
 
   // pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -360,10 +363,10 @@ export default function AllRulesPanel({
   });
 
   const activeFilters = [
-    categoryFilter !== 'all', dateFilter !== 'all', search.trim() !== '',
+    categoryFilter !== 'all', search.trim() !== '',
   ].filter(Boolean).length;
   const clearFilters = () => {
-    setSearch(''); setCategoryFilter('all'); setDateFilter('all'); setPage(1);
+    setSearch(''); setCategoryFilter('all'); setPage(1);
   };
 
   const handleBulkExport = async () => {
@@ -381,17 +384,17 @@ export default function AllRulesPanel({
   const catOptions = useMemo(() => [...new Set(rules.map((r) => r.rule_type))], [rules]);
 
   return (
-    <aside className="rounded-2xl border border-slate-200/80 bg-white shadow-sm flex flex-col overflow-hidden min-h-0">
+    <aside className="flex min-h-0 flex-col overflow-hidden rounded-[16px] border border-[#E5E7EB] bg-white shadow-[0px_2px_10px_rgba(0,0,0,0.05)]">
       {/* ─── Header ─── */}
-      <div className="p-4 border-b border-slate-100 bg-gradient-to-b from-slate-50/80 to-white space-y-3">
+      <div className="space-y-3 border-b border-[#E5E7EB] bg-[#F8FAFC]/70 p-4">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm shrink-0">
-              <span className="material-icons text-white text-lg">library_books</span>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EFF6FF] text-[#2563EB]">
+              <span className="material-icons text-[18px]">library_books</span>
             </div>
             <div className="min-w-0">
-              <h3 className="text-[15px] font-bold text-slate-800 leading-tight">All Rules</h3>
-              <p className="text-[11px] text-slate-400">
+              <h3 className="text-[15px] font-semibold leading-tight text-[#111827]">All Rules</h3>
+              <p className="text-[11.5px] text-[#6B7280]">
                 {filtered.length} of {rules.length} rules{activeFilters > 0 && ` · ${activeFilters} filter${activeFilters > 1 ? 's' : ''}`}
               </p>
             </div>
@@ -399,97 +402,90 @@ export default function AllRulesPanel({
           <button
             onClick={onCreateRule}
             title="Create a new business rule"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[13px] font-semibold shadow-sm shadow-indigo-200 hover:shadow-md hover:shadow-indigo-300 hover:-translate-y-px transition-all shrink-0"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#2563EB] px-3 py-2 text-[12.5px] font-semibold text-white shadow-[0px_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:bg-[#1D4ED8] hover:shadow-[0px_4px_12px_rgba(37,99,235,0.3)] active:scale-[0.98]"
           >
-            <span className="material-icons text-[18px] leading-none">add_circle</span>
+            <span className="material-icons text-[16px] leading-none">add</span>
             <span className="hidden sm:inline">Create New Rule</span>
           </button>
         </div>
 
         {/* search */}
         <div className="relative">
-          <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[19px]">search</span>
+          <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#9CA3AF]">search</span>
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search Rules by Name, Category, or Description"
-            className="w-full border border-slate-200 rounded-xl pl-10 pr-8 py-2.5 text-[13px] bg-white text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-shadow"
+            placeholder="Search rules by name, category, or description"
+            className="w-full rounded-[10px] border border-[#E5E7EB] bg-white py-2.5 pl-10 pr-8 text-[13px] text-[#111827] placeholder:text-[#9CA3AF] transition focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/15"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500" title="Clear search">
-              <span className="material-icons text-[17px]">close</span>
+            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] transition-colors hover:text-[#6B7280]" title="Clear search">
+              <span className="material-icons text-[16px]">close</span>
             </button>
           )}
         </div>
 
         {/* advanced filters */}
-        <div className="grid grid-cols-2 gap-2">
+        <div>
           <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }} className={inputCls} title="Filter by category">
             <option value="all">All Categories</option>
             {catOptions.map((t) => <option key={t} value={t}>{categoryMeta(t).label}</option>)}
           </select>
-          <select value={dateFilter} onChange={(e) => { setDateFilter(e.target.value as any); setPage(1); }} className={inputCls} title="Filter by last modified date">
-            <option value="all">Modified — Any time</option>
-            <option value="today">Modified today</option>
-            <option value="7d">Modified in last 7 days</option>
-            <option value="30d">Modified in last 30 days</option>
-            <option value="older">Modified more than 30 days ago</option>
-          </select>
         </div>
 
         {/* select-all + expand/collapse */}
-        <div className="flex items-center justify-between text-[11px]">
-          <label className="inline-flex items-center gap-1.5 text-slate-500 cursor-pointer select-none" title="Select all rules on this page">
-            <input type="checkbox" checked={allOnPageChecked} onChange={toggleSelectAllOnPage} className="w-3.5 h-3.5 rounded border-slate-300 accent-indigo-600 cursor-pointer" />
+        <div className="flex items-center justify-between text-[11.5px]">
+          <label className="inline-flex cursor-pointer select-none items-center gap-1.5 text-[#6B7280]" title="Select all rules on this page">
+            <input type="checkbox" checked={allOnPageChecked} onChange={toggleSelectAllOnPage} className="h-3.5 w-3.5 cursor-pointer rounded border-[#D1D5DB] accent-[#2563EB]" />
             Select page
           </label>
           {activeFilters > 0 && (
-            <button onClick={clearFilters} className="text-indigo-500 hover:text-indigo-700 font-medium" title="Clear all filters">
+            <button onClick={clearFilters} className="font-medium text-[#2563EB] transition-colors hover:text-[#1D4ED8]" title="Clear all filters">
               Clear filters ({activeFilters})
             </button>
           )}
-          <button onClick={collapsed.size ? expandAll : collapseAll} className="text-slate-400 hover:text-slate-600 font-medium" title="Expand or collapse all categories">
+          <button onClick={collapsed.size ? expandAll : collapseAll} className="font-medium text-[#6B7280] transition-colors hover:text-[#111827]" title="Expand or collapse all categories">
             {collapsed.size ? 'Expand all' : 'Collapse all'}
           </button>
         </div>
       </div>
 
       {/* ─── Rules list ─── */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[220px] max-h-none xl:max-h-[62vh]">
+      <div className="min-h-[220px] flex-1 space-y-3 overflow-y-auto p-3 xl:max-h-[62vh]">
         {isLoading ? (
           [...Array(5)].map((_, i) => (
-            <div key={i} className="rounded-xl border border-slate-100 p-3 space-y-2.5 animate-pulse">
-              <div className="flex gap-2"><div className="w-4 h-4 rounded bg-slate-100" /><div className="h-4 w-3/4 bg-slate-100 rounded" /></div>
-              <div className="h-3 w-1/2 bg-slate-50 rounded" />
+            <div key={i} className="space-y-2.5 rounded-[12px] border border-[#E5E7EB] p-3">
+              <div className="flex gap-2"><div className="h-4 w-4 rounded bg-[#F3F4F6] animate-pulse" /><div className="h-4 w-3/4 animate-pulse rounded bg-[#F3F4F6]" /></div>
+              <div className="h-3 w-1/2 animate-pulse rounded bg-[#F8FAFC]" />
             </div>
           ))
         ) : pageRules.length === 0 ? (
           <div className="py-12 text-center">
-            <span className="material-icons block text-5xl text-slate-200 mb-2">manage_search</span>
-            <p className="text-sm font-medium text-slate-400">No rules match these filters.</p>
-            <button onClick={clearFilters} className="mt-2 text-[12px] text-indigo-500 hover:text-indigo-700 font-medium">Clear all filters</button>
+            <span className="material-icons block text-[44px] leading-none text-[#E5E7EB]">manage_search</span>
+            <p className="mt-3 text-[13px] font-medium text-[#6B7280]">No rules match these filters.</p>
+            <button onClick={clearFilters} className="mt-2 text-[12.5px] font-medium text-[#2563EB] transition-colors hover:text-[#1D4ED8]">Clear all filters</button>
           </div>
         ) : (
           [...groups.map.entries()].map(([type, groupRules]) => {
             const meta = categoryMeta(type);
             const isCollapsed = collapsed.has(type);
             return (
-              <section key={type} className="rounded-xl border border-slate-100 overflow-hidden">
+              <section key={type} className="overflow-hidden rounded-[12px] border border-[#E5E7EB]">
                 {/* category header */}
                 <button
                   onClick={() => toggleGroup(type)}
                   title={`${meta.label} — ${groups.totals.get(type) ?? 0} rules`}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-slate-50/70 hover:bg-slate-100/70 transition-colors text-left"
+                  className="flex w-full items-center gap-2.5 bg-[#F8FAFC]/80 px-3 py-2.5 text-left transition-colors hover:bg-[#F3F4F6]/60"
                 >
-                  <span className="material-icons text-[16px] text-slate-400 transition-transform duration-200" style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>expand_more</span>
-                  <span className={clsx('w-6 h-6 rounded-lg flex items-center justify-center shrink-0', meta.chip)}>
+                  <span className="material-icons text-[16px] text-[#9CA3AF] transition-transform duration-200" style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>expand_more</span>
+                  <span className={clsx('flex h-6 w-6 shrink-0 items-center justify-center rounded-md', meta.chip)}>
                     <span className="material-icons text-[14px]">{meta.icon}</span>
                   </span>
-                  <span className="text-[12.5px] font-bold text-slate-700 flex-1 truncate">{meta.label}</span>
-                  <span className={clsx('px-2 py-0.5 rounded-full text-[10.5px] font-bold', meta.chip)}>{groups.totals.get(type) ?? 0}</span>
+                  <span className="flex-1 truncate text-[12.5px] font-semibold text-[#374151]">{meta.label}</span>
+                  <span className={clsx('rounded-full px-2 py-0.5 text-[10.5px] font-bold', meta.chip)}>{groups.totals.get(type) ?? 0}</span>
                 </button>
                 {/* cards */}
-                <div className={clsx('p-2 space-y-2 transition-all duration-300', isCollapsed ? 'hidden' : 'block')}>
+                <div className={clsx('space-y-2 p-2 transition-all duration-300', isCollapsed ? 'hidden' : 'block')}>
                   {groupRules.map((r) => (
                     <RuleCard
                       key={r.id}
@@ -515,60 +511,60 @@ export default function AllRulesPanel({
 
       {/* ─── Bulk action bar ─── */}
       {selectedIds.size > 0 && (
-        <div className="border-t border-indigo-100 bg-indigo-50/80 backdrop-blur px-3 py-2.5 flex items-center gap-1.5 flex-wrap">
-          <span className="text-[12px] font-bold text-indigo-700 mr-1 inline-flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-[#DBEAFE] bg-[#EFF6FF]/90 px-3 py-2.5">
+          <span className="mr-1 inline-flex items-center gap-1 text-[12px] font-bold text-[#2563EB]">
             <span className="material-icons text-[15px]">checklist</span>{selectedIds.size} selected
           </span>
-          <button disabled={bulkPending} onClick={() => onBulkActivate([...selectedIds])} title="Activate all selected rules" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-emerald-200 text-emerald-600 text-[11.5px] font-semibold hover:bg-emerald-50 disabled:opacity-50">
+          <button disabled={bulkPending} onClick={() => onBulkActivate([...selectedIds])} title="Activate all selected rules" className="inline-flex items-center gap-1 rounded-lg border border-[#16A34A]/25 bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#16A34A] transition-colors hover:bg-[#DCFCE7] disabled:opacity-50">
             <span className="material-icons text-[14px]">play_circle</span>Activate
           </button>
-          <button disabled={bulkPending} onClick={() => onBulkDeactivate([...selectedIds])} title="Deactivate all selected rules" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-amber-200 text-amber-600 text-[11.5px] font-semibold hover:bg-amber-50 disabled:opacity-50">
+          <button disabled={bulkPending} onClick={() => onBulkDeactivate([...selectedIds])} title="Deactivate all selected rules" className="inline-flex items-center gap-1 rounded-lg border border-[#F59E0B]/25 bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#F59E0B] transition-colors hover:bg-[#FFFBEB] disabled:opacity-50">
             <span className="material-icons text-[14px]">pause_circle</span>Deactivate
           </button>
-          <button disabled={exporting || bulkPending} onClick={handleBulkExport} title="Export selected rules as JSON" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-[11.5px] font-semibold hover:bg-slate-50 disabled:opacity-50">
+          <button disabled={exporting || bulkPending} onClick={handleBulkExport} title="Export selected rules as JSON" className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#374151] transition-colors hover:bg-[#F8FAFC] disabled:opacity-50">
             <span className="material-icons text-[14px]">download</span>{exporting ? 'Exporting…' : 'Export'}
           </button>
-          <button disabled={bulkPending} onClick={() => onBulkDelete([...selectedIds])} title="Delete all selected rules" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-red-200 text-red-500 text-[11.5px] font-semibold hover:bg-red-50 disabled:opacity-50">
+          <button disabled={bulkPending} onClick={() => onBulkDelete([...selectedIds])} title="Delete all selected rules" className="inline-flex items-center gap-1 rounded-lg border border-[#EF4444]/25 bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#EF4444] transition-colors hover:bg-[#FEE2E2] disabled:opacity-50">
             <span className="material-icons text-[14px]">delete</span>Delete
           </button>
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto text-slate-400 hover:text-slate-600 p-1.5 rounded-lg" title="Clear selection">
+          <button onClick={() => setSelectedIds(new Set())} className="ml-auto rounded-lg p-1.5 text-[#6B7280] transition-colors hover:bg-white hover:text-[#111827]" title="Clear selection">
             <span className="material-icons text-[17px]">close</span>
           </button>
         </div>
       )}
 
       {/* ─── Pagination ─── */}
-      <div className="border-t border-slate-100 px-3 py-2.5 flex items-center justify-between gap-2 bg-white">
-        <span className="text-[11px] text-slate-400 hidden sm:block">
+      <div className="flex items-center justify-between gap-2 border-t border-[#E5E7EB] bg-white px-3 py-2.5">
+        <span className="hidden text-[11.5px] text-[#6B7280] sm:block">
           {filtered.length === 0 ? 'No rules' : `${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} of ${filtered.length} rules`}
         </span>
         <div className="flex items-center gap-1">
-          <button onClick={() => setPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30" title="Previous page">
+          <button onClick={() => setPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827] disabled:opacity-30" title="Previous page">
             <span className="material-icons text-[18px]">chevron_left</span>
           </button>
           {pageWindow(safePage, totalPages).map((p, i) =>
             p === '…' ? (
-              <span key={`e${i}`} className="px-1 text-slate-300 text-[12px]">…</span>
+              <span key={`e${i}`} className="px-1 text-[12px] text-[#9CA3AF]">…</span>
             ) : (
               <button
                 key={p}
                 onClick={() => setPage(p)}
                 className={clsx(
-                  'min-w-[28px] h-7 px-1.5 rounded-lg text-[12px] font-semibold transition-colors',
-                  p === safePage ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' : 'text-slate-500 hover:bg-slate-100',
+                  'h-7 min-w-[28px] rounded-lg px-1.5 text-[12px] font-semibold transition-all duration-150',
+                  p === safePage ? 'bg-[#2563EB] text-white shadow-[0px_2px_6px_rgba(37,99,235,0.3)]' : 'text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]',
                 )}
               >
                 {p}
               </button>
             ),
           )}
-          <button onClick={() => setPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30" title="Next page">
+          <button onClick={() => setPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827] disabled:opacity-30" title="Next page">
             <span className="material-icons text-[18px]">chevron_right</span>
           </button>
           <select
             value={pageSize}
             onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-            className="ml-1 border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] text-slate-500 bg-white"
+            className="ml-1 cursor-pointer rounded-lg border border-[#E5E7EB] bg-white px-1.5 py-1 text-[11px] text-[#6B7280] focus:border-[#2563EB] focus:outline-none"
             title="Rules per page"
           >
             {[8, 12, 24, 48].map((n) => <option key={n} value={n}>{n}/pg</option>)}
@@ -578,36 +574,36 @@ export default function AllRulesPanel({
 
       {/* ─── Version history modal ─── */}
       {historyRule && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setHistoryRule(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="p-5 border-b border-slate-100 flex items-start justify-between gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/40 p-4 backdrop-blur-sm" onClick={() => setHistoryRule(null)}>
+          <div className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-[16px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 border-b border-[#E5E7EB] p-5">
               <div>
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <span className="material-icons text-purple-500">history</span>Version History
+                <h3 className="flex items-center gap-2 text-[16px] font-semibold text-[#111827]">
+                  <span className="material-icons text-[20px] text-[#2563EB]">history</span>Version History
                 </h3>
-                <p className="text-[12px] text-slate-400 mt-0.5 truncate max-w-sm">{historyRule.name}</p>
+                <p className="mt-0.5 max-w-sm truncate text-[12.5px] text-[#6B7280]">{historyRule.name}</p>
               </div>
-              <button onClick={() => setHistoryRule(null)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100" title="Close">
+              <button onClick={() => setHistoryRule(null)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]" title="Close">
                 <span className="material-icons">close</span>
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               {versionsLoading ? (
-                <div className="space-y-2.5">{[...Array(4)].map((_, i) => <div key={i} className="h-14 rounded-xl bg-slate-50 animate-pulse" />)}</div>
+                <div className="space-y-2.5">{[...Array(4)].map((_, i) => <div key={i} className="h-14 animate-pulse rounded-[12px] bg-[#F8FAFC]" />)}</div>
               ) : (versions ?? []).length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-8">No versions recorded yet.</p>
+                <p className="py-8 text-center text-[13px] text-[#6B7280]">No versions recorded yet.</p>
               ) : (
-                <ol className="relative border-l-2 border-slate-100 ml-3 space-y-4">
+                <ol className="relative ml-3 space-y-4 border-l-2 border-[#E5E7EB]">
                   {(versions as RuleVersionRow[]).map((v) => (
-                    <li key={v.id} className="ml-4 relative">
-                      <span className="absolute -left-[25px] top-1 w-4 h-4 rounded-full bg-white border-2 border-purple-400" />
-                      <div className="rounded-xl border border-slate-100 p-3 hover:shadow-sm transition-shadow">
+                    <li key={v.id} className="relative ml-4">
+                      <span className="absolute -left-[25px] top-1 h-4 w-4 rounded-full border-2 border-[#2563EB] bg-white" />
+                      <div className="rounded-[12px] border border-[#E5E7EB] p-3 transition-all hover:shadow-[0px_2px_10px_rgba(0,0,0,0.05)]">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-600 text-[11px] font-bold">v{v.version_number}{v.is_rollback && ' · rollback'}</span>
-                          <span className="text-[11px] text-slate-400">{new Date(v.modified_at).toLocaleString()}</span>
+                          <span className="rounded-md bg-[#EFF6FF] px-2 py-0.5 text-[11px] font-bold text-[#2563EB]">v{v.version_number}{v.is_rollback && ' · rollback'}</span>
+                          <span className="text-[11px] text-[#9CA3AF]">{new Date(v.modified_at).toLocaleString()}</span>
                         </div>
-                        <p className="text-[13px] text-slate-600 mt-1.5">{v.change_summary || 'No change summary'}</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">by {v.modified_by}</p>
+                        <p className="mt-1.5 text-[13px] text-[#374151]">{v.change_summary || 'No change summary'}</p>
+                        <p className="mt-0.5 text-[11px] text-[#9CA3AF]">by {v.modified_by}</p>
                       </div>
                     </li>
                   ))}

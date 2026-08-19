@@ -72,7 +72,7 @@ export default function LandingPage() {
 
       {/* Stats */}
       <section className="border-b border-slate-100 py-8">
-        <div className="max-w-4xl mx-auto px-8 grid grid-cols-4 gap-6">
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-4 px-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 lg:px-8">
           {[
             { value: '100+', label: 'Employees per dispatch' },
             { value: '1', label: 'Supabase database' },
@@ -92,7 +92,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-slate-800 text-center mb-2">Everything HR teams need</h2>
           <p className="text-slate-500 text-center mb-10">Built for UAE & GCC organizations using GDHR SmartTime attendance systems.</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {features.map(f => (
               <div key={f.title} className="bg-slate-50 rounded-xl p-5 hover:shadow-md transition-shadow">
                 <span className="material-icons text-brand-600 text-3xl mb-3 block">{f.icon}</span>

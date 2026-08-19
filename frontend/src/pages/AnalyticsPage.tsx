@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Overview stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
         <StatCard label="Total Employees" value={overview?.totalEmployees ?? '—'} icon="people" color="bg-blue-500" />
         <StatCard label="Uploads" value={overview?.totalUploads ?? '—'} icon="upload_file" color="bg-indigo-500" />
         <StatCard label="Emails Generated" value={overview?.totalEmails ?? '—'} icon="drafts" color="bg-amber-500" />

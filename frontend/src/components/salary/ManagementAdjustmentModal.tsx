@@ -78,8 +78,8 @@ export default function ManagementAdjustmentModal({
   const amountColor = amount > 0 ? 'text-emerald-600' : amount < 0 ? 'text-red-600' : 'text-slate-700';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+      <div className="flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between">
           <div>

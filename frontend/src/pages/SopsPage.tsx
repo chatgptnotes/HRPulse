@@ -162,9 +162,9 @@ export default function SopsPage() {
 
       {/* View Modal */}
       {viewing && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+        <div className="hr-modal-shell">
+          <div className="hr-modal-card max-w-2xl">
+            <div className="hr-modal-header">
               <div>
                 <span className="text-xs font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">{viewing.category}</span>
                 <h2 className="text-xl font-bold text-slate-800 mt-1">{viewing.title}</h2>
@@ -190,11 +190,11 @@ export default function SopsPage() {
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 prose prose-sm max-w-none">
+            <div className="hr-modal-content prose prose-sm max-w-none">
               <ReactMarkdown>{viewing.content}</ReactMarkdown>
             </div>
             {viewing.tags?.length > 0 && (
-              <div className="px-6 py-3 border-t border-slate-100 flex gap-2">
+              <div className="hr-modal-footer">
                 {viewing.tags.map(t => (
                   <span key={t} className="bg-slate-100 text-slate-500 text-xs px-2 py-0.5 rounded">{t}</span>
                 ))}
@@ -206,16 +206,16 @@ export default function SopsPage() {
 
       {/* Create / Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between mb-5">
+        <div className="hr-modal-shell">
+          <div className="hr-modal-card max-w-2xl p-4 sm:p-6">
+            <div className="mb-5 flex items-center justify-between gap-3">
               <h3 className="text-lg font-bold text-slate-800">{editingSop ? 'Edit SOP' : 'New SOP'}</h3>
               <button onClick={closeModal} className="p-1.5 rounded hover:bg-slate-100">
                 <span className="material-icons text-xl text-slate-400">close</span>
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="min-h-0 flex-1 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Title *</label>
                   <input

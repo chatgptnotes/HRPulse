@@ -3,8 +3,11 @@
  *
  * Flow: type a natural-language instruction → Generate. If the AI needs more
  * detail it returns clarifying questions which render as inputs; answering
- * them re-submits. A complete draft is previewed and applied into the Visual
- * Rule Builder for review before saving.
+ * them re-submits. A complete draft is previewed and applied into the Rule
+ * Builder for review before saving.
+ *
+ * Visual system: white card with subtle blue border, highlighted AI badge,
+ * modern textarea with blue focus ring, prominent gradient Generate button.
  */
 
 import { useState } from 'react';
@@ -68,15 +71,17 @@ export default function AiGeneratorPanel({ onApply }: { onApply: (rule: AiGenera
   };
 
   return (
-    <div className="rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/70 to-white p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3.5">
-        <h3 className="flex items-center gap-2 text-base font-semibold text-indigo-900">
-          <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
-            <span className="material-icons text-white text-lg">auto_awesome</span>
+    <div className="rounded-[16px] border border-[#E5E7EB] bg-white p-4 shadow-[0px_2px_10px_rgba(0,0,0,0.05)] sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2.5 text-[16px] font-semibold text-[#111827]">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EFF6FF] text-[#2563EB]">
+            <span className="material-icons text-[17px]">auto_awesome</span>
           </span>
           AI Rule Generator
         </h3>
-        <span className="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-600 font-semibold">Gemini</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[11px] font-bold text-[#2563EB]">
+          <span className="material-icons text-[12px]">auto_awesome</span>Gemini AI
+        </span>
       </div>
 
       {!preview && !questions && (
@@ -86,11 +91,11 @@ export default function AiGeneratorPanel({ onApply }: { onApply: (rule: AiGenera
             onChange={(e) => setInstruction(e.target.value)}
             rows={3}
             placeholder="Describe the rule in plain English…"
-            className="w-full border border-indigo-200 rounded-lg px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400/50 resize-none"
+            className="w-full resize-none rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#111827] placeholder:text-[#9CA3AF] transition focus:border-[#2563EB] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB]/15"
           />
-          <div className="flex flex-wrap gap-2 mt-2.5">
+          <div className="mt-2.5 flex flex-wrap gap-2">
             {EXAMPLES.map((ex) => (
-              <button key={ex} onClick={() => setInstruction(ex)} className="text-xs px-2.5 py-1.5 rounded-full bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-100 truncate max-w-full" title={ex}>
+              <button key={ex} onClick={() => setInstruction(ex)} className="max-w-full truncate rounded-full border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[11.5px] text-[#374151] transition-all hover:border-[#93C5FD] hover:bg-[#EFF6FF] hover:text-[#2563EB]" title={ex}>
                 {ex.length > 42 ? ex.slice(0, 40) + '…' : ex}
               </button>
             ))}
@@ -98,9 +103,9 @@ export default function AiGeneratorPanel({ onApply }: { onApply: (rule: AiGenera
           <button
             onClick={() => generate.mutate()}
             disabled={instruction.trim().length < 8 || generate.isPending}
-            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold hover:shadow-lg transition-shadow disabled:opacity-50"
+            className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-[10px] bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] py-2.5 text-[13px] font-semibold text-white shadow-[0px_2px_10px_rgba(37,99,235,0.3)] transition-all duration-200 hover:shadow-[0px_4px_16px_rgba(37,99,235,0.4)] hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
-            <span className="material-icons text-lg">{generate.isPending ? 'hourglass_top' : 'bolt'}</span>
+            <span className="material-icons text-[17px]">{generate.isPending ? 'hourglass_top' : 'bolt'}</span>
             {generate.isPending ? 'Thinking…' : 'Generate Rule'}
           </button>
         </>
@@ -109,17 +114,17 @@ export default function AiGeneratorPanel({ onApply }: { onApply: (rule: AiGenera
       {/* Clarifying questions */}
       {questions && (
         <div className="space-y-3">
-          <p className="text-sm font-medium text-indigo-900 flex items-center gap-2">
-            <span className="material-icons text-base">help</span>AI needs a bit more detail:
+          <p className="flex items-center gap-2 text-[13px] font-medium text-[#111827]">
+            <span className="material-icons text-[16px] text-[#2563EB]">help</span>AI needs a bit more detail:
           </p>
           {questions.map((q) => (
             <div key={q.id}>
-              <label className="block text-sm text-slate-600 mb-1.5">{q.question}</label>
+              <label className="mb-1.5 block text-[13px] font-medium text-[#374151]">{q.question}</label>
               {q.options ? (
                 <select
                   value={answers[q.id] ?? ''}
                   onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
-                  className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm bg-white"
+                  className="h-10 w-full cursor-pointer rounded-[10px] border border-[#E5E7EB] bg-white px-3 text-[13px] text-[#111827] transition focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/15"
                 >
                   <option value="">Select…</option>
                   {q.options.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -129,18 +134,18 @@ export default function AiGeneratorPanel({ onApply }: { onApply: (rule: AiGenera
                   type={q.type === 'number' ? 'number' : 'text'}
                   value={answers[q.id] ?? ''}
                   onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
-                  className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm bg-white"
+                  className="h-10 w-full rounded-[10px] border border-[#E5E7EB] bg-white px-3 text-[13px] text-[#111827] transition focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/15"
                   placeholder={q.type === 'number' ? '0' : 'Answer…'}
                 />
               )}
             </div>
           ))}
           <div className="flex gap-2">
-            <button onClick={reset} className="px-3.5 py-2 rounded-lg border border-indigo-200 text-sm text-slate-600 hover:bg-white">Start over</button>
+            <button onClick={reset} className="rounded-[10px] border border-[#E5E7EB] bg-white px-3.5 py-2 text-[13px] font-medium text-[#374151] transition-colors hover:bg-[#F8FAFC]">Start over</button>
             <button
               onClick={() => generate.mutate()}
               disabled={generate.isPending || questions.some((q) => !answers[q.id])}
-              className="flex-1 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold hover:shadow-md disabled:opacity-50"
+              className="flex-1 rounded-[10px] bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] py-2 text-[13px] font-semibold text-white shadow-[0px_2px_10px_rgba(37,99,235,0.3)] transition-all hover:shadow-[0px_4px_16px_rgba(37,99,235,0.4)] disabled:opacity-50"
             >
               {generate.isPending ? 'Generating…' : 'Generate with answers'}
             </button>
@@ -151,43 +156,44 @@ export default function AiGeneratorPanel({ onApply }: { onApply: (rule: AiGenera
       {/* Preview of generated rule */}
       {preview && (
         <div className="space-y-3">
-          <div className="rounded-xl bg-white border border-indigo-100 p-3.5">
-            <p className="text-sm font-semibold text-slate-800">{preview.name}</p>
-            {preview.description && <p className="text-xs text-slate-500 mt-1 leading-relaxed">{preview.description}</p>}
-            {preview.explanation && <p className="text-xs text-indigo-600 mt-1.5 italic leading-relaxed">{preview.explanation}</p>}
+          <div className="rounded-[12px] border border-[#E5E7EB] bg-[#F8FAFC] p-3.5">
+            <p className="text-[13px] font-semibold text-[#111827]">{preview.name}</p>
+            {preview.description && <p className="mt-1 text-[12.5px] leading-relaxed text-[#6B7280]">{preview.description}</p>}
+            {preview.explanation && <p className="mt-1.5 text-[12.5px] italic leading-relaxed text-[#2563EB]">{preview.explanation}</p>}
             <div className="mt-3 space-y-1.5">
               {(preview.conditions || []).map((c, i) => (
-                <p key={i} className="text-xs text-slate-700 flex items-start gap-1.5 leading-relaxed">
-                  <span className={clsx('px-1.5 rounded text-[10px] font-bold shrink-0', i === 0 ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700')}>
+                <p key={i} className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-[#374151]">
+                  <span className={clsx('shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold', i === 0 ? 'bg-[#DCFCE7] text-[#16A34A]' : 'bg-[#DBEAFE] text-[#2563EB]')}>
                     {i === 0 ? 'IF' : c.logicalOperator ?? 'AND'}
                   </span>
                   {describeCondition(c)}
                 </p>
               ))}
             </div>
-            <div className="mt-2.5 pt-2.5 border-t border-slate-100 space-y-1.5">
+            <div className="mt-2.5 space-y-1.5 border-t border-[#E5E7EB] pt-2.5">
               {(preview.actions || []).map((a, i) => (
-                <p key={i} className="text-xs text-slate-700 flex items-start gap-1.5 leading-relaxed">
-                  <span className="px-1.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold shrink-0">THEN</span>
+                <p key={i} className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-[#374151]">
+                  <span className="shrink-0 rounded bg-[#EFF6FF] px-1.5 py-0.5 text-[10px] font-bold text-[#2563EB]">THEN</span>
                   {describeAction(a)}
                 </p>
               ))}
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={reset} className="px-3.5 py-2 rounded-lg border border-indigo-200 text-sm text-slate-600 hover:bg-white">Discard</button>
+            <button onClick={reset} className="rounded-[10px] border border-[#E5E7EB] bg-white px-3.5 py-2 text-[13px] font-medium text-[#374151] transition-colors hover:bg-[#F8FAFC]">Discard</button>
             <button
               onClick={() => { onApply(preview); setPreview(null); setInstruction(''); }}
-              className="flex-1 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold hover:shadow-lg transition-shadow"
+              className="flex-1 rounded-[10px] bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] py-2 text-[13px] font-semibold text-white shadow-[0px_2px_10px_rgba(37,99,235,0.3)] transition-all hover:shadow-[0px_4px_16px_rgba(37,99,235,0.4)]"
             >
-              Load into Builder for review →
+              Load into Builder →
             </button>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="mt-2.5 text-sm text-red-700 bg-red-50 rounded-lg px-3.5 py-2.5 leading-relaxed">
+        <div className="mt-2.5 flex items-start gap-2 rounded-[10px] bg-[#FEE2E2] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#DC2626]">
+          <span className="material-icons text-[16px] mt-0.5">error</span>
           {error}
         </div>
       )}
