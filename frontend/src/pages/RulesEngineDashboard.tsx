@@ -146,7 +146,7 @@ export default function RulesEngineDashboard() {
 
       {/* ─── Tabs + content ─── */}
       <div className="overflow-hidden rounded-[16px] border border-[#E5E7EB] bg-white shadow-[0px_2px_10px_rgba(0,0,0,0.05)]">
-        <div className="flex overflow-x-auto border-b border-[#E5E7EB] bg-white [scrollbar-width:thin]">
+        <div className="hr-scroll-x flex flex-nowrap border-b border-[#E5E7EB] bg-white [scrollbar-width:thin]">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -154,7 +154,7 @@ export default function RulesEngineDashboard() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={clsx(
-                  'relative flex items-center gap-2 whitespace-nowrap px-4 py-4 text-[13px] font-medium transition-colors duration-200 sm:px-5',
+                  'relative flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-3 text-left text-[12px] font-medium transition-colors duration-200 sm:gap-2 sm:px-5 sm:py-4 sm:text-[13px]',
                   isActive ? 'text-[#2563EB]' : 'text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]',
                 )}
               >
