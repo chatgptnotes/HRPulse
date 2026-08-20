@@ -11,7 +11,7 @@
  *          live Validation results.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import {
@@ -251,7 +251,7 @@ function AddRowButton({ label, onClick }: { label: string; onClick: () => void }
 // Main tab
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function RuleManagementTab({ onChanged }: { onChanged?: () => void }) {
+export default function RuleManagementTab({ onChanged, openCreateSignal }: { onChanged?: () => void; openCreateSignal?: number }) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const actor = user?.email || 'user';
@@ -382,6 +382,10 @@ export default function RuleManagementTab({ onChanged }: { onChanged?: () => voi
   const openNew = () => setDraft({ ...emptyDraft(), categoryId: categories[0]?.id ?? null });
   const openEdit = (r: RuleRow) => { setDraft(ruleToDraft(r)); setSaveError(''); };
 
+  useEffect(() => {
+    if (openCreateSignal) openNew();
+  }, [openCreateSignal]);
+
   // Reset: restore a blank draft (keeping the category default).
   const resetDraft = () => {
     setSaveError('');
@@ -420,7 +424,7 @@ export default function RuleManagementTab({ onChanged }: { onChanged?: () => voi
         />
 
         {/* ══════════ CENTER — Rule Builder (clean SaaS design) ══════════ */}
-        <div className="rounded-[16px] border border-[#E5E7EB] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.05)] flex flex-col overflow-hidden">
+        <div id="rule-builder" className="rounded-[16px] border border-[#E5E7EB] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.05)] flex flex-col overflow-hidden">
           {!draft ? (
             <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-10 text-center">
               <div className="w-16 h-16 rounded-[16px] bg-[#EFF6FF] flex items-center justify-center mb-4">

@@ -58,6 +58,17 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
     queryFn: () => api.getAttendanceRecords(uploadId, employeeId).then(r => r.data as any[]),
   });
 
+  const { data: shiftProfile, isLoading: shiftProfileLoading } = useQuery({
+    queryKey: ['employee-shift-profile', employeeId],
+    queryFn: async () => {
+      const [employeeResult, assignmentsResult] = await Promise.all([
+        api.getEmployee(employeeId),
+        api.getEmployeeShiftAssignments(employeeId),
+      ]);
+      return { employee: employeeResult.data as any, assignments: assignmentsResult.data || [] };
+    },
+  });
+
   useEffect(() => {
     if (draft) {
       setSubject(draft.subject || '');
@@ -166,6 +177,111 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
   const visibleOvertimeHours = creditFilteredRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.overtimeHours || 0), 0);
   const visibleOvertimePay = creditFilteredRecords.reduce((sum: number, r: any) => sum + (lineFor(r)?.overtimePay || 0), 0);
   const money = (value: number) => formatINR(Math.round(value * 100) / 100);
+
+  const downloadTimingPdf = () => {
+    const timeMinutes = (value: unknown) => {
+      const match = String(value ?? '').match(/(\d{1,2}):(\d{2})/);
+      if (!match) return null;
+      return Number(match[1]) * 60 + Number(match[2]);
+    };
+    const toClock = (value: number) => `${String(Math.floor((value % 1440) / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+    const shiftStartMinutes = (() => {
+      const assignments = (shiftProfile?.assignments || []).filter((assignment: any) => !assignment.effectiveTo || String(assignment.effectiveTo) >= new Date().toISOString().slice(0, 10));
+      const assignedStart = assignments[0]?.startTime;
+      if (assignedStart) return timeMinutes(assignedStart) ?? 540;
+      const configured = Object.values(shiftProfile?.employee?.shift_timings || {})
+        .map((timing: any) => timeMinutes(timing?.start))
+        .filter((value): value is number => value !== null);
+      const punchTimes = creditFilteredRecords.map((record: any) => timeMinutes(record.timeIn)).filter((value): value is number => value !== null);
+      if (!configured.length) return 540;
+      if (!punchTimes.length) return configured[0];
+      const typicalPunch = punchTimes.reduce((sum, value) => sum + value, 0) / punchTimes.length;
+      return configured.reduce((closest, value) => Math.abs(value - typicalPunch) < Math.abs(closest - typicalPunch) ? value : closest, configured[0]);
+    })();
+    const sections = [
+      { label: toClock(shiftStartMinutes), test: (minutes: number | null) => minutes !== null && minutes <= shiftStartMinutes },
+      { label: toClock(shiftStartMinutes + 15), test: (minutes: number | null) => minutes !== null && minutes > shiftStartMinutes && minutes <= shiftStartMinutes + 15 },
+      { label: toClock(shiftStartMinutes + 30), test: (minutes: number | null) => minutes !== null && minutes > shiftStartMinutes + 15 && minutes <= shiftStartMinutes + 30 },
+      { label: `After ${toClock(shiftStartMinutes + 30)}`, test: (minutes: number | null) => minutes === null || minutes > shiftStartMinutes + 30 },
+    ];
+    const rowsFor = (section: typeof sections[number]) => creditFilteredRecords.filter((record: any) => section.test(timeMinutes(record.timeIn)));
+    // Build a small standards-compliant PDF in the browser so the file
+    // downloads directly instead of opening the browser print dialog.
+    const pdfText = (value: unknown) => String(value ?? '—').replace(/[\\()]/g, '\\$&').replace(/[^\x20-\x7E]/g, '?');
+    const pageCommands: string[][] = [[]];
+    let currentPage = 0;
+    let y = 760;
+    const command = (value: string) => pageCommands[currentPage].push(value);
+    const newPage = () => { pageCommands.push([]); currentPage += 1; y = 760; };
+    const textAt = (x: number, yPosition: number, value: unknown, size = 10, bold = false, color = '0.09 0.13 0.2') => {
+      command(`${color} rg BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x} ${yPosition} Td (${pdfText(value)}) Tj ET`);
+    };
+    const drawTable = (section: typeof sections[number], rows: any[]) => {
+      if (y < 170) newPage();
+      textAt(42, y, section.label, 12, true, '0.12 0.35 0.8');
+      y -= 8;
+      command(`0.65 0.78 0.95 RG 42 ${y} m 570 ${y} l S`);
+      y -= 20;
+      command(`0.94 0.96 1 rg 42 ${y - 14} 528 18 re f`);
+      textAt(50, y - 10, 'Date', 9, true, '0.28 0.35 0.45');
+      textAt(180, y - 10, 'Status', 9, true, '0.28 0.35 0.45');
+      textAt(375, y - 10, 'Time In', 9, true, '0.28 0.35 0.45');
+      textAt(465, y - 10, 'Time Out', 9, true, '0.28 0.35 0.45');
+      y -= 18;
+      const tableRows = rows.length ? rows : [{ recordDate: 'No records', status: '', timeIn: '', timeOut: '' }];
+      for (let index = 0; index < tableRows.length; index += 1) {
+        const record = tableRows[index];
+        if (y < 45) { newPage(); drawTable(section, tableRows.slice(index)); return; }
+        command(`0.86 0.9 0.96 RG 42 ${y - 14} m 570 ${y - 14} l S`);
+        textAt(50, y - 10, record.recordDate, 9, false, '0.2 0.28 0.4');
+        textAt(180, y - 10, record.status, 9, false, '0.2 0.28 0.4');
+        textAt(375, y - 10, record.timeIn, 9, false, '0.2 0.28 0.4');
+        textAt(465, y - 10, record.timeOut, 9, false, '0.2 0.28 0.4');
+        y -= 18;
+      }
+      y -= 18;
+    };
+    textAt(42, y, 'Attendance Timing Report', 18, true);
+    y -= 22;
+    textAt(42, y, `${employeeName} · ${employeeEmail} · Shift ${toClock(shiftStartMinutes)} · ${creditFilteredRecords.length} records`, 10, false, '0.28 0.38 0.52');
+    y -= 30;
+    sections.forEach((section) => drawTable(section, rowsFor(section)));
+
+    const pages = pageCommands;
+    const objects: string[] = [];
+    const pageIds: number[] = [];
+    objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+    const fontId = 3 + pages.length * 2;
+    const boldFontId = fontId + 1;
+    pages.forEach((commands, pageIndex) => {
+      const pageId = 3 + pageIndex * 2;
+      const contentId = pageId + 1;
+      pageIds.push(pageId);
+      const content = commands.join('\n');
+      objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontId} 0 R /F2 ${boldFontId} 0 R >> >> /Contents ${contentId} 0 R >>`;
+      objects[contentId] = `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
+    });
+    objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>`;
+    objects[fontId] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+    objects[boldFontId] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>';
+    let pdf = '%PDF-1.4\n';
+    const offsets: number[] = [0];
+    for (let id = 1; id < objects.length; id += 1) {
+      offsets[id] = pdf.length;
+      pdf += `${id} 0 obj\n${objects[id]}\nendobj\n`;
+    }
+    const xrefOffset = pdf.length;
+    pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+    for (let id = 1; id < objects.length; id += 1) pdf += `${String(offsets[id]).padStart(10, '0')} 00000 n \n`;
+    pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+    const blob = new Blob([pdf], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `attendance-timing-${employeeName.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'employee'}.pdf`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
@@ -349,6 +465,12 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
             {draft?.isEdited ? ' · Edited' : ''}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
+            {recordsOnly && (
+              <button onClick={downloadTimingPdf} disabled={shiftProfileLoading} className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-50">
+                <span className="material-icons text-[16px]">picture_as_pdf</span>
+                Download PDF
+              </button>
+            )}
             <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium">
               {recordsOnly ? 'Close' : 'Cancel'}
             </button>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatINR } from '../../lib/dayWiseSalary';
 
 interface EmployeeDrawerProps {
@@ -12,9 +13,18 @@ interface EmployeeDrawerProps {
     hasLop: boolean;
   } | null;
   month?: string;
+  onOpenAttendance?: (filter: { statuses: string[]; label: string; includeSundays?: boolean; note?: string; showProtectedOnly?: boolean; protectedCount?: number }) => void;
+  onOpenLop?: () => void;
+  onOpenCalculation?: () => void;
+  onOpenManagement?: () => void;
+  onOpenExtraPay?: () => void;
+  canEditManagement?: boolean;
 }
 
-export default function EmployeeDrawer({ isOpen, onClose, employee, month }: EmployeeDrawerProps) {
+export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpenAttendance, onOpenLop, onOpenCalculation, onOpenManagement, onOpenExtraPay, canEditManagement = false }: EmployeeDrawerProps) {
+  const [showPaymentBreakdown, setShowPaymentBreakdown] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({ salary: true, attendance: true, extra: true, lop: true, adjustment: true, formula: true });
+  const toggleSection = (section: string) => setOpenSections(current => ({ ...current, [section]: !current[section] }));
   if (!isOpen || !employee) return null;
 
   const { emp, config, deduction, hasAttendance, hasSalary, hasLop } = employee;
@@ -74,6 +84,14 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month }: Emp
     { label: 'Half Days', value: deduction?.halfDays ?? '—', color: 'text-orange-600' },
     { label: 'Late Count', value: deduction?.lateOccurrences ?? '—', color: 'text-slate-600' },
     { label: 'Paid Leave', value: `${deduction?.protectedAbsentDays ?? 0}/${deduction?.leaveLimit ?? 0}`, color: 'text-blue-600' },
+  ];
+  const attendanceFilters = [
+    { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving'], label: 'Present Dates', includeSundays: deduction?.rafttarStaff === true },
+    { statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'HALF_DAY'], label: 'Payable Dates', includeSundays: deduction?.rafttarStaff === true },
+    { statuses: ['Absent'], label: 'Absent Dates' },
+    { statuses: ['HALF_DAY'], label: 'Half-Day Dates' },
+    { statuses: ['Late Coming', 'LATE'], label: 'Late Coming Dates' },
+    { statuses: ['Absent'], label: 'Paid Leave Dates', showProtectedOnly: true, protectedCount: deduction?.protectedAbsentDays ?? 0 },
   ];
 
   const extraPayBreakdown = [
@@ -142,25 +160,26 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month }: Emp
           </div>
 
           {/* Summary Cards */}
-          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mb-5 grid grid-cols-2 gap-2 sm:mb-6 sm:gap-3 sm:grid-cols-2">
             {summaryCards.map((card) => (
-              <div
+              <button type="button" onClick={() => card.label === 'Loss of Pay' && onOpenLop?.()}
                 key={card.label}
-                className={`relative overflow-hidden rounded-xl border ${card.highlight ? 'border-emerald-300 ring-2 ring-emerald-200' : 'border-slate-200'} bg-gradient-to-br ${card.bgColor} px-4 py-3`}
+                className={`relative overflow-hidden rounded-lg border text-left ${card.highlight ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200'} bg-gradient-to-br ${card.bgColor} px-2.5 py-2 sm:rounded-xl sm:px-4 sm:py-3 ${card.label === 'Loss of Pay' ? 'cursor-pointer hover:border-red-300' : ''}`}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{card.label}</p>
-                <p className={`text-lg font-bold ${card.textColor} tabular-nums mt-1`}>{card.value}</p>
-              </div>
+                <p className="text-[8px] font-semibold uppercase leading-tight tracking-wide text-slate-500 sm:text-[10px] sm:tracking-wider">{card.label}</p>
+                <p className={`mt-0.5 text-base font-bold ${card.textColor} tabular-nums sm:mt-1 sm:text-lg`}>{card.value}</p>
+              </button>
             ))}
           </div>
 
           {/* Salary Structure */}
           <div className="mb-6">
-            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+            <button type="button" onClick={() => toggleSection('salary')} className="mb-3 flex w-full items-center gap-2 text-left text-sm font-bold text-slate-700">
               <span className="material-icons text-lg text-purple-600">account_balance</span>
               Salary Structure
-            </h4>
-            <div className="bg-slate-50 rounded-xl border border-slate-200 px-4 py-3 space-y-2">
+              <span className="material-icons ml-auto text-slate-400">{openSections.salary ? 'expand_less' : 'expand_more'}</span>
+            </button>
+            <div className={`${openSections.salary ? '' : 'hidden'} bg-slate-50 rounded-xl border border-slate-200 px-4 py-3 space-y-2`}>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-600">Monthly Salary</span>
                 <span className="text-sm font-bold text-slate-800 tabular-nums">{basicSalary > 0 ? formatINR(basicSalary) : '—'}</span>
@@ -182,28 +201,63 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month }: Emp
 
           {/* Attendance Summary */}
           <div className="mb-6">
-            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+            <button type="button" onClick={() => toggleSection('attendance')} className="mb-3 flex w-full items-center gap-2 text-left text-sm font-bold text-slate-700">
               <span className="material-icons text-lg text-emerald-600">event_available</span>
               Attendance Summary
-            </h4>
-            <div className="grid grid-cols-3 gap-3">
-              {attendanceData.map((item) => (
-                <div key={item.label} className="bg-white rounded-xl border border-slate-200 px-3 py-3 text-center">
+              <span className="material-icons ml-auto text-slate-400">{openSections.attendance ? 'expand_less' : 'expand_more'}</span>
+            </button>
+            <div className={`${openSections.attendance ? '' : 'hidden'} grid grid-cols-3 gap-3`}>
+              {attendanceData.map((item, index) => (
+                <button type="button" key={item.label} onClick={() => onOpenAttendance?.(attendanceFilters[index])} className="bg-white rounded-xl border border-slate-200 px-3 py-3 text-center hover:border-indigo-300 hover:bg-indigo-50/30">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">{item.label}</p>
                   <p className={`text-base font-bold ${item.color} tabular-nums`}>{item.value}</p>
-                </div>
+                </button>
               ))}
             </div>
+          </div>
+
+          {/* Complete payment breakdown matching the salary table columns. */}
+          <div className="mb-6">
+            <button type="button" onClick={() => setShowPaymentBreakdown(value => !value)} className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left hover:bg-slate-100">
+              <span className="flex items-center gap-2 text-sm font-bold text-slate-700">
+              <span className="material-icons text-lg text-indigo-600">receipt_long</span>
+              Payment Breakdown
+              </span>
+              <span className="material-icons text-lg text-slate-400">{showPaymentBreakdown ? 'expand_less' : 'expand_more'}</span>
+            </button>
+            {showPaymentBreakdown && <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
+              {[
+                { label: 'LOP Days', value: deduction?.lopDays != null ? `${Number(deduction.lopDays).toFixed(1)} days` : '—', tone: 'text-red-600' },
+                { label: 'LOP Amount', value: lopAmount > 0 ? formatINR(lopAmount) : '₹0', tone: 'text-red-600' },
+                { label: 'Extra Pay Days', value: deduction?.extraPayableDays != null ? `${Number(deduction.extraPayableDays).toFixed(1)} days` : '—', tone: 'text-emerald-600' },
+                { label: 'Extra Pay Amount', value: extraPayment > 0 ? formatINR(extraPayment) : '₹0', tone: 'text-emerald-600' },
+                { label: 'Rule Deductions', value: Number(deduction?.ruleDeductions || 0) > 0 ? `-${formatINR(Number(deduction.ruleDeductions))}` : '₹0', tone: 'text-red-600' },
+                { label: 'Rule Bonus', value: Number(deduction?.ruleBonus || 0) > 0 ? `+${formatINR(Number(deduction.ruleBonus))}` : '₹0', tone: 'text-emerald-600' },
+                { label: 'Management Adjustment', value: managementAdjustment > 0 ? `+${formatINR(managementAdjustment)}` : managementAdjustment < 0 ? `-${formatINR(Math.abs(managementAdjustment))}` : '₹0', tone: managementAdjustment < 0 ? 'text-red-600' : 'text-blue-600' },
+                { label: 'Net Payable', value: netPayable > 0 ? formatINR(netPayable) : '—', tone: 'text-emerald-700' },
+              ].map(item => (
+                <button type="button" key={item.label} onClick={() => {
+                  if (item.label === 'LOP Days') onOpenLop?.();
+                  if (item.label === 'Rule Deductions' || item.label === 'Rule Bonus' || item.label === 'Net Payable') onOpenCalculation?.();
+                  if (item.label === 'Management Adjustment' && canEditManagement) onOpenManagement?.();
+                  if (item.label === 'Extra Pay Amount' || item.label === 'Extra Pay Days') onOpenExtraPay?.();
+                }} className={`rounded-lg border border-white bg-white px-2.5 py-2 text-left ${['LOP Days', 'Rule Deductions', 'Rule Bonus', 'Net Payable', 'Extra Pay Amount', 'Extra Pay Days'].includes(item.label) || (item.label === 'Management Adjustment' && canEditManagement) ? 'cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30' : ''}`}>
+                  <p className="text-[9px] font-semibold uppercase leading-tight tracking-wide text-slate-400">{item.label}</p>
+                  <p className={`mt-1 text-xs font-bold tabular-nums ${item.tone}`}>{item.value}</p>
+                </button>
+              ))}
+            </div>}
           </div>
 
           {/* Extra Pay Breakdown */}
           {extraPayment > 0 && extraPayBreakdown.length > 0 && (
             <div className="mb-6">
-              <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+              <button type="button" onClick={() => toggleSection('extra')} className="mb-3 flex w-full items-center gap-2 text-left text-sm font-bold text-slate-700">
                 <span className="material-icons text-lg text-teal-600">trending_up</span>
                 Extra Pay Breakdown
-              </h4>
-              <div className="bg-teal-50 rounded-xl border border-teal-200 px-4 py-3 space-y-2">
+                <span className="material-icons ml-auto text-slate-400">{openSections.extra ? 'expand_less' : 'expand_more'}</span>
+              </button>
+              <div className={`${openSections.extra ? '' : 'hidden'} bg-teal-50 rounded-xl border border-teal-200 px-4 py-3 space-y-2`}>
                 {extraPayBreakdown.map((item, index) => (
                   <div key={index} className="flex justify-between items-center">
                     <div>
@@ -224,11 +278,12 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month }: Emp
           {/* Loss of Pay Breakdown */}
           {lopAmount > 0 && (
             <div className="mb-6">
-              <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+              <button type="button" onClick={() => toggleSection('lop')} className="mb-3 flex w-full items-center gap-2 text-left text-sm font-bold text-slate-700">
                 <span className="material-icons text-lg text-red-600">money_off</span>
                 Loss of Pay Breakdown
-              </h4>
-              <div className="bg-red-50 rounded-xl border border-red-200 px-4 py-3 space-y-2">
+                <span className="material-icons ml-auto text-slate-400">{openSections.lop ? 'expand_less' : 'expand_more'}</span>
+              </button>
+              <div className={`${openSections.lop ? '' : 'hidden'} bg-red-50 rounded-xl border border-red-200 px-4 py-3 space-y-2`}>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-600">LOP Days</span>
                   <span className="text-sm font-bold text-red-600">{deduction?.lopDays?.toFixed(1) || '0'} days</span>
@@ -250,11 +305,12 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month }: Emp
           {/* Management Adjustment */}
           {managementAdjustment !== 0 && (
             <div className="mb-6">
-              <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+              <button type="button" onClick={() => toggleSection('adjustment')} className="mb-3 flex w-full items-center gap-2 text-left text-sm font-bold text-slate-700">
                 <span className="material-icons text-lg text-blue-600">tune</span>
                 Management Adjustment
-              </h4>
-              <div className={`rounded-xl border px-4 py-3 space-y-2 ${
+                <span className="material-icons ml-auto text-slate-400">{openSections.adjustment ? 'expand_less' : 'expand_more'}</span>
+              </button>
+              <div className={`${openSections.adjustment ? '' : 'hidden'} rounded-xl border px-4 py-3 space-y-2 ${
                 managementAdjustment > 0
                   ? 'bg-emerald-50 border-emerald-200'
                   : 'bg-red-50 border-red-200'
@@ -279,11 +335,14 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month }: Emp
           {/* Calculation Formula */}
           {basicSalary > 0 && (
             <div className="bg-slate-100 rounded-lg px-4 py-3">
-              <p className="text-xs font-semibold text-slate-700 mb-2">CALCULATION FORMULA:</p>
-              <code className="text-xs text-slate-600 block">
+              <button type="button" onClick={() => toggleSection('formula')} className="mb-2 flex w-full items-center justify-between text-left">
+                <span className="text-xs font-semibold text-slate-700">CALCULATION FORMULA:</span>
+                <span className="material-icons text-sm text-slate-400">{openSections.formula ? 'expand_less' : 'expand_more'}</span>
+              </button>
+              {openSections.formula && <code className="text-xs text-slate-600 block">
                 Gross Salary = Basic Salary + Extra Pay<br />
                 Net Payable = Gross Salary - Loss of Pay {managementAdjustment !== 0 ? '+ Management Adjustment' : ''}
-              </code>
+              </code>}
             </div>
           )}
         </div>

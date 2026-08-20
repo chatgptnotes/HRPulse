@@ -22,7 +22,6 @@ export default function MobileNav() {
 
   const more = [
     { to: '/analytics', label: 'Analytics', icon: 'bar_chart' },
-    { to: '/history', label: 'Email History', icon: 'history' },
     { to: '/rules', label: 'Rules', icon: 'rule' },
     { to: '/sops', label: 'SOPs', icon: 'description' },
     ...(user?.role === 'admin' ? [{ to: '/rules-engine', label: 'Rules Engine', icon: 'settings_suggest' }] : []),

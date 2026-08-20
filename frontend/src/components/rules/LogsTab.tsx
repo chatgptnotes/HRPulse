@@ -119,30 +119,30 @@ export default function LogsTab() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-end gap-2.5 mb-4">
-        <select value={ruleFilter === 'all' ? 'all' : String(ruleFilter)} onChange={(e) => { setRuleFilter(e.target.value === 'all' ? 'all' : Number(e.target.value)); setPage(1); }} className={clsx(inputCls, 'min-w-[160px]')}>
+      <div className="mb-4 flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:items-end sm:gap-2.5">
+        <select value={ruleFilter === 'all' ? 'all' : String(ruleFilter)} onChange={(e) => { setRuleFilter(e.target.value === 'all' ? 'all' : Number(e.target.value)); setPage(1); }} className={clsx(inputCls, 'w-[96px] shrink-0 px-2 py-1.5 text-[11px] sm:w-auto sm:min-w-[160px] sm:px-3 sm:py-2 sm:text-sm')}>
           <option value="all">All rules</option>
           {rules.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className={inputCls}>
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className={clsx(inputCls, 'w-[96px] shrink-0 px-2 py-1.5 text-[11px] sm:w-auto sm:px-3 sm:py-2 sm:text-sm')}>
           <option value="all">All statuses</option>
           <option value="success">Success</option>
           <option value="failed">Failed</option>
           <option value="partial">Partial</option>
           <option value="skipped">Skipped</option>
         </select>
-        <label className="text-sm text-slate-500">From <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className={clsx(inputCls, 'ml-1')} /></label>
-        <label className="text-sm text-slate-500">To <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className={clsx(inputCls, 'ml-1')} /></label>
-        <div className="flex items-center gap-1.5 ml-auto">
-          <span className="text-sm text-slate-400 mr-1">Export page:</span>
+        <label className="inline-flex shrink-0 items-center text-[11px] text-slate-500 sm:text-sm">From <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className={clsx(inputCls, 'ml-1 w-[112px] px-2 py-1.5 text-[11px] sm:w-auto sm:px-3 sm:py-2 sm:text-sm')} /></label>
+        <label className="inline-flex shrink-0 items-center text-[11px] text-slate-500 sm:text-sm">To <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className={clsx(inputCls, 'ml-1 w-[112px] px-2 py-1.5 text-[11px] sm:w-auto sm:px-3 sm:py-2 sm:text-sm')} /></label>
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
+          <span className="mr-1 hidden text-sm text-slate-400 sm:inline">Export page:</span>
           {[
             { label: 'CSV', fn: exportCsv, icon: 'table_view' },
             { label: 'Excel', fn: exportExcel, icon: 'grid_on' },
             { label: 'JSON', fn: exportJson, icon: 'data_object' },
             { label: 'PDF', fn: exportPdf, icon: 'picture_as_pdf' },
           ].map((x) => (
-            <button key={x.label} onClick={x.fn} disabled={!logs.length} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40">
-              <span className="material-icons text-base">{x.icon}</span>{x.label}
+            <button key={x.label} onClick={x.fn} disabled={!logs.length} className="flex h-8 items-center gap-0.5 rounded-lg border border-slate-200 px-1.5 text-[10px] text-slate-600 hover:bg-slate-50 disabled:opacity-40 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm">
+              <span className="material-icons text-[13px] sm:text-base">{x.icon}</span><span className="hidden sm:inline">{x.label}</span>
             </button>
           ))}
         </div>

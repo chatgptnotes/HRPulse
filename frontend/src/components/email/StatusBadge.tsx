@@ -18,13 +18,13 @@ const STATUS_COLORS: Record<string, string> = {
   'failed': 'bg-red-100 text-red-700 border-red-200',
 };
 
-export default function StatusBadge({ label, small }: { label: string; small?: boolean }) {
+export default function StatusBadge({ label, small, compact }: { label: string; small?: boolean; compact?: boolean }) {
   // Status casing is not guaranteed by older imports, so match on a folded key.
   const key = String(label ?? '').toLowerCase().replace(/[_-]+/g, ' ').trim();
   const entry = Object.entries(STATUS_COLORS).find(([k]) => k.toLowerCase().replace(/[_-]+/g, ' ').trim() === key);
   const cls = entry?.[1] || 'bg-slate-100 text-slate-600 border-slate-200';
   return (
-    <span className={clsx('inline-flex items-center rounded-full border font-medium', small ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs', cls)}>
+    <span className={clsx('inline-flex shrink-0 items-center rounded-full border font-medium', compact ? 'px-1.5 py-0 text-[10px] leading-4' : small ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs', cls)}>
       {label}
     </span>
   );

@@ -52,15 +52,39 @@ export default function Dashboard() {
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState<{ completed: number; total: number; current: string } | null>(null);
   const [search, setSearch] = useState('');
+  const [visibleCount, setVisibleCount] = useState(10);
   const [previewEmployee, setPreviewEmployee] = useState<{ uploadId: number; employeeId: number; name: string; email: string } | null>(null);
+  const [recordsEmployee, setRecordsEmployee] = useState<{ uploadId: number; employeeId: number; name: string; email: string } | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [applyingRules, setApplyingRules] = useState(false);
   const [ruleResult, setRuleResult] = useState<{ draftsCreated: number; evaluated: number } | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
+  const [removingDrafts, setRemovingDrafts] = useState(false);
 
   const showToast = (msg: string, type: 'ok' | 'err' = 'ok') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
+  };
+
+  const removeUnsentDrafts = async () => {
+    if (!uploadId || removingDrafts) return;
+    const confirmed = window.confirm('Remove all unsent auto-generated drafts for this upload? Sent emails will not be removed.');
+    if (!confirmed) return;
+    setRemovingDrafts(true);
+    try {
+      const { data } = await api.deleteUnsentDraftsForUpload(uploadId);
+      const removed = (data as any[]).length;
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['drafts', uploadId] }),
+        qc.invalidateQueries({ queryKey: ['summary', uploadId] }),
+      ]);
+      setSelected(new Set());
+      showToast(removed ? `Removed ${removed} unsent draft${removed === 1 ? '' : 's'}` : 'No unsent drafts found');
+    } catch (err: any) {
+      showToast(err?.message || 'Could not remove drafts', 'err');
+    } finally {
+      setRemovingDrafts(false);
+    }
   };
 
   const { data: uploads = [] } = useQuery({ queryKey: ['uploads'], queryFn: () => api.getUploads().then(r => r.data) });
@@ -164,6 +188,12 @@ export default function Dashboard() {
     s.employeeEmail.toLowerCase().includes(search.toLowerCase())
   );
 
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [search, uploadId]);
+
+  const visibleFiltered = filtered.slice(0, visibleCount);
+
   const uniqueEntities = summary.length;
   const flaggedRecords = summary.reduce((acc, s) => acc + s.flaggedTotal, 0);
   const pendingEmails = (drafts as any[]).filter(d => isUnsent(d.status)).length;
@@ -175,20 +205,22 @@ export default function Dashboard() {
     <div className="flex min-h-[calc(100dvh-3.5rem)] min-w-0 flex-col overflow-visible bg-slate-100 lg:h-screen lg:flex-row lg:overflow-hidden">
       {/* Left Panel */}
       <div className="flex w-full flex-shrink-0 flex-col border-b border-slate-200/70 bg-white shadow-sm lg:max-h-none lg:w-64 lg:border-b-0 lg:border-r lg:overflow-y-auto">
-        <div className="px-5 py-5 border-b border-slate-100">
-          <h2 className="font-bold text-slate-800 text-sm">Attendance Dispatcher</h2>
-          <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-            Template-based email drafting
-          </p>
+        <div className="border-b border-slate-100 px-3 py-1 sm:px-5 sm:py-5">
+          <div className="flex items-center justify-between gap-2 sm:block">
+            <h2 className="text-[13px] font-bold text-slate-800 sm:text-sm">Attendance Dispatcher</h2>
+            <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-400 sm:text-xs">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Template-based email drafting
+            </p>
+          </div>
         </div>
 
         {/* Upload Zone */}
-        <div className="px-4 py-4 border-b border-slate-100">
+        <div className="border-b border-slate-100 px-2 py-1.5 sm:px-4 sm:py-4">
           <div
             {...getRootProps()}
             className={clsx(
-              'border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all',
+              'cursor-pointer rounded-xl border-2 border-dashed p-1.5 text-center transition-all sm:rounded-2xl sm:p-5',
               isDragActive
                 ? 'border-indigo-400 bg-indigo-50 scale-[0.98]'
                 : uploadId
@@ -199,26 +231,26 @@ export default function Dashboard() {
             <input {...getInputProps()} />
             {uploading ? (
               <>
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center mx-auto mb-2">
-                  <span className="material-icons text-indigo-500 text-xl animate-spin">sync</span>
+                <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-md bg-indigo-100 sm:mb-2 sm:h-10 sm:w-10 sm:rounded-xl">
+                  <span className="material-icons text-sm text-indigo-500 animate-spin sm:text-xl">sync</span>
                 </div>
-                <p className="text-xs font-medium text-slate-600">Processing...</p>
+                <p className="text-[11px] font-medium text-slate-600 sm:text-xs">Processing...</p>
               </>
             ) : uploadId ? (
               <>
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center mx-auto mb-2">
-                  <span className="material-icons text-emerald-600 text-xl">check_circle</span>
+                <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100 sm:mb-2 sm:h-10 sm:w-10 sm:rounded-xl">
+                  <span className="material-icons text-sm text-emerald-600 sm:text-xl">check_circle</span>
                 </div>
-                <p className="text-xs font-semibold text-emerald-700">{periodMonth}</p>
-                <p className="text-xs text-slate-400 mt-0.5">Drop one or more files to import</p>
+                <p className="text-[11px] font-semibold text-emerald-700 sm:text-xs">{periodMonth}</p>
+                <p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">Drop one or more files to import</p>
               </>
             ) : (
               <>
-                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-2">
-                  <span className="material-icons text-slate-400 text-xl">upload_file</span>
+                <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 sm:mb-2 sm:h-10 sm:w-10 sm:rounded-xl">
+                  <span className="material-icons text-sm text-slate-400 sm:text-xl">upload_file</span>
                 </div>
-                <p className="text-xs font-semibold text-slate-600">Upload Attendance File</p>
-                <p className="text-xs text-slate-400 mt-0.5">Drop one or more Excel files (.xls/.xlsx) here</p>
+                <p className="text-[11px] font-semibold text-slate-600 sm:text-xs">Upload Attendance File</p>
+                <p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">Drop one or more Excel files (.xls/.xlsx) here</p>
               </>
             )}
           </div>
@@ -290,23 +322,23 @@ export default function Dashboard() {
         </div>
 
         {/* Custom Guide */}
-        <div className="px-4 py-3 border-b border-slate-100">
-          <label className="text-xs font-semibold text-slate-500 block mb-1.5">AI Draft Instructions</label>
+        <div className="border-b border-slate-100 px-2 py-1 sm:px-4 sm:py-3">
+          <label className="mb-1 block text-[11px] font-semibold text-slate-500 sm:text-xs sm:mb-1.5">AI Draft Instructions</label>
           <textarea
             value={customGuide}
             onChange={e => setCustomGuide(e.target.value)}
             placeholder="Optional: add specific tone or context for the AI..."
-            className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 bg-slate-50"
-            rows={3}
+            className="h-8 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:h-auto sm:px-3 sm:py-2 sm:text-xs"
+            rows={2}
           />
         </div>
 
         {/* Generate Button */}
-        <div className="px-4 py-3 border-b border-slate-100">
+        <div className="border-b border-slate-100 px-2 py-1 sm:px-4 sm:py-3">
           <button
             onClick={handleGenerate}
             disabled={!uploadId || generating}
-            className="w-full text-white text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-indigo-900/20"
+            className="flex min-h-8 w-full items-center justify-center gap-2 rounded-xl py-0.5 text-[12px] font-semibold text-white shadow-md shadow-indigo-900/20 transition-all disabled:opacity-50 sm:min-h-0 sm:py-2.5 sm:text-sm"
             style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}
           >
             {generating ? (
@@ -336,7 +368,7 @@ export default function Dashboard() {
           <button
             onClick={handleApplyRules}
             disabled={!uploadId || applyingRules}
-            className="w-full mt-2 text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 disabled:opacity-50 text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+            className="mt-0.5 flex min-h-8 w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 py-0.5 text-[12px] font-semibold text-amber-800 transition-all hover:bg-amber-100 disabled:opacity-50 sm:mt-2 sm:min-h-0 sm:py-2.5 sm:text-sm"
           >
             {applyingRules
               ? <><span className="material-icons text-base animate-spin">sync</span> Evaluating...</>
@@ -353,7 +385,7 @@ export default function Dashboard() {
           <button
             disabled
             title={`Pending reminders ${api.NOT_MIGRATED}`}
-            className="w-full mt-2 text-rose-800 bg-rose-50 border border-rose-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+            className="mt-0.5 flex min-h-8 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 py-0.5 text-[12px] font-semibold text-rose-800 transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:mt-2 sm:min-h-0 sm:py-2.5 sm:text-sm"
           >
             <span className="material-icons text-base">alarm</span> Check 7-Day Reminders
           </button>
@@ -361,18 +393,18 @@ export default function Dashboard() {
 
         {/* Stats */}
         {uploadId && (
-          <div className="px-4 py-4 border-b border-slate-100">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Summary</p>
-            <div className="space-y-2">
+          <div className="border-b border-slate-100 bg-slate-50/30 px-2.5 py-2 sm:bg-white sm:px-4 sm:py-4">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 sm:mb-3 sm:text-xs">Summary</p>
+            <div className="space-y-1 sm:space-y-2">
               {[
                 { label: 'Employees', value: uniqueEntities, color: 'text-slate-700', bg: 'bg-slate-100' },
                 { label: 'Flagged Records', value: flaggedRecords, color: 'text-red-600', bg: 'bg-red-50' },
                 { label: 'Pending Emails', value: pendingEmails, color: 'text-amber-600', bg: 'bg-amber-50' },
                 ...(sentEmails > 0 ? [{ label: 'Sent', value: sentEmails, color: 'text-emerald-600', bg: 'bg-emerald-50' }] : []),
               ].map(s => (
-                <div key={s.label} className={clsx('flex items-center justify-between px-3 py-2 rounded-xl', s.bg)}>
-                  <span className="text-xs text-slate-600">{s.label}</span>
-                  <span className={clsx('text-sm font-bold', s.color)}>{s.value}</span>
+                <div key={s.label} className={clsx('flex min-h-8 items-center justify-between gap-2 rounded-lg px-2.5 py-1 sm:min-h-0 sm:rounded-xl sm:px-3 sm:py-2', s.bg)}>
+                  <span className="text-[11px] leading-tight text-slate-600 sm:text-xs">{s.label}</span>
+                  <span className={clsx('shrink-0 text-sm font-bold leading-none sm:text-sm', s.color)}>{s.value}</span>
                 </div>
               ))}
             </div>
@@ -381,25 +413,36 @@ export default function Dashboard() {
 
         {/* Dispatch Button */}
         {uploadId && (
-          <div className="px-4 py-4 mt-auto">
+          <div className="mt-auto px-2.5 py-2 sm:px-4 sm:py-4">
             <button
               disabled
               title={`Sending email ${api.NOT_MIGRATED}`}
-              className="w-full bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-900/20"
+              className="flex min-h-8 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-1 text-[12px] font-semibold text-white shadow-md shadow-emerald-900/20 transition-all disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-0 sm:py-2.5 sm:text-sm"
             >
               <span className="material-icons text-base">send</span> Dispatch Emails{selected.size > 0 ? ` (${selected.size})` : ''}
             </button>
-            <p className="mt-2 text-[11px] leading-snug text-slate-400 text-center">
+            <p className="mt-1 text-center text-[9px] leading-snug text-slate-400 sm:mt-2 sm:text-[11px]">
               Drafts are saved and editable. Delivery is being rebuilt on Supabase.
             </p>
+            {pendingEmails > 0 && (
+              <button
+                type="button"
+                onClick={removeUnsentDrafts}
+                disabled={removingDrafts}
+                className="mt-2 w-full rounded-lg border border-rose-200 bg-rose-50 py-1.5 text-[10px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-wait disabled:opacity-60 sm:mt-3 sm:py-2 sm:text-xs"
+              >
+                <span className="material-icons mr-1 align-middle text-[13px]">delete_outline</span>
+                {removingDrafts ? 'Removing drafts...' : 'Remove unsent drafts'}
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {/* Right Panel */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-visible lg:overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col gap-3 border-b border-slate-200/70 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex flex-col gap-2 border-b border-slate-200/70 bg-white px-3 py-2.5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:py-4">
           <div>
             <h3 className="font-bold text-slate-800 text-base">Records Preview</h3>
             {uploadId && (
@@ -408,14 +451,14 @@ export default function Dashboard() {
               </p>
             )}
           </div>
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="relative">
-              <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none">search</span>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="relative w-full max-w-[180px] sm:w-auto sm:max-w-none">
+              <span className="material-icons pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 sm:left-3 sm:text-base">search</span>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search employee..."
-                className="w-full min-w-0 border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 sm:w-52"
+                className="!min-h-0 h-7 w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 py-0.5 pl-7 pr-2 text-[10px] focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:h-auto sm:rounded-xl sm:py-2 sm:pl-9 sm:pr-4 sm:text-sm sm:w-52"
               />
             </div>
             {selected.size > 0 && (
@@ -441,16 +484,16 @@ export default function Dashboard() {
             <p>{summary.length === 0 ? 'No flagged records found' : 'No employees match search'}</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div className="flex-1 space-y-1 overflow-y-auto p-2.5 sm:space-y-2 sm:p-4">
             {/* Table header */}
             <div className="hidden grid-cols-12 gap-4 px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider sm:grid">
               <div className="col-span-1 flex items-center">
                 <input
                   type="checkbox"
-                  checked={selected.size === filtered.length && filtered.length > 0}
+                  checked={selected.size === visibleFiltered.length && visibleFiltered.length > 0}
                   onChange={e => {
                     if (e.target.checked) {
-                      const ids = filtered.map(s => getDraftForEmployee(s.employeeId)?.id).filter(Boolean);
+                      const ids = visibleFiltered.map(s => getDraftForEmployee(s.employeeId)?.id).filter(Boolean);
                       setSelected(new Set(ids));
                     } else {
                       setSelected(new Set());
@@ -466,14 +509,15 @@ export default function Dashboard() {
             </div>
 
             {/* Rows */}
-            {filtered.map(s => {
+            {visibleFiltered.map(s => {
               const draft = getDraftForEmployee(s.employeeId);
               const isSelected = draft && selected.has(draft.id);
               return (
                 <div
                   key={s.employeeId}
+                  onClick={() => setRecordsEmployee({ uploadId: uploadId!, employeeId: s.employeeId, name: s.employeeName, email: s.employeeEmail })}
                   className={clsx(
-                    'flex flex-col gap-3 px-4 py-3.5 bg-white rounded-2xl border transition-all shadow-sm hover:shadow-md sm:grid sm:grid-cols-12 sm:items-center sm:gap-4',
+                    'flex cursor-pointer flex-col gap-1 rounded-lg border bg-white px-1.5 py-1.5 shadow-sm transition-all hover:shadow-md sm:cursor-default sm:grid sm:grid-cols-12 sm:items-center sm:gap-4 sm:rounded-2xl sm:px-4 sm:py-3.5',
                     isSelected
                       ? 'border-indigo-300 bg-indigo-50/50 shadow-indigo-100'
                       : 'border-slate-200/70 hover:border-slate-300'
@@ -485,6 +529,7 @@ export default function Dashboard() {
                         type="checkbox"
                         checked={!!isSelected}
                         onChange={e => {
+                          e.stopPropagation();
                           const next = new Set(selected);
                           if (e.target.checked) next.add(draft.id);
                           else next.delete(draft.id);
@@ -495,29 +540,28 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  <div className="col-span-3 flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-xs font-bold">{s.employeeName.charAt(0)}</span>
+                  <div className="col-span-3 flex min-w-0 items-center gap-2 sm:gap-3">
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-8 sm:w-8 sm:rounded-xl">
+                      <span className="text-[11px] font-bold text-white sm:text-xs">{s.employeeName.charAt(0)}</span>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{s.employeeName}</p>
-                      <p className="text-xs text-slate-400 truncate">{s.employeeEmail}</p>
+                      <p className="truncate text-[13px] font-semibold leading-tight text-slate-800 sm:text-sm">{s.employeeName}</p>
                     </div>
                   </div>
 
-                  <div className="col-span-4 flex flex-wrap gap-1.5 items-center">
-                    {s.absentDays > 0 && <StatusBadge label="Absent" small />}
-                    {s.missedSwipeDays > 0 && <StatusBadge label="Missed Swipe" small />}
-                    {s.lateComingDays > 0 && <StatusBadge label="Late Coming" small />}
-                    {s.earlyLeavingDays > 0 && <StatusBadge label="Early Leaving" small />}
-                    <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">{s.flaggedTotal}</span>
+                  <div className="hr-scroll-x col-span-4 flex flex-nowrap items-center gap-1 sm:gap-1.5">
+                    {s.absentDays > 0 && <StatusBadge label="Absent" small compact />}
+                    {s.missedSwipeDays > 0 && <StatusBadge label="Missed Swipe" small compact />}
+                    {s.lateComingDays > 0 && <StatusBadge label="Late Coming" small compact />}
+                    {s.earlyLeavingDays > 0 && <StatusBadge label="Early Leaving" small compact />}
+                    <span className="shrink-0 rounded-lg bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-400">{s.flaggedTotal}</span>
                   </div>
 
                   <div className="col-span-2 flex items-center gap-2">
                     {draft ? (
                       <>
                         <button
-                          onClick={() => setPreviewEmployee({ uploadId: uploadId!, employeeId: s.employeeId, name: s.employeeName, email: s.employeeEmail })}
+                          onClick={(e) => { e.stopPropagation(); setPreviewEmployee({ uploadId: uploadId!, employeeId: s.employeeId, name: s.employeeName, email: s.employeeEmail }); }}
                           className="text-xs font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 px-3 py-1.5 rounded-xl transition-colors border border-transparent hover:border-indigo-200"
                         >
                           Preview
@@ -543,6 +587,16 @@ export default function Dashboard() {
                 </div>
               );
             })}
+            {visibleFiltered.length < filtered.length && (
+              <div className="flex justify-center pt-2">
+                <button
+                  onClick={() => setVisibleCount(count => Math.min(count + 10, filtered.length))}
+                  className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100"
+                >
+                  Load more · {filtered.length - visibleFiltered.length} remaining
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -560,6 +614,19 @@ export default function Dashboard() {
             showToast(`Email sent to ${previewEmployee.name}`);
             setPreviewEmployee(null);
           }}
+        />
+      )}
+
+      {recordsEmployee && (
+        <EmailDraftModal
+          uploadId={recordsEmployee.uploadId}
+          employeeId={recordsEmployee.employeeId}
+          employeeName={recordsEmployee.name}
+          employeeEmail={recordsEmployee.email}
+          initialTab="records"
+          recordsOnly
+          onClose={() => setRecordsEmployee(null)}
+          onSent={() => setRecordsEmployee(null)}
         />
       )}
 

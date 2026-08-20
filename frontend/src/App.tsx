@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import LoginPage from './pages/LoginPage';
@@ -14,6 +14,7 @@ import EmployeesPage from './pages/EmployeesPage';
 import RulesPage from './pages/RulesPage';
 import SopsPage from './pages/SopsPage';
 import RulesEngineDashboard from './pages/RulesEngineDashboard';
+import ProfilePage from './pages/ProfilePage';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
 
@@ -45,7 +46,7 @@ function MobileTopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
         <p className="truncate text-[15px] font-semibold leading-tight text-[#111827]">{title}</p>
         <p className="text-[11px] leading-tight text-[#6B7280]">HRPulse</p>
       </div>
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-[11px] font-bold text-white">HR</div>
+      <Link to="/profile" aria-label="Open profile" className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-[11px] font-bold text-white transition-transform hover:scale-105">HR</Link>
     </header>
   );
 }
@@ -72,7 +73,7 @@ function AppShell() {
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar onOpenMenu={openMenu} />
-        <main className="flex-1 overflow-auto min-w-0">
+        <main className="min-w-0 flex-1 overflow-auto">
           <div className="mx-auto w-full max-w-[1920px]">
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -83,6 +84,7 @@ function AppShell() {
               <Route path="/employees" element={<EmployeesPage />} />
               <Route path="/rules" element={<RulesPage />} />
               <Route path="/sops" element={<SopsPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route
                 path="/rules-engine"
                 element={

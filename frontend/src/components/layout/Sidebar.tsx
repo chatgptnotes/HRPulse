@@ -17,7 +17,7 @@ const links = [
   { to: '/analytics', label: 'Analytics', icon: 'bar_chart', end: false },
   { to: '/employees', label: 'Employees', icon: 'people', end: false },
   { to: '/salary', label: 'Salary / Loss of Pay', icon: 'payments', end: false },
-  { to: '/history', label: 'Email History', icon: 'history', end: false },
+  { to: '/history', label: 'Email History', icon: 'history', end: false, hideOnMobile: true },
   { to: '/rules', label: 'Rules', icon: 'rule', end: false },
   { to: '/sops', label: 'SOPs', icon: 'description', end: false },
 ];
@@ -77,7 +77,8 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       title={collapsed ? l.label : undefined}
       className={({ isActive }) =>
         clsx(
-          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group min-h-[44px]',
+          'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all group min-h-[44px] max-sm:min-h-10 max-sm:gap-2 max-sm:px-2.5 max-sm:py-2 max-sm:text-[13px]',
+          l.hideOnMobile && 'max-sm:hidden',
           collapsed && 'justify-center px-2',
           isActive
             ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30 relative overflow-hidden'
@@ -87,7 +88,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
     >
       {({ isActive }) => (
         <>
-          <span className={clsx('material-icons text-xl flex-shrink-0 transition-transform', isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200')}>{l.icon}</span>
+          <span className={clsx('material-icons flex-shrink-0 text-xl transition-transform max-sm:text-lg', isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200')}>{l.icon}</span>
           {!collapsed && <span className="truncate">{l.label}</span>}
         </>
       )}
@@ -113,15 +114,15 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           // Desktop/tablet widths; tablet (768–1199) shows the icon rail via CSS.
           collapsed ? 'w-12' : 'w-64 md:w-[76px] lg:w-64',
           // Mobile: fixed slide-out drawer, hidden when collapsed.
-          'max-sm:fixed max-sm:inset-y-0 max-sm:left-0 max-sm:top-0 max-sm:z-50 max-sm:h-full max-sm:w-[280px] sm:min-h-screen',
+          'max-sm:fixed max-sm:inset-y-0 max-sm:left-0 max-sm:top-0 max-sm:z-50 max-sm:h-full max-sm:w-[55vw] max-sm:max-w-[220px] sm:min-h-screen',
           collapsed && 'max-sm:-translate-x-full max-sm:shadow-none',
         )}
       >
         {/* Logo + close */}
-        <div className={clsx('flex items-center h-16 border-b border-white/10', collapsed ? 'justify-center px-2' : 'px-5 gap-3 max-sm:justify-between max-sm:gap-2')}>
+        <div className={clsx('flex h-16 items-center border-b border-white/10 max-sm:h-14', collapsed ? 'justify-center px-2' : 'gap-3 px-5 max-sm:justify-between max-sm:gap-2 max-sm:px-3')}>
           {!collapsed && (
             <div className="flex items-center gap-2.5 flex-1 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/30">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg shadow-purple-500/30 max-sm:h-8 max-sm:w-8 max-sm:rounded-lg">
                 <span className="material-icons text-white text-lg">corporate_fare</span>
               </div>
               <div className="min-w-0 max-sm:hidden md:hidden lg:block">
@@ -139,7 +140,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           <button
             onClick={onToggle}
             aria-label={collapsed ? 'Open menu' : 'Close menu'}
-            className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0"
+            className="flex-shrink-0 rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-slate-200 max-sm:p-1.5"
           >
             <span className="material-icons text-lg max-sm:hidden">{collapsed ? 'menu' : 'chevron_left'}</span>
             <span className="material-icons text-lg sm:hidden">close</span>
@@ -156,7 +157,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
         )}
 
         {/* Nav */}
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4 max-sm:space-y-0.5 max-sm:px-2 max-sm:py-3">
           {!collapsed && (
             <p className="block text-xs font-semibold text-slate-500 uppercase tracking-widest px-3 pb-2 max-sm:hidden md:hidden lg:block">Main Menu</p>
           )}
@@ -172,7 +173,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
         </nav>
 
         {/* Bottom */}
-        <div className="px-3 pb-4 border-t border-white/10 pt-3 space-y-1">
+        <div className="space-y-1 border-t border-white/10 px-3 pb-4 pt-3 max-sm:space-y-0.5 max-sm:px-2 max-sm:pb-3 max-sm:pt-2">
           {bottomLinks.map((l) => navLink(l, 'bottom'))}
           {!collapsed && (
             <div className="flex px-3 pt-3 items-center gap-2 max-sm:hidden md:hidden lg:flex">
@@ -196,7 +197,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
               onClick={logout}
               title={collapsed ? 'Sign out' : undefined}
               className={clsx(
-                'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all hover:bg-white/10 hover:text-slate-100 min-h-[44px]',
+                'flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all hover:bg-white/10 hover:text-slate-100 max-sm:min-h-10 max-sm:gap-2 max-sm:px-2.5 max-sm:py-2 max-sm:text-[13px]',
                 collapsed && 'justify-center px-2',
               )}
             >

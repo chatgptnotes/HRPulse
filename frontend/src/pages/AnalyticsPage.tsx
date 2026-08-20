@@ -28,13 +28,13 @@ const statusColor = (status: string) => {
 
 function StatCard({ label, value, icon, color }: { label: string; value: number | string; icon: string; color: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-100 p-5 flex items-center gap-4 shadow-sm">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
-        <span className="material-icons text-white text-2xl">{icon}</span>
+    <div className="flex items-center gap-1.5 rounded-lg border border-slate-100 bg-white p-2 shadow-sm sm:gap-4 sm:rounded-xl sm:p-5">
+      <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12 sm:rounded-xl ${color}`}>
+        <span className="material-icons text-lg text-white sm:text-2xl">{icon}</span>
       </div>
       <div>
-        <div className="text-2xl font-bold text-slate-800">{value}</div>
-        <div className="text-sm text-slate-500">{label}</div>
+        <div className="text-xl font-bold leading-none text-slate-800 sm:text-2xl">{value}</div>
+        <div className="mt-1 text-xs leading-tight text-slate-500 sm:text-sm">{label}</div>
       </div>
     </div>
   );
@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Overview stats */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Total Employees" value={overview?.totalEmployees ?? '—'} icon="people" color="bg-blue-500" />
         <StatCard label="Uploads" value={overview?.totalUploads ?? '—'} icon="upload_file" color="bg-indigo-500" />
         <StatCard label="Emails Generated" value={overview?.totalEmails ?? '—'} icon="drafts" color="bg-amber-500" />

@@ -49,21 +49,21 @@ export default function PayrollSummaryBar({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="mb-4 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
       {cards.map((card) => (
         <div
           key={card.label}
-          className="relative overflow-hidden rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group"
+          className="group relative overflow-hidden rounded-lg border border-slate-200 bg-white px-2 py-2 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md sm:rounded-xl sm:px-5 sm:py-4"
         >
           <div className="absolute top-0 right-0 h-20 w-20 -translate-y-1/2 translate-x-1/2 rounded-full bg-gradient-to-br opacity-30 transition-all group-hover:scale-125 from-slate-100 to-slate-200" />
           <div className="relative">
-            <div className="flex items-center gap-2 mb-2">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${card.color} text-white shadow-md`}>
-                <span className="material-icons text-lg">{card.icon}</span>
+            <div className="mb-1 flex items-center gap-1.5 sm:mb-2 sm:gap-2">
+              <div className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-gradient-to-br ${card.color} text-white shadow-md sm:h-8 sm:w-8 sm:rounded-lg`}>
+                <span className="material-icons text-sm sm:text-lg">{card.icon}</span>
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{card.label}</p>
+              <p className="truncate text-[9px] font-semibold uppercase leading-tight tracking-wider text-slate-500 sm:text-xs">{card.label}</p>
             </div>
-            <p className={`text-2xl font-bold ${card.textColor} tabular-nums`}>
+            <p className={`text-lg font-bold leading-tight ${card.textColor} tabular-nums sm:text-2xl`}>
               {formatINR(card.value)}
             </p>
           </div>

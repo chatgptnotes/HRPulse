@@ -58,27 +58,27 @@ export default function CategoriesTab({ onChanged }: { onChanged?: () => void })
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-3.5 lg:grid-cols-3 xl:grid-cols-4">
         {isLoading
-          ? [...Array(8)].map((_, i) => <div key={i} className="h-32 rounded-2xl border border-slate-200 bg-white animate-pulse" />)
+          ? [...Array(8)].map((_, i) => <div key={i} className="h-24 rounded-xl border border-slate-200 bg-white animate-pulse sm:h-32 sm:rounded-2xl" />)
           : categories.map((c) => (
-            <div key={c.id} className="group rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
+            <div key={c.id} className="group rounded-xl border border-slate-200 bg-white p-3 transition-shadow hover:shadow-md sm:rounded-2xl sm:p-4">
               <div className="flex items-start justify-between">
-                <div className={clsx('w-11 h-11 rounded-xl flex items-center justify-center', c.color ?? 'bg-slate-400')}>
-                  <span className="material-icons text-white text-xl">{c.icon ?? 'category'}</span>
+                <div className={clsx('flex h-9 w-9 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl', c.color ?? 'bg-slate-400')}>
+                  <span className="material-icons text-lg text-white sm:text-xl">{c.icon ?? 'category'}</span>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500" title="Edit"><span className="material-icons text-lg">edit</span></button>
                   <button onClick={() => deleteMutation.mutate(c.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="Delete"><span className="material-icons text-lg">delete</span></button>
                 </div>
               </div>
-              <p className="mt-3 text-base font-semibold text-slate-800">{c.name}</p>
-              <p className="text-xs text-slate-500 line-clamp-2 mt-1 min-h-[2.5em] leading-relaxed">{c.description ?? 'No description'}</p>
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
+              <p className="mt-2 text-sm font-semibold text-slate-800 sm:mt-3 sm:text-base">{c.name}</p>
+              <p className="mt-0.5 line-clamp-2 min-h-[2.25em] text-[11px] leading-relaxed text-slate-500 sm:mt-1 sm:min-h-[2.5em] sm:text-xs">{c.description ?? 'No description'}</p>
+              <div className="mt-2 flex items-center justify-between sm:mt-3">
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 sm:px-2.5 sm:py-1 sm:text-xs">
                   {ruleCountByCat.get(c.id) ?? 0} rule{(ruleCountByCat.get(c.id) ?? 0) === 1 ? '' : 's'}
                 </span>
-                <span className={clsx('text-xs px-2.5 py-1 rounded-full font-medium', c.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400')}>
+                <span className={clsx('rounded-full px-2 py-0.5 text-[11px] font-medium sm:px-2.5 sm:py-1 sm:text-xs', c.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400')}>
                   {c.is_active ? 'Active' : 'Inactive'}
                 </span>
               </div>

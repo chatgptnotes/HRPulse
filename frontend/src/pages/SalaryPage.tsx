@@ -13,9 +13,11 @@ import PayrollSummaryBar from '../components/salary/PayrollSummaryBar';
 import DepartmentPillFilters from '../components/salary/DepartmentPillFilters';
 import EmployeeDrawer from '../components/salary/EmployeeDrawer';
 import SalaryStatsGrid from '../components/salary/SalaryStatsGrid';
+import { useAuth } from '../auth/AuthContext';
 
 export default function SalaryPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [month, setMonth] = useState(currentMonth);
   const monthWasSelected = useRef(false);
@@ -317,20 +319,27 @@ export default function SalaryPage() {
 
   return (
     <div className="w-full min-w-0 bg-gradient-to-br from-slate-50 to-slate-100 px-3 py-4 sm:p-6">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-row items-center justify-between gap-2 sm:gap-3">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg shadow-purple-500/30 sm:h-12 sm:w-12 sm:rounded-2xl">
+            <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg shadow-purple-500/30 sm:flex sm:h-12 sm:w-12 sm:rounded-2xl">
               <span className="material-icons text-xl sm:text-2xl">payments</span>
             </div>
             <h1 className="min-w-0 text-2xl font-bold leading-tight text-slate-800 sm:text-3xl">Salary &amp; Loss of Pay</h1>
           </div>
-          <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:ml-14 sm:text-sm">Salary is calculated automatically from Employee Master and attendance records.</p>
+          <p className="mt-2 hidden text-xs leading-relaxed text-slate-500 sm:ml-14 sm:block sm:text-sm">Salary is calculated automatically from Employee Master and attendance records.</p>
         </div>
-        <div className="flex justify-start sm:justify-end">
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={exportSalarySheet}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-2 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-50 sm:gap-2 sm:px-3 sm:text-xs"
+          >
+            <span className="material-icons text-sm">download</span>
+            Export
+          </button>
           <button
             onClick={() => setShowPrintOptions(true)}
-            className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+            className="hidden items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 sm:flex"
           >
             <span className="material-icons text-sm">print</span>
             Print Salary Sheet
@@ -349,22 +358,39 @@ export default function SalaryPage() {
       /> */}
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-lg shadow-slate-200/50">
-        <div className="flex flex-col gap-3 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-sm">
+        <div className="flex flex-row items-center gap-1 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white p-2 sm:flex-row sm:justify-between sm:gap-3 sm:p-3">
+          <div className="flex min-w-0 flex-1 items-center gap-1 sm:max-w-sm sm:gap-2">
+            <div className="relative min-w-0 flex-1">
             <span className="material-icons pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">search</span>
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search employee name, email or ID..."
-              className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-12 pr-4 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-sm"
+              className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-1 text-[10px] outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-sm sm:rounded-xl sm:py-2 sm:pl-12 sm:pr-4 sm:text-sm"
             />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
+            </div>
+            <div className="relative w-[64px] shrink-0 sm:hidden">
               <select
                 value={filter}
                 onChange={e => setFilter(e.target.value)}
-                className="appearance-none rounded-xl border border-slate-300 bg-white py-2 pl-4 pr-12 text-sm font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer hover:border-purple-400 shadow-sm"
+                className="!min-w-0 !w-full h-9 appearance-none rounded-lg border border-slate-300 bg-white py-1 pl-1 pr-4 text-[8px] font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 sm:h-auto sm:w-auto sm:rounded-xl sm:py-2 sm:pl-4 sm:pr-12 sm:text-sm"
+              >
+                <option value="attendance">All Employees</option>
+                <option value="all">All Employees</option>
+                <option value="missing-attendance">Missing Attendance</option>
+                <option value="lop">Has Loss of Pay</option>
+                <option value="missing-salary">Missing Salary</option>
+                <option value="payable">Net Payable &gt; 0</option>
+              </select>
+              <span className="material-icons pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-base text-slate-400">expand_more</span>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:flex-wrap sm:gap-2">
+            <div className="relative hidden shrink-0 sm:block">
+              <select
+                value={filter}
+                onChange={e => setFilter(e.target.value)}
+                className="!min-w-0 !w-[78px] appearance-none rounded-lg border border-slate-300 bg-white py-1.5 pl-1 pr-4 text-[8px] font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer hover:border-purple-400 shadow-sm sm:w-auto sm:rounded-xl sm:py-2 sm:pl-4 sm:pr-12 sm:text-sm"
               >
                 <option value="attendance">All Employees</option>
                 <option value="all">All Employees</option>
@@ -375,11 +401,11 @@ export default function SalaryPage() {
               </select>
               <span className="material-icons pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">expand_more</span>
             </div>
-            <div className="relative">
+            <div className="relative w-[78px] shrink-0 sm:w-auto">
               <select
                 value={companyFilter}
                 onChange={e => setCompanyFilter(e.target.value)}
-                className="appearance-none rounded-xl border border-slate-300 bg-white py-2 pl-4 pr-12 text-sm font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer hover:border-purple-400 shadow-sm"
+                className="!min-w-0 !w-full appearance-none rounded-lg border border-slate-300 bg-white py-1.5 pl-1 pr-4 text-[8px] font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer hover:border-purple-400 shadow-sm sm:rounded-xl sm:py-2 sm:pl-4 sm:pr-12 sm:text-sm"
               >
                 <option value="All">All Departments</option>
                 <option value="Rafttar">Rafttar</option>
@@ -393,19 +419,12 @@ export default function SalaryPage() {
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:from-slate-200 hover:to-slate-300 transition-all shadow-sm"
+                className="flex h-9 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-slate-100 to-slate-200 px-1 py-1.5 text-[9px] font-semibold text-slate-700 hover:from-slate-200 hover:to-slate-300 transition-all shadow-sm sm:h-auto sm:w-auto sm:gap-2 sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm"
               >
                 <span className="material-icons text-lg">close</span>
-                Clear Filters
+                <span className="hidden sm:inline">Clear Filters</span>
               </button>
             )}
-            <button
-              onClick={exportSalarySheet}
-              className="flex items-center gap-2 border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <span className="material-icons text-sm">download</span>
-              Export
-            </button>
           </div>
         </div>
         {noAttendanceData && (
@@ -457,9 +476,36 @@ export default function SalaryPage() {
           />
         </div> */}
 
+        <div className="space-y-2 p-2 sm:hidden">
+          {visibleRows.map(row => {
+            const { emp, config: cfg, deduction: ded, hasAttendance, hasSalary } = row;
+            const currentSalary = Number(cfg?.basicSalary || 0);
+            const liveExtraPayment = ded ? Number(ded.extraPayment || 0) : 0;
+            return (
+              <article key={emp.id} onClick={() => setDrawerEmployee(row)} className="cursor-pointer rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm transition-shadow hover:shadow-md">
+                <div className="flex items-start gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-xs font-bold text-white shadow-sm">
+                    {emp.name ? emp.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : 'NA'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0"><p className="truncate text-xs font-bold text-slate-800">{emp.name}</p><p className="truncate text-[10px] text-slate-500">{emp.email || 'No email'}</p></div>
+                      <p className="shrink-0 text-xs font-bold text-slate-700">{currentSalary > 0 ? formatINR(currentSalary) : '—'}</p>
+                    </div>
+                    <div className="mt-1.5 flex flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap text-[9px]">
+                      <span className={`shrink-0 rounded-full px-1.5 py-0.5 font-bold uppercase ${!hasAttendance ? 'bg-slate-100 text-slate-500' : ded?.lopAmount ? 'bg-red-50 text-red-600' : liveExtraPayment > 0 ? 'bg-blue-50 text-blue-600' : hasSalary ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{!hasAttendance ? 'No attendance' : liveExtraPayment > 0 ? 'Extra pay' : ded?.lopAmount ? 'LOP' : hasSalary ? 'Loaded' : 'Pending'}</span>
+                      {ded && <><span className="shrink-0 rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700">Present {Number(ded.presentDays || 0).toFixed(Number(ded.presentDays || 0) % 1 ? 1 : 0)}</span><span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">Payable {Number(ded.payableDays || 0).toFixed(Number(ded.payableDays || 0) % 1 ? 1 : 0)}</span></>}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
         {/* A fade on the right edge whenever the table is wider than its box, so a
             column pushed off-screen is visible rather than silently cut off. */}
-        <div className="relative">
+        <div className="relative hidden sm:block">
         <div className="w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100 hover:scrollbar-thumb-slate-400">
         <table className="w-full table-auto text-xs md:text-sm tabular-nums">
           <thead>
@@ -796,6 +842,37 @@ export default function SalaryPage() {
       <EmployeeDrawer
         isOpen={!!drawerEmployee}
         onClose={() => setDrawerEmployee(null)}
+        onOpenAttendance={(filter) => {
+          const row = drawerEmployee;
+          if (!row) return;
+          setDrawerEmployee(null);
+          openAttendance(row, filter);
+        }}
+        onOpenLop={() => {
+          if (!drawerEmployee) return;
+          const row = drawerEmployee;
+          setDrawerEmployee(null);
+          setLopExplain({ ded: row.deduction, emp: row.emp, row, salary: Number(row.config?.basicSalary || 0) });
+        }}
+        onOpenCalculation={() => {
+          if (!drawerEmployee) return;
+          const row = drawerEmployee;
+          setDrawerEmployee(null);
+          setCalculationDetailsRow(row);
+        }}
+        onOpenManagement={() => {
+          if (!drawerEmployee || user?.role !== 'admin') return;
+          const row = drawerEmployee;
+          setDrawerEmployee(null);
+          setManagementAdjustmentRow(row);
+        }}
+        onOpenExtraPay={() => {
+          if (!drawerEmployee) return;
+          const row = drawerEmployee;
+          setDrawerEmployee(null);
+          setLopExplain({ ded: row.deduction, emp: row.emp, row, salary: Number(row.config?.basicSalary || 0) });
+        }}
+        canEditManagement={user?.role === 'admin'}
         employee={drawerEmployee}
         month={month}
       />

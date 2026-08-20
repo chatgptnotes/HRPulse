@@ -86,13 +86,13 @@ export default function SettingsTab({ onChanged }: { onChanged?: () => void }) {
   return (
     <div>
       {/* Section switcher */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="mb-4 flex flex-nowrap gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:gap-2">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setSection(t.id)}
             className={clsx(
-              'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors',
+              'flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium border transition-colors sm:gap-2 sm:rounded-xl sm:px-4 sm:py-2.5 sm:text-sm',
               section === t.id ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             )}
           >

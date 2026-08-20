@@ -54,7 +54,7 @@ export default function SettingsPage() {
   return (
     <div className="w-full min-w-0 max-w-4xl px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
       <h1 className="text-xl font-bold text-slate-800 mb-1">Settings</h1>
-      <p className="text-sm text-slate-500 mb-6">Configure email, templates and company information</p>
+      <p className="hidden text-sm text-slate-500 mb-6 sm:block">Configure email, templates and company information</p>
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 mb-6 bg-slate-100 rounded-xl p-1 w-fit max-w-full">

@@ -14,7 +14,7 @@ interface SalaryStatsGridProps {
 
 export default function SalaryStatsGrid({ summary }: SalaryStatsGridProps) {
   return (
-    <div className="mb-3 grid grid-cols-1 gap-3 sm:mb-4 sm:grid-cols-3 sm:gap-3 lg:mb-5 lg:grid-cols-5">
+    <div className="mb-3 grid grid-cols-2 gap-2 sm:mb-4 sm:grid-cols-3 sm:gap-3 lg:mb-5 lg:grid-cols-5">
       <SalaryStatCard
         label="Employees"
         value={summary.total}

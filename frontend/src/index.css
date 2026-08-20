@@ -57,6 +57,15 @@ p, span, a, td, th, div, li, label { overflow-wrap: break-word; }
 }
 .hr-scroll-x::-webkit-scrollbar { display: none; }
 
+/* Keep compact employee-card metadata on one line on narrow screens. */
+@media (max-width: 639px) {
+  section > .space-y-2.p-2 > article > div:last-child {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
 /* Form controls */
 input, select, textarea, button { font-family: inherit; }
 select { cursor: pointer; }

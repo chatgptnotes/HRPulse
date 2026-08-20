@@ -629,6 +629,15 @@ export const updateDraft = async (draftId: number, data: { subject: string; body
   const { data: saved, error } = await directClient().from('email_messages').update({ subject: data.subject, body: data.body, is_edited: true }).eq('id', draftId).select().single();
   return directResult(saved, error);
 };
+export const deleteUnsentDraftsForUpload = async (uploadId: number) => {
+  const { data, error } = await directClient()
+    .from('email_messages')
+    .delete()
+    .eq('import_id', uploadId)
+    .in('status', ['draft', 'pending'])
+    .select('id');
+  return directResult(data || [], error);
+};
 // Drafts are read and edited through Supabase; actually delivering them needs
 // SMTP credentials, which cannot live in the browser. That waits on an edge
 // function.

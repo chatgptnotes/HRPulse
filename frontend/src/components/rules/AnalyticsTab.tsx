@@ -54,20 +54,20 @@ export default function AnalyticsTab() {
       ) : (
         <div className="space-y-4">
           {/* Summary strip */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
             {[
               { label: 'Total Executions', value: data.executionsByDay.reduce((a, b) => a + b.total, 0).toLocaleString(), icon: 'bolt', tone: 'text-purple-600 bg-purple-50' },
               { label: 'Failures', value: data.executionsByDay.reduce((a, b) => a + b.failed, 0).toLocaleString(), icon: 'error', tone: 'text-red-600 bg-red-50' },
               { label: 'Avg Execution Time', value: `${data.avgExecutionMs}ms`, icon: 'speed', tone: 'text-blue-600 bg-blue-50' },
               { label: 'Rules Tracked', value: data.topRules.length, icon: 'rule', tone: 'text-emerald-600 bg-emerald-50' },
             ].map((s) => (
-              <div key={s.label} className="rounded-2xl border border-slate-200 bg-white p-4 flex items-center gap-3">
-                <span className={clsx('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', s.tone)}>
-                  <span className="material-icons text-xl">{s.icon}</span>
+              <div key={s.label} className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white p-2.5 sm:gap-3 sm:rounded-2xl sm:p-4">
+                <span className={clsx('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 sm:rounded-xl', s.tone)}>
+                  <span className="material-icons text-base sm:text-xl">{s.icon}</span>
                 </span>
                 <div className="min-w-0">
-                  <p className="text-lg font-bold text-slate-800 leading-tight">{s.value}</p>
-                  <p className="text-sm text-slate-500 truncate">{s.label}</p>
+                  <p className="text-base font-bold leading-tight text-slate-800 sm:text-lg">{s.value}</p>
+                  <p className="truncate text-[10px] text-slate-500 sm:text-sm">{s.label}</p>
                 </div>
               </div>
             ))}
