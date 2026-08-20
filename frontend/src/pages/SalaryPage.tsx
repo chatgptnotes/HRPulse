@@ -332,7 +332,7 @@ export default function SalaryPage() {
         <div className="flex shrink-0 items-center gap-2">
           <button
             onClick={exportSalarySheet}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-2 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-50 sm:gap-2 sm:px-3 sm:text-xs"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-2 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-50 sm:hidden"
           >
             <span className="material-icons text-sm">download</span>
             Export
@@ -425,6 +425,13 @@ export default function SalaryPage() {
                 <span className="hidden sm:inline">Clear Filters</span>
               </button>
             )}
+            <button
+              onClick={exportSalarySheet}
+              className="hidden items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 sm:flex"
+            >
+              <span className="material-icons text-sm">download</span>
+              Export
+            </button>
           </div>
         </div>
         {noAttendanceData && (

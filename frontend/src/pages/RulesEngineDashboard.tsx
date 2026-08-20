@@ -113,7 +113,7 @@ export default function RulesEngineDashboard() {
             type="button"
             onClick={openRuleBuilder}
             title="Create a new business rule"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#2563EB] text-white shadow-[0px_2px_8px_rgba(37,99,235,0.25)] transition hover:bg-[#1D4ED8] active:scale-95 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-2 sm:text-[13px] sm:font-semibold"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#2563EB] text-white shadow-[0px_2px_8px_rgba(37,99,235,0.25)] transition hover:bg-[#1D4ED8] active:scale-95 sm:hidden"
           >
             <span className="material-icons text-[18px]">add</span>
             <span className="hidden sm:inline">Create Rule</span>

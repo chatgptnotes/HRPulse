@@ -387,7 +387,7 @@ export default function AllRulesPanel({
     <aside className="flex min-h-0 flex-col overflow-hidden bg-white sm:rounded-[16px] sm:border sm:border-[#E5E7EB] sm:shadow-[0px_2px_10px_rgba(0,0,0,0.05)]">
       {/* ─── Header ─── */}
       <div className="space-y-3 border-b border-[#E5E7EB] bg-[#F8FAFC]/70 p-4">
-        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EFF6FF] text-[#2563EB]">
               <span className="material-icons text-[18px]">library_books</span>
@@ -398,6 +398,14 @@ export default function AllRulesPanel({
                 {filtered.length} of {rules.length} rules{activeFilters > 0 && ` · ${activeFilters} filter${activeFilters > 1 ? 's' : ''}`}
               </p>
             </div>
+          <button
+            onClick={onCreateRule}
+            title="Create a new business rule"
+            className="hidden shrink-0 items-center gap-1.5 rounded-[10px] bg-[#2563EB] px-3 py-2 text-[12.5px] font-semibold text-white shadow-[0px_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:bg-[#1D4ED8] hover:shadow-[0px_4px_12px_rgba(37,99,235,0.3)] active:scale-[0.98] sm:inline-flex"
+          >
+            <span className="material-icons text-[16px] leading-none">add</span>
+            <span>Create New Rule</span>
+          </button>
           </div>
         </div>
 

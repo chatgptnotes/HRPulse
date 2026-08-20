@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatINR } from '../../lib/dayWiseSalary';
+import useIsPhone from '../../lib/useIsPhone';
 
 interface EmployeeDrawerProps {
   isOpen: boolean;
@@ -22,9 +23,13 @@ interface EmployeeDrawerProps {
 }
 
 export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpenAttendance, onOpenLop, onOpenCalculation, onOpenManagement, onOpenExtraPay, canEditManagement = false }: EmployeeDrawerProps) {
+  const isPhone = useIsPhone();
   const [showPaymentBreakdown, setShowPaymentBreakdown] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ salary: true, attendance: true, extra: true, lop: true, adjustment: true, formula: true });
-  const toggleSection = (section: string) => setOpenSections(current => ({ ...current, [section]: !current[section] }));
+  const toggleSection = (section: string) => {
+    if (!isPhone) return;
+    setOpenSections(current => ({ ...current, [section]: !current[section] }));
+  };
   if (!isOpen || !employee) return null;
 
   const { emp, config, deduction, hasAttendance, hasSalary, hasLop } = employee;
@@ -162,7 +167,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpe
           {/* Summary Cards */}
           <div className="mb-5 grid grid-cols-2 gap-2 sm:mb-6 sm:gap-3 sm:grid-cols-2">
             {summaryCards.map((card) => (
-              <button type="button" onClick={() => card.label === 'Loss of Pay' && onOpenLop?.()}
+              <button type="button" onClick={() => isPhone && card.label === 'Loss of Pay' && onOpenLop?.()}
                 key={card.label}
                 className={`relative overflow-hidden rounded-lg border text-left ${card.highlight ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200'} bg-gradient-to-br ${card.bgColor} px-2.5 py-2 sm:rounded-xl sm:px-4 sm:py-3 ${card.label === 'Loss of Pay' ? 'cursor-pointer hover:border-red-300' : ''}`}
               >
@@ -177,7 +182,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpe
             <button type="button" onClick={() => toggleSection('salary')} className="mb-3 flex w-full items-center gap-2 text-left text-sm font-bold text-slate-700">
               <span className="material-icons text-lg text-purple-600">account_balance</span>
               Salary Structure
-              <span className="material-icons ml-auto text-slate-400">{openSections.salary ? 'expand_less' : 'expand_more'}</span>
+              <span className="material-icons ml-auto text-slate-400 sm:hidden">{openSections.salary ? 'expand_less' : 'expand_more'}</span>
             </button>
             <div className={`${openSections.salary ? '' : 'hidden'} bg-slate-50 rounded-xl border border-slate-200 px-4 py-3 space-y-2`}>
               <div className="flex justify-between items-center">
@@ -204,11 +209,11 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpe
             <button type="button" onClick={() => toggleSection('attendance')} className="mb-3 flex w-full items-center gap-2 text-left text-sm font-bold text-slate-700">
               <span className="material-icons text-lg text-emerald-600">event_available</span>
               Attendance Summary
-              <span className="material-icons ml-auto text-slate-400">{openSections.attendance ? 'expand_less' : 'expand_more'}</span>
+              <span className="material-icons ml-auto text-slate-400 sm:hidden">{openSections.attendance ? 'expand_less' : 'expand_more'}</span>
             </button>
             <div className={`${openSections.attendance ? '' : 'hidden'} grid grid-cols-3 gap-3`}>
               {attendanceData.map((item, index) => (
-                <button type="button" key={item.label} onClick={() => onOpenAttendance?.(attendanceFilters[index])} className="bg-white rounded-xl border border-slate-200 px-3 py-3 text-center hover:border-indigo-300 hover:bg-indigo-50/30">
+                <button type="button" key={item.label} onClick={() => isPhone && onOpenAttendance?.(attendanceFilters[index])} className="bg-white rounded-xl border border-slate-200 px-3 py-3 text-center hover:border-indigo-300 hover:bg-indigo-50/30">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">{item.label}</p>
                   <p className={`text-base font-bold ${item.color} tabular-nums`}>{item.value}</p>
                 </button>
@@ -217,7 +222,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpe
           </div>
 
           {/* Complete payment breakdown matching the salary table columns. */}
-          <div className="mb-6">
+          <div className="mb-6 sm:hidden">
             <button type="button" onClick={() => setShowPaymentBreakdown(value => !value)} className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left hover:bg-slate-100">
               <span className="flex items-center gap-2 text-sm font-bold text-slate-700">
               <span className="material-icons text-lg text-indigo-600">receipt_long</span>
@@ -237,6 +242,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpe
                 { label: 'Net Payable', value: netPayable > 0 ? formatINR(netPayable) : '—', tone: 'text-emerald-700' },
               ].map(item => (
                 <button type="button" key={item.label} onClick={() => {
+                  if (!isPhone) return;
                   if (item.label === 'LOP Days') onOpenLop?.();
                   if (item.label === 'Rule Deductions' || item.label === 'Rule Bonus' || item.label === 'Net Payable') onOpenCalculation?.();
                   if (item.label === 'Management Adjustment' && canEditManagement) onOpenManagement?.();
@@ -255,7 +261,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpe
               <button type="button" onClick={() => toggleSection('extra')} className="mb-3 flex w-full items-center gap-2 text-left text-sm font-bold text-slate-700">
                 <span className="material-icons text-lg text-teal-600">trending_up</span>
                 Extra Pay Breakdown
-                <span className="material-icons ml-auto text-slate-400">{openSections.extra ? 'expand_less' : 'expand_more'}</span>
+              <span className="material-icons ml-auto text-slate-400 sm:hidden">{openSections.extra ? 'expand_less' : 'expand_more'}</span>
               </button>
               <div className={`${openSections.extra ? '' : 'hidden'} bg-teal-50 rounded-xl border border-teal-200 px-4 py-3 space-y-2`}>
                 {extraPayBreakdown.map((item, index) => (
@@ -281,7 +287,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpe
               <button type="button" onClick={() => toggleSection('lop')} className="mb-3 flex w-full items-center gap-2 text-left text-sm font-bold text-slate-700">
                 <span className="material-icons text-lg text-red-600">money_off</span>
                 Loss of Pay Breakdown
-                <span className="material-icons ml-auto text-slate-400">{openSections.lop ? 'expand_less' : 'expand_more'}</span>
+                <span className="material-icons ml-auto text-slate-400 sm:hidden">{openSections.lop ? 'expand_less' : 'expand_more'}</span>
               </button>
               <div className={`${openSections.lop ? '' : 'hidden'} bg-red-50 rounded-xl border border-red-200 px-4 py-3 space-y-2`}>
                 <div className="flex justify-between items-center">
@@ -308,7 +314,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpe
               <button type="button" onClick={() => toggleSection('adjustment')} className="mb-3 flex w-full items-center gap-2 text-left text-sm font-bold text-slate-700">
                 <span className="material-icons text-lg text-blue-600">tune</span>
                 Management Adjustment
-                <span className="material-icons ml-auto text-slate-400">{openSections.adjustment ? 'expand_less' : 'expand_more'}</span>
+                <span className="material-icons ml-auto text-slate-400 sm:hidden">{openSections.adjustment ? 'expand_less' : 'expand_more'}</span>
               </button>
               <div className={`${openSections.adjustment ? '' : 'hidden'} rounded-xl border px-4 py-3 space-y-2 ${
                 managementAdjustment > 0
@@ -337,7 +343,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpe
             <div className="bg-slate-100 rounded-lg px-4 py-3">
               <button type="button" onClick={() => toggleSection('formula')} className="mb-2 flex w-full items-center justify-between text-left">
                 <span className="text-xs font-semibold text-slate-700">CALCULATION FORMULA:</span>
-                <span className="material-icons text-sm text-slate-400">{openSections.formula ? 'expand_less' : 'expand_more'}</span>
+                <span className="material-icons text-sm text-slate-400 sm:hidden">{openSections.formula ? 'expand_less' : 'expand_more'}</span>
               </button>
               {openSections.formula && <code className="text-xs text-slate-600 block">
                 Gross Salary = Basic Salary + Extra Pay<br />

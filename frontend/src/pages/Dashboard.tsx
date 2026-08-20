@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import * as api from '../api';
 import StatusBadge from '../components/email/StatusBadge';
 import EmailDraftModal from '../components/email/EmailDraftModal';
+import useIsPhone from '../lib/useIsPhone';
 
 interface Summary {
   employeeId: number;
@@ -42,6 +43,7 @@ function StatCard({ icon, label, value, color }: { icon: string; label: string; 
 const isUnsent = (status: unknown) => ['draft', 'pending'].includes(String(status ?? '').trim().toLowerCase());
 
 export default function Dashboard() {
+  const isPhone = useIsPhone();
   const qc = useQueryClient();
   const [uploadId, setUploadId] = useState<number | null>(null);
   const [periodMonth, setPeriodMonth] = useState('');
@@ -192,7 +194,7 @@ export default function Dashboard() {
     setVisibleCount(10);
   }, [search, uploadId]);
 
-  const visibleFiltered = filtered.slice(0, visibleCount);
+  const visibleFiltered = isPhone ? filtered.slice(0, visibleCount) : filtered;
 
   const uniqueEntities = summary.length;
   const flaggedRecords = summary.reduce((acc, s) => acc + s.flaggedTotal, 0);
@@ -515,9 +517,9 @@ export default function Dashboard() {
               return (
                 <div
                   key={s.employeeId}
-                  onClick={() => setRecordsEmployee({ uploadId: uploadId!, employeeId: s.employeeId, name: s.employeeName, email: s.employeeEmail })}
-                  className={clsx(
-                    'flex cursor-pointer flex-col gap-1 rounded-lg border bg-white px-1.5 py-1.5 shadow-sm transition-all hover:shadow-md sm:cursor-default sm:grid sm:grid-cols-12 sm:items-center sm:gap-4 sm:rounded-2xl sm:px-4 sm:py-3.5',
+                    onClick={isPhone ? () => setRecordsEmployee({ uploadId: uploadId!, employeeId: s.employeeId, name: s.employeeName, email: s.employeeEmail }) : undefined}
+                    className={clsx(
+                    'flex flex-col gap-1 rounded-lg border bg-white px-1.5 py-1.5 shadow-sm transition-all hover:shadow-md sm:cursor-default sm:grid sm:grid-cols-12 sm:items-center sm:gap-4 sm:rounded-2xl sm:px-4 sm:py-3.5',
                     isSelected
                       ? 'border-indigo-300 bg-indigo-50/50 shadow-indigo-100'
                       : 'border-slate-200/70 hover:border-slate-300'
@@ -546,14 +548,15 @@ export default function Dashboard() {
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-[13px] font-semibold leading-tight text-slate-800 sm:text-sm">{s.employeeName}</p>
+                      <p className="hidden truncate text-xs text-slate-400 sm:block">{s.employeeEmail}</p>
                     </div>
                   </div>
 
                   <div className="hr-scroll-x col-span-4 flex flex-nowrap items-center gap-1 sm:gap-1.5">
-                    {s.absentDays > 0 && <StatusBadge label="Absent" small compact />}
-                    {s.missedSwipeDays > 0 && <StatusBadge label="Missed Swipe" small compact />}
-                    {s.lateComingDays > 0 && <StatusBadge label="Late Coming" small compact />}
-                    {s.earlyLeavingDays > 0 && <StatusBadge label="Early Leaving" small compact />}
+                    {s.absentDays > 0 && <StatusBadge label="Absent" small compact={isPhone} />}
+                    {s.missedSwipeDays > 0 && <StatusBadge label="Missed Swipe" small compact={isPhone} />}
+                    {s.lateComingDays > 0 && <StatusBadge label="Late Coming" small compact={isPhone} />}
+                    {s.earlyLeavingDays > 0 && <StatusBadge label="Early Leaving" small compact={isPhone} />}
                     <span className="shrink-0 rounded-lg bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-400">{s.flaggedTotal}</span>
                   </div>
 
@@ -587,7 +590,7 @@ export default function Dashboard() {
                 </div>
               );
             })}
-            {visibleFiltered.length < filtered.length && (
+            {isPhone && visibleFiltered.length < filtered.length && (
               <div className="flex justify-center pt-2">
                 <button
                   onClick={() => setVisibleCount(count => Math.min(count + 10, filtered.length))}
