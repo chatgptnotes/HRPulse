@@ -1083,12 +1083,38 @@ export const saveTemplate = async (type: string, data: { subject: string; body: 
 };
 
 // Employees
+export interface SalaryLedger {
+  id: number;
+  accountName: string;
+  accountCode: string;
+}
+
+export const getSalaryLedgers = async () => {
+  const { data, error } = await directClient()
+    .from('salary_ledgers')
+    .select('id,account_name,account_code')
+    .order('account_name');
+  return directResult((data || []).map((row: any) => ({
+    id: row.id,
+    accountName: row.account_name,
+    accountCode: row.account_code,
+  } as SalaryLedger)), error);
+};
+
 export const getEmployees = async () => {
-  const { data, error } = await directClient().from('employees').select('*').order('name');
-  if (error) throw new Error(error.message);
+  const client = directClient();
+  const [{ data, error }, { data: ledgers, error: ledgerError }] = await Promise.all([
+    client.from('employees').select('*').order('name'),
+    client.from('salary_ledgers').select('id,account_name,account_code'),
+  ]);
+  if (error || ledgerError) throw new Error(error?.message || ledgerError?.message);
+  const ledgerById = new Map((ledgers || []).map((row: any) => [String(row.id), row]));
   return directResult((data || []).map((row: any) => ({
     ...row, employeeId: row.employee_number, photoUrl: row.photo_url, createdAt: row.created_at,
     actualDesignation: row.designation, designation: row.biometric_name || row.designation, biometricName: row.biometric_name,
+    ledgerId: row.salary_ledger_id ?? null,
+    ledgerName: ledgerById.get(String(row.salary_ledger_id))?.account_name ?? null,
+    accountCode: ledgerById.get(String(row.salary_ledger_id))?.account_code ?? null,
     basicSalary: row.monthly_salary == null ? null : Number(row.monthly_salary),
     shiftTimings: row.shift_timings || {}, eligibleForPaidLeaves: row.eligible_for_paid_leaves, eligibleForOvertime: row.eligible_for_overtime,
   })), null);
@@ -1129,17 +1155,18 @@ export const mergeEmployees = async (keepId: number, mergeId: number) => {
   if (removed.error) throw new Error(removed.error.message);
   return { data: { kept: keep.data.name, removed: merge.data.name } };
 };
-export const updateEmployee = async (id: number, data: { name?: string; email?: string; department?: string; employeeNumber?: string; mobile?: string; designation?: string; biometricName?: string; branch?: string; status?: string; monthlySalary?: number | null; shiftTimings?: Record<string, { start: string; end: string }>; eligibleForPaidLeaves?: boolean; eligibleForOvertime?: boolean }) => {
+export const updateEmployee = async (id: number, data: { name?: string; email?: string; department?: string; employeeNumber?: string; mobile?: string; designation?: string; biometricName?: string; branch?: string; status?: string; monthlySalary?: number | null; shiftTimings?: Record<string, { start: string; end: string }>; eligibleForPaidLeaves?: boolean; eligibleForOvertime?: boolean; salaryLedgerId?: number | null }) => {
   const { data: saved, error } = await directClient().from('employees').update({
     name: data.name, email: data.email, department: data.department, designation: data.designation, biometric_name: data.biometricName,
     employee_number: data.employeeNumber, mobile: data.mobile, branch: data.branch, status: data.status,
     monthly_salary: data.monthlySalary,
     shift_timings: data.shiftTimings,
     eligible_for_paid_leaves: data.eligibleForPaidLeaves, eligible_for_overtime: data.eligibleForOvertime,
+    salary_ledger_id: data.salaryLedgerId ?? null,
   }).eq('id', id).select().single();
   return directResult(saved, error);
 };
-export const createEmployee = async (data: { name: string; email?: string; department?: string; designation?: string; employeeNumber?: string; mobile?: string; branch?: string; status?: string; basicSalary?: number; eligibleForPaidLeaves?: boolean; eligibleForOvertime?: boolean; organisation?: string; biometricName?: string }) => {
+export const createEmployee = async (data: { name: string; email?: string; department?: string; designation?: string; employeeNumber?: string; mobile?: string; branch?: string; status?: string; basicSalary?: number; eligibleForPaidLeaves?: boolean; eligibleForOvertime?: boolean; organisation?: string; biometricName?: string; salaryLedgerId?: number | null }) => {
   const { data: saved, error } = await directClient().from('employees').insert({
     name: data.name,
     email: data.email || `${data.name.toLowerCase().replace(/\s+/g, '.')}@hrpulse.local`,
@@ -1154,6 +1181,7 @@ export const createEmployee = async (data: { name: string; email?: string; depar
     eligible_for_overtime: data.eligibleForOvertime === true,
     organisation: data.organisation || null,
     biometric_name: data.biometricName || null,
+    salary_ledger_id: data.salaryLedgerId ?? null,
   }).select().single();
   return directResult(saved, error);
 };

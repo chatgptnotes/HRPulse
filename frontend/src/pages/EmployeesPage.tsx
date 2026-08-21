@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getEmployees, updateEmployee, mergeEmployees, createEmployee, getShiftOptions, getEmployeeShiftAssignments, saveEmployeeShiftAssignment, getDerivedShiftTimings, getAllShiftAssignments, type EmployeeShiftAssignment, type ShiftOption, type DerivedTimings } from '../api';
+import { getEmployees, updateEmployee, mergeEmployees, createEmployee, getSalaryLedgers, getShiftOptions, getEmployeeShiftAssignments, saveEmployeeShiftAssignment, getDerivedShiftTimings, getAllShiftAssignments, type EmployeeShiftAssignment, type ShiftOption, type DerivedTimings, type SalaryLedger } from '../api';
 import TablePagination, { PAGE_SIZE } from '../components/TablePagination';
 import TimePicker from '../components/TimePicker';
 import useIsPhone from '../lib/useIsPhone';
@@ -20,6 +20,9 @@ interface Employee {
   designation?: string | null;
   actualDesignation?: string | null;
   biometricName?: string | null;
+  ledgerId?: number | null;
+  ledgerName?: string | null;
+  accountCode?: string | null;
   status?: string | null;
   basicSalary?: number | null;
   shiftTimings?: Record<string, { start?: string; end?: string }> | null;
@@ -35,6 +38,7 @@ interface EditForm {
   mobile: string;
   designation: string;
   biometricName: string;
+  salaryLedgerId: number | null;
   branch: string;
   status: string;
   basicSalary: string;
@@ -79,7 +83,9 @@ export default function EmployeesPage() {
   const [editing, setEditing] = useState<Employee | null>(null);
   const [detailsEmployee, setDetailsEmployee] = useState<Employee | null>(null);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState<EditForm>({ name: '', email: '', department: '', employeeNumber: '', mobile: '', designation: '', biometricName: '', branch: '', status: 'Active', basicSalary: '', shiftTimings: { morning: { start: '', end: '' }, evening: { start: '', end: '' }, night: { start: '', end: '' } }, eligibleForPaidLeaves: true, eligibleForOvertime: false });
+  const [form, setForm] = useState<EditForm>({ name: '', email: '', department: '', employeeNumber: '', mobile: '', designation: '', biometricName: '', salaryLedgerId: null, branch: '', status: 'Active', basicSalary: '', shiftTimings: { morning: { start: '', end: '' }, evening: { start: '', end: '' }, night: { start: '', end: '' } }, eligibleForPaidLeaves: true, eligibleForOvertime: false });
+  const [ledgerSearch, setLedgerSearch] = useState('');
+  const [ledgerFocused, setLedgerFocused] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [mergeKeepId, setMergeKeepId] = useState<number | null>(null);
   const [mergeError, setMergeError] = useState('');
@@ -98,6 +104,11 @@ export default function EmployeesPage() {
     queryKey: ['employees'],
     queryFn: () => getEmployees().then(r => r.data),
   });
+  const { data: salaryLedgers = [], isLoading: ledgersLoading } = useQuery<SalaryLedger[]>({
+    queryKey: ['salary-ledgers'],
+    queryFn: () => getSalaryLedgers().then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Timing is not stored for anyone, so it is reconstructed at read time from
   // assigned shifts and punch history. Neither query writes anything back.
@@ -113,7 +124,8 @@ export default function EmployeesPage() {
       const { basicSalary, ...employeeData } = data;
       await updateEmployee(id, { ...employeeData, monthlySalary: basicSalary.trim() ? Number(basicSalary) : null });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['employees'] }); setEditing(null); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['employees'] }); setEditing(null); setLedgerSearch(''); },
+    onError: (error: any) => alert(error.message || 'Employee could not be saved.'),
   });
 
   const addMutation = useMutation({
@@ -130,11 +142,14 @@ export default function EmployeesPage() {
       eligibleForPaidLeaves: data.eligibleForPaidLeaves,
       eligibleForOvertime: data.eligibleForOvertime,
       biometricName: data.biometricName || undefined,
+      salaryLedgerId: data.salaryLedgerId,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['employees'] });
       setAdding(false);
-      setForm({ name: '', email: '', department: '', employeeNumber: '', mobile: '', designation: '', biometricName: '', branch: '', status: 'Active', basicSalary: '', shiftTimings: { morning: { start: '', end: '' }, evening: { start: '', end: '' }, night: { start: '', end: '' } }, eligibleForPaidLeaves: true, eligibleForOvertime: false });
+      setLedgerSearch('');
+      setLedgerFocused(false);
+      setForm({ name: '', email: '', department: '', employeeNumber: '', mobile: '', designation: '', biometricName: '', salaryLedgerId: null, branch: '', status: 'Active', basicSalary: '', shiftTimings: { morning: { start: '', end: '' }, evening: { start: '', end: '' }, night: { start: '', end: '' } }, eligibleForPaidLeaves: true, eligibleForOvertime: false });
     },
     onError: (error: any) => {
       const errorMsg = error.response?.data?.error || error.message || 'Failed to add employee';
@@ -144,7 +159,7 @@ export default function EmployeesPage() {
 
   const searchText = search.trim().toLowerCase();
   const filtered = employees.filter(e => {
-    const searchable = [e.name, e.email, e.department, e.organisation, e.entity]
+    const searchable = [e.name, e.email, e.biometricName, e.ledgerName, e.accountCode, e.department, e.organisation, e.entity]
       .map(value => String(value || '').toLowerCase())
       .join(' ');
     return (!searchText || searchable.includes(searchText)) && (!departmentFilter || e.department === departmentFilter);
@@ -155,6 +170,10 @@ export default function EmployeesPage() {
     'Reception', 'Pharmacy', 'Laboratory', 'Housekeeping', ...departments,
   ])).sort((a, b) => a.localeCompare(b));
   const visibleEmployees = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const ledgerSearchText = ledgerSearch.trim().toLowerCase();
+  const matchingLedgers = salaryLedgers.filter(ledger =>
+    !ledgerSearchText || `${ledger.accountName} ${ledger.accountCode}`.toLowerCase().includes(ledgerSearchText)
+  ).slice(0, 12);
   const mergeMutation = useMutation({
     mutationFn: () => mergeEmployees(mergeKeepId!, selectedIds.find(id => id !== mergeKeepId)!),
     onSuccess: () => {
@@ -194,9 +213,11 @@ export default function EmployeesPage() {
   function openEdit(emp: Employee) {
     setEditing(emp);
     setOpenActionMenu(null);
+    setLedgerSearch(emp.ledgerName || emp.accountCode || '');
+    setLedgerFocused(false);
     setForm({
       name: emp.name, email: emp.email || '', department: emp.department || 'Rafttar', employeeNumber: emp.employeeId || '',
-      mobile: emp.mobile || '', designation: emp.actualDesignation || emp.designation || '', biometricName: emp.biometricName || '', branch: emp.branch || emp.entity || '', status: emp.status || 'Active',
+      mobile: emp.mobile || '', designation: emp.actualDesignation || emp.designation || '', biometricName: emp.biometricName || '', salaryLedgerId: emp.ledgerId ?? null, branch: emp.branch || emp.entity || '', status: emp.status || 'Active',
       basicSalary: emp.basicSalary ? String(emp.basicSalary) : '', shiftTimings: { morning: { start: emp.shiftTimings?.morning?.start || '', end: emp.shiftTimings?.morning?.end || '' }, evening: { start: emp.shiftTimings?.evening?.start || '', end: emp.shiftTimings?.evening?.end || '' }, night: { start: emp.shiftTimings?.night?.start || '', end: emp.shiftTimings?.night?.end || '' } },
       eligibleForPaidLeaves: emp.eligibleForPaidLeaves !== false, eligibleForOvertime: emp.eligibleForOvertime === true,
     });
@@ -257,13 +278,14 @@ export default function EmployeesPage() {
       </div>
 
       <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 p-2.5 sm:p-3">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="relative min-w-0 flex-[1.4]"><span className="material-icons pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[12px] text-slate-400 sm:left-3 sm:text-sm">search</span><input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search employees..." className="!min-h-0 h-7 w-full rounded-md border border-slate-200 bg-slate-50 py-1 pl-7 pr-1.5 text-[10px] outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 sm:h-auto sm:py-2 sm:pl-9 sm:pr-3 sm:text-xs" /></div>
-            <select value={departmentFilter} onChange={e => { setDepartmentFilter(e.target.value); setPage(1); }} className="h-8 min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-600 outline-none sm:h-auto sm:px-3 sm:py-2 sm:text-xs"><option value="">All departments</option>{departments.map(d => <option key={d} value={d}>{d}</option>)}</select>
+        <div className="border-b border-slate-200 bg-slate-50/50 p-3 sm:p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(220px,0.8fr)] sm:items-end">
+            <label className="block min-w-0"><span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 sm:text-xs">Search directory</span><div className="relative"><span className="material-icons pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">search</span><input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Name, biometric name, ledger name, or account code" className="!min-h-0 h-10 w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-9 text-xs text-slate-700 outline-none transition-shadow placeholder:text-slate-400 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 sm:text-sm" />{search && <button type="button" onClick={() => { setSearch(''); setPage(1); }} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Clear employee search"><span className="material-icons text-sm">close</span></button>}</div></label>
+            <label className="block"><span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500 sm:text-xs">Department</span><select value={departmentFilter} onChange={e => { setDepartmentFilter(e.target.value); setPage(1); }} className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none transition-shadow focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 sm:text-sm"><option value="">All departments</option>{departments.map(d => <option key={d} value={d}>{d}</option>)}</select></label>
           </div>
+          <p className="mt-2 text-[10px] text-slate-400">Search matches employee name, biometric name, ledger name, and account code.</p>
         </div>
-        <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"><div className="min-w-0"><h2 className="truncate text-xs font-bold text-slate-800 sm:text-sm">Employee directory</h2><p className="text-[9px] text-slate-400 sm:text-[10px]">{filtered.length} active employees</p></div><div className="flex flex-none items-center gap-1 sm:gap-2"><button onClick={() => { setAdding(true); setForm({ name: '', email: '', department: 'Marketing', employeeNumber: '', mobile: '', designation: '', biometricName: '', branch: '', status: 'Active', basicSalary: '', shiftTimings: { morning: { start: '', end: '' }, evening: { start: '', end: '' }, night: { start: '', end: '' } }, eligibleForPaidLeaves: false, eligibleForOvertime: false }); }} className="flex items-center justify-center gap-1 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 px-2 py-1.5 text-[9px] font-semibold text-white shadow-md transition-all hover:from-purple-600 hover:to-indigo-700 sm:gap-2 sm:rounded-xl sm:px-3 sm:text-[10px]"><span className="material-icons text-[11px] align-middle sm:text-sm">add_circle</span>Add Employee</button><button className="flex items-center justify-center rounded-md border border-slate-200 px-2 py-1.5 text-[9px] font-medium text-slate-600 sm:px-2.5 sm:text-[10px]"><span className="material-icons mr-0.5 align-middle text-[11px] sm:mr-1 sm:text-xs">download</span>Export</button>{selectedIds.length === 2 && <button onClick={() => { setMergeKeepId(selectedIds[0]); setMergeError(''); }} className="flex flex-none items-center justify-center rounded-md bg-indigo-600 px-2 py-1.5 text-[9px] font-semibold text-white sm:px-2.5 sm:text-[10px]"><span className="material-icons mr-0.5 align-middle text-[11px] sm:mr-1 sm:text-xs">merge</span>Merge names</button>}</div></div>
+        <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"><div className="min-w-0"><h2 className="truncate text-xs font-bold text-slate-800 sm:text-sm">Employee directory</h2><p className="text-[9px] text-slate-400 sm:text-[10px]">{filtered.length} active employees</p></div><div className="flex flex-none items-center gap-1 sm:gap-2"><button onClick={() => { setAdding(true); setLedgerSearch(''); setLedgerFocused(false); setForm({ name: '', email: '', department: 'Marketing', employeeNumber: '', mobile: '', designation: '', biometricName: '', salaryLedgerId: null, branch: '', status: 'Active', basicSalary: '', shiftTimings: { morning: { start: '', end: '' }, evening: { start: '', end: '' }, night: { start: '', end: '' } }, eligibleForPaidLeaves: false, eligibleForOvertime: false }); }} className="flex items-center justify-center gap-1 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 px-2 py-1.5 text-[9px] font-semibold text-white shadow-md transition-all hover:from-purple-600 hover:to-indigo-700 sm:gap-2 sm:rounded-xl sm:px-3 sm:text-[10px]"><span className="material-icons text-[11px] align-middle sm:text-sm">add_circle</span>Add Employee</button><button className="flex items-center justify-center rounded-md border border-slate-200 px-2 py-1.5 text-[9px] font-medium text-slate-600 sm:px-2.5 sm:text-[10px]"><span className="material-icons mr-0.5 align-middle text-[11px] sm:mr-1 sm:text-xs">download</span>Export</button>{selectedIds.length === 2 && <button onClick={() => { setMergeKeepId(selectedIds[0]); setMergeError(''); }} className="flex flex-none items-center justify-center rounded-md bg-indigo-600 px-2 py-1.5 text-[9px] font-semibold text-white sm:px-2.5 sm:text-[10px]"><span className="material-icons mr-0.5 align-middle text-[11px] sm:mr-1 sm:text-xs">merge</span>Merge names</button>}</div></div>
         {isLoading ? <div className="p-12 text-center text-sm text-slate-400"><span className="material-icons mr-2 animate-spin align-middle">sync</span>Loading employees...</div> : filtered.length === 0 ? <div className="p-12 text-center text-sm text-slate-400">No employees match the current filters.</div> : <><div className="space-y-2 p-2 sm:hidden">{visibleEmployees.map((emp, i) => <article key={emp.id} onClick={() => openDetails(emp)} className="cursor-pointer rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition-shadow hover:shadow-md"><div className="flex items-start gap-2"><input type="checkbox" checked={selectedIds.includes(emp.id)} onClick={e => e.stopPropagation()} onChange={() => setSelectedIds(ids => ids.includes(emp.id) ? ids.filter(id => id !== emp.id) : ids.length < 2 ? [...ids, emp.id] : ids)} className="mt-1" /><div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${AVATAR_COLORS[i % AVATAR_COLORS.length]} text-[10px] font-bold text-white`}>{emp.photoUrl ? <img src={emp.photoUrl} alt="" className="h-full w-full rounded-full object-cover" /> : initials(emp.name)}</div><div className="min-w-0 flex-1 text-left"><p className="truncate text-[11px] font-semibold text-slate-800">{emp.name}</p><p className="truncate text-[9px] text-slate-400">{emp.email || '—'}</p></div></div><div className="ml-12 mt-1.5 flex flex-wrap items-center gap-1.5 text-[9px] text-slate-500"><span className="rounded bg-indigo-50 px-1.5 py-0.5 font-medium text-indigo-600">ID: {emp.employeeId || '—'}</span><span className="rounded bg-slate-100 px-1.5 py-0.5">{emp.department || 'Unassigned'}</span><span className="rounded-full bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-600">{emp.status || 'Active'}</span></div></article>)}</div><div className="hidden overflow-x-auto sm:block"><table className="w-full min-w-[1180px] text-left tabular-nums"><thead className="border-b border-slate-200 bg-slate-50 text-[9px] font-bold uppercase tracking-wide text-slate-400"><tr><th className="w-10 px-4 py-3"><input type="checkbox" aria-label="Select all visible employees" checked={visibleEmployees.length > 0 && visibleEmployees.every(e => selectedIds.includes(e.id))} onChange={() => setSelectedIds(visibleEmployees.every(e => selectedIds.includes(e.id)) ? [] : visibleEmployees.slice(0, 2).map(e => e.id))} /></th><th className="px-3 py-3">Employee</th><th className="px-3 py-3">Emp ID</th><th className="px-3 py-3">Mobile</th><th className="px-3 py-3">Department</th><th className="px-3 py-3">Branch</th><th className="px-3 py-3">Biometric Name</th><th className="px-3 py-3">Shift</th><th className="px-3 py-3">Timing</th><th className="px-3 py-3">Basic Salary</th><th className="px-3 py-3">Paid Leaves</th><th className="px-3 py-3">Overtime</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Edit</th></tr></thead><tbody className="divide-y divide-slate-100">{visibleEmployees.map((emp, i) => <tr key={emp.id} className="group hover:bg-slate-50/70"><td className="px-4 py-2.5"><input type="checkbox" checked={selectedIds.includes(emp.id)} onChange={() => setSelectedIds(ids => ids.includes(emp.id) ? ids.filter(id => id !== emp.id) : ids.length < 2 ? [...ids, emp.id] : ids)} /></td><td className="px-3 py-2.5"><button type="button" onClick={() => isPhone ? openDetails(emp) : openEdit(emp)} className="flex items-center gap-2 text-left"><div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${AVATAR_COLORS[i % AVATAR_COLORS.length]} text-[9px] font-bold text-white`}>{emp.photoUrl ? <img src={emp.photoUrl} alt="" className="h-full w-full rounded-full object-cover" /> : initials(emp.name)}</div><div className="max-w-[180px]"><p className="truncate text-[11px] font-semibold text-slate-700 hover:text-indigo-600">{emp.name}</p><p className="truncate text-[9px] text-slate-400">{emp.email || '—'}</p></div></button></td><td className="px-3 py-2.5 text-[10px] text-slate-600">{emp.employeeId || '—'}</td><td className="px-3 py-2.5 text-[10px] text-slate-600">{emp.mobile || '—'}</td><td className="px-3 py-2.5"><span className="rounded bg-indigo-50 px-1.5 py-1 text-[9px] font-medium text-indigo-600">{emp.department || '—'}</span></td><td className="px-3 py-2.5 text-[10px] text-slate-600">{emp.branch || emp.entity || '—'}</td><td className="px-3 py-2.5 text-[10px] text-slate-600">{emp.designation || emp.name}</td><td className="px-3 py-2.5"><button type="button" onClick={() => openWorkTimes(emp)} className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100" title="Assign a shift / work time">M / E / N</button></td><td className="max-w-[190px] px-3 py-2.5 text-[9px] leading-4">{(() => { const t = timings(emp); return <span className={t.inferred ? 'text-slate-300 italic' : 'text-slate-600'} title={t.source}>{t.text}{t.inferred ? ' (standard)' : ''}</span>; })()}</td><td className="px-3 py-2.5 text-[10px] font-medium text-slate-700">{emp.basicSalary ? `₹${emp.basicSalary.toLocaleString('en-IN')}` : '—'}</td><td className="px-3 py-2.5 text-[10px] text-emerald-600">{emp.eligibleForPaidLeaves !== false ? 'Eligible' : 'No'}</td><td className="px-3 py-2.5 text-[10px] text-indigo-600">{emp.eligibleForOvertime ? 'Eligible' : 'No'}</td><td className="px-3 py-2.5"><span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-medium text-emerald-600">{emp.status || 'Active'}</span></td><td className="px-3 py-2.5"><button type="button" onClick={() => openEdit(emp)} className="rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold text-indigo-600 hover:bg-indigo-100"><span className="material-icons mr-1 align-middle text-xs">edit</span>Edit</button></td></tr>)}</tbody></table></div></>}
         <TablePagination total={filtered.length} page={page} pageSize={PAGE_SIZE} onPageChange={setPage} noun="employees" />
       </section>
@@ -373,7 +395,7 @@ export default function EmployeesPage() {
                 <div className="min-w-0"><h4 className="truncate text-base font-bold text-slate-800">{detailsEmployee.name}</h4><p className="truncate text-xs text-slate-500">{detailsEmployee.email || 'No email provided'}</p><span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">{detailsEmployee.status || 'Active'}</span></div>
               </div>
               {[
-                { title: 'Contact & identity', icon: 'badge', items: [['Employee ID', detailsEmployee.employeeId], ['Mobile', detailsEmployee.mobile], ['Biometric Name', detailsEmployee.biometricName]] },
+                { title: 'Contact & identity', icon: 'badge', items: [['Employee ID', detailsEmployee.employeeId], ['Mobile', detailsEmployee.mobile], ['Biometric Name', detailsEmployee.biometricName], ['Ledger Name', detailsEmployee.ledgerName], ['Account Code', detailsEmployee.accountCode]] },
                 { title: 'Employment', icon: 'business_center', items: [['Department', detailsEmployee.department], ['Organisation', detailsEmployee.organisation], ['Entity / Branch', detailsEmployee.branch || detailsEmployee.entity], ['Designation', detailsEmployee.actualDesignation || detailsEmployee.designation]] },
                 { title: 'Payroll & eligibility', icon: 'payments', items: [['Monthly Salary', detailsEmployee.basicSalary ? `₹${detailsEmployee.basicSalary.toLocaleString('en-IN')}` : null], ['Paid Leaves', detailsEmployee.eligibleForPaidLeaves === null || detailsEmployee.eligibleForPaidLeaves === undefined ? null : detailsEmployee.eligibleForPaidLeaves ? 'Eligible' : 'Not eligible'], ['Overtime', detailsEmployee.eligibleForOvertime ? 'Eligible' : 'Not eligible']] },
               ].map(section => <section key={section.title} className="border-b border-slate-100 py-4"><h5 className="mb-2 flex items-center gap-1.5 text-xs font-bold text-slate-700"><span className="material-icons text-sm text-indigo-500">{section.icon}</span>{section.title}</h5><div className="space-y-2">{section.items.map(([label, value]) => <div key={label} className="flex items-start justify-between gap-4 text-xs"><span className="text-slate-400">{label}</span><span className="max-w-[60%] text-right font-medium text-slate-700">{value || '—'}</span></div>)}</div></section>)}
@@ -397,7 +419,7 @@ export default function EmployeesPage() {
             <div className="overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {[
-                  { label: 'Employee Name *', key: 'name', type: 'text', span: true, placeholder: 'Enter full name' },
+                  { label: 'Employee Name *', key: 'name', type: 'text', placeholder: 'Enter full name' },
                   { label: 'Employee ID', key: 'employeeNumber', type: 'text', placeholder: 'Optional employee ID' },
                   { label: 'Email Address', key: 'email', type: 'email', placeholder: 'Optional email' },
                   { label: 'Mobile Number', key: 'mobile', type: 'tel', placeholder: 'Optional mobile' },
@@ -405,7 +427,8 @@ export default function EmployeesPage() {
                   { label: 'Biometric Name', key: 'biometricName', type: 'text', placeholder: 'Optional biometric name' },
                   { label: 'Branch', key: 'branch', type: 'text', placeholder: 'Optional branch' },
                   { label: 'Monthly Salary (INR)', key: 'basicSalary', type: 'number', placeholder: 'Optional salary' },
-                ].map(f => <div key={f.key} className={f.span ? 'sm:col-span-2' : ''}><label className="mb-1.5 block text-xs font-medium text-slate-700">{f.label}</label><input type={f.type} value={form[f.key as keyof EditForm] as string} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" /></div>)}
+                ].map(f => <div key={f.key} className=""><label className="mb-1.5 block text-xs font-medium text-slate-700">{f.label}</label><input type={f.type} value={form[f.key as keyof EditForm] as string} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" /></div>)}
+                <div className="relative"><label className="mb-1.5 block text-xs font-medium text-slate-700">Salary Ledger Name</label><div className="relative"><input value={ledgerSearch} onFocus={() => setLedgerFocused(true)} onBlur={() => setTimeout(() => setLedgerFocused(false), 120)} onChange={e => { setLedgerFocused(true); setLedgerSearch(e.target.value); setForm(prev => ({ ...prev, salaryLedgerId: null })); }} placeholder={ledgersLoading ? 'Loading ledger accounts...' : 'Search ledger name or account code'} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 pr-9 text-sm outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" />{ledgerSearch && <button type="button" onClick={() => { setLedgerSearch(''); setLedgerFocused(false); setForm(prev => ({ ...prev, salaryLedgerId: null })); }} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-200" aria-label="Clear salary ledger"><span className="material-icons text-sm">close</span></button>}</div>{form.salaryLedgerId && (() => { const selected = salaryLedgers.find(ledger => ledger.id === form.salaryLedgerId); return selected ? <p className="mt-1 text-[11px] font-medium text-emerald-700">Linked account code: {selected.accountCode}</p> : null; })()}{ledgerFocused && ledgerSearch.trim() && !ledgersLoading && <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-xl">{matchingLedgers.length ? matchingLedgers.map(ledger => <button type="button" key={ledger.id} onClick={() => { setForm(prev => ({ ...prev, salaryLedgerId: ledger.id })); setLedgerSearch(ledger.accountName); setLedgerFocused(false); }} className="flex w-full items-start justify-between gap-3 rounded-md px-3 py-2 text-left hover:bg-indigo-50"><span className="min-w-0 truncate text-xs font-medium text-slate-700">{ledger.accountName}</span><span className="shrink-0 text-[10px] text-slate-400">{ledger.accountCode}</span></button>) : <p className="px-3 py-2 text-xs text-slate-400">No ledger or account code matches.</p>}</div>}<p className="mt-1 text-[10px] text-slate-400">Search by ledger name or account code. The account code is linked automatically.</p></div>
                 <div><label className="mb-1.5 block text-xs font-medium text-slate-700">Department</label><input list="employee-departments" value={form.department} onChange={e => setForm(prev => ({ ...prev, department: e.target.value }))} placeholder="Select or type a department" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" /><datalist id="employee-departments">{departmentOptions.map(department => <option key={department} value={department} />)}</datalist><p className="mt-1 text-[10px] text-slate-400">Choose a department or type a new one.</p></div>
                 <div><label className="mb-1.5 block text-xs font-medium text-slate-700">Status</label><select value={form.status} onChange={e => setForm(prev => ({ ...prev, status: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-300"><option>Active</option><option>Inactive</option></select></div>
                 <div className="sm:col-span-2 space-y-4">

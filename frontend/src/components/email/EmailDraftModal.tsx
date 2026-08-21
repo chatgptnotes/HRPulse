@@ -297,13 +297,14 @@ export default function EmailDraftModal({ uploadId, employeeId, employeeName, em
         </div>
 
         {/* Tabs */}
-        <div className="hr-scroll-x flex gap-4 border-b border-slate-100 px-4 pt-3 sm:px-6">
-          {['draft', 'records'].map(t => (
+        <div className="hr-scroll-x flex gap-1 border-b border-slate-200 bg-slate-50/80 px-3 pt-2 sm:px-5">
+          {(recordsOnly ? ['records'] : ['draft', 'records']).map(t => (
             <button
               key={t}
               onClick={() => setTab(t as any)}
-              className={`pb-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+              className={`flex shrink-0 items-center gap-1.5 rounded-t-lg border-b-2 px-3 py-2.5 text-xs font-semibold transition-colors sm:px-4 sm:text-sm ${tab === t ? 'border-indigo-600 bg-white text-indigo-700 shadow-sm' : 'border-transparent text-slate-500 hover:bg-white/70 hover:text-slate-700'}`}
             >
+              <span className="material-icons text-[15px] sm:text-base">{t === 'draft' ? 'edit_note' : 'fingerprint'}</span>
               {t === 'draft' ? 'Email Draft' : `${filterLabel || 'Attendance Records'} (${creditFilteredRecords.length})`}
             </button>
           ))}

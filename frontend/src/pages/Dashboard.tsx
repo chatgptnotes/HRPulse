@@ -542,7 +542,14 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  <div className="col-span-3 flex min-w-0 items-center gap-2 sm:gap-3">
+                  <div
+                    className="col-span-3 flex min-w-0 cursor-pointer items-center gap-2 sm:gap-3"
+                    role="button"
+                    tabIndex={0}
+                    title="View attendance and punch records"
+                    onClick={() => setRecordsEmployee({ uploadId: uploadId!, employeeId: s.employeeId, name: s.employeeName, email: s.employeeEmail })}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setRecordsEmployee({ uploadId: uploadId!, employeeId: s.employeeId, name: s.employeeName, email: s.employeeEmail }); }}
+                  >
                     <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-400 to-purple-500 sm:h-8 sm:w-8 sm:rounded-xl">
                       <span className="text-[11px] font-bold text-white sm:text-xs">{s.employeeName.charAt(0)}</span>
                     </div>
