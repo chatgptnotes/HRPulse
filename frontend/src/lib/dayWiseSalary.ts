@@ -35,8 +35,6 @@ export type DayLine = {
   why: string;
   /** Overtime hours worked on this date (hospital staff only). */
   overtimeHours?: number;
-  /** Overtime payment for this date (hospital staff only). */
-  overtimePay?: number;
 };
 
 export type DayWiseSalary = {
@@ -50,18 +48,15 @@ export type DayWiseSalary = {
   reconciles: boolean;
   /** Total overtime hours for hospital staff. */
   totalOvertimeHours: number;
-  /** Total overtime payment for hospital staff. */
+  /** Kept as a zero-valued compatibility field for existing callers. */
   totalOvertimePay: number;
 };
 
 export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseSalary {
   const rate = Number(ded?.dailySalary || 0);
   const rafttarStaff = ded?.rafttarStaff === true;
-  const contracted = emp?.contracted_hours == null ? null : Number(emp.contracted_hours);
-  // Under four hours is half a day for everyone. The contracted shift still
-  // decides what counts as an extra shift, but no longer what counts as half one.
+  // Under four hours is half a day for everyone.
   const halfBelow = Number(ded?.halfDayHours || 4);
-  const shift = contracted || 8;
 
   type Working = DayLine & { isAbsent: boolean; isHalf: boolean; isPaidLeave: boolean };
 
@@ -109,20 +104,9 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
         line.credit = 1;
         if (hours < halfBelow) line.isHalf = true;
       } else {
-        line.credit = hours >= shift * 2 ? 2
-          : hours >= shift * 1.5 ? 1.5
-          : hours < halfBelow ? 0.5
-          : 1;
+        // Extra hours do not create an additional attendance or payable day.
+        line.credit = hours < halfBelow ? 0.5 : 1;
         if (line.credit === 0.5) line.isHalf = true;
-        // Calculate overtime for hospital staff (not Rafttar)
-        // Overtime > 4 hours threshold, proportional to daily rate (hours/8)
-        const scheduledShift = shift;
-        const overtimeHours = Math.max(0, hours - scheduledShift);
-        if (overtimeHours > 4) {
-          line.overtimeHours = overtimeHours;
-          const overtimeDays = overtimeHours / 8;
-          line.overtimePay = overtimeDays * rate;
-        }
       }
     } else if (canonicalStatus(status) === 'Missed Swipe' || ['normal', 'present', 'late', 'late coming', 'early leaving'].includes(status)) {
       // Present, but with no usable punch span to measure. Full duty.
@@ -188,8 +172,8 @@ export function buildDayWiseSalary(records: any[], ded: any, emp: any): DayWiseS
   const clean: DayLine[] = lines.map(({ isAbsent: _a, isHalf: _h, isPaidLeave: _p, ...line }) => line);
   const totalEarned = clean.reduce((sum, l) => sum + l.earned, 0);
   const totalDeducted = clean.reduce((sum, l) => sum + l.deducted, 0);
-  const totalOvertimeHours = clean.reduce((sum, l) => sum + (l.overtimeHours || 0), 0);
-  const totalOvertimePay = clean.reduce((sum, l) => sum + (l.overtimePay || 0), 0);
+  const totalOvertimeHours = 0;
+  const totalOvertimePay = 0;
 
   // A per-date list that disagrees with the headline would be worse than none.
   // It can happen legitimately: the engine walks every record in the calendar

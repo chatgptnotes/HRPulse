@@ -85,6 +85,8 @@ export default function SalaryPage() {
     return 'Other';
   };
 
+  const directoryDisplayName = (emp: any) => [emp.ledgerName, emp.name, emp.biometricName].find(value => String(value || '').trim()) || '—';
+
   const rows = useMemo(() => {
     const deductionMap = new Map((deductions as any[]).map(d => [d.employeeId, d]));
     const configMap = new Map((configs as any[]).map(c => [c.employeeId, c]));
@@ -118,7 +120,7 @@ export default function SalaryPage() {
         if (!deduction || !deduction.managementAdjustment) {
           const baseNetPayable = deduction?.netPayable || 0;
           // For standalone adjustments (no attendance), netPayable = management adjustment amount
-          const standaloneNetPayable = !deduction ? mgmtAdjustment.amount : baseNetPayable + mgmtAdjustment.amount;
+          const standaloneNetPayable = Math.max(0, !deduction ? mgmtAdjustment.amount : baseNetPayable + mgmtAdjustment.amount);
 
           enhancedDeduction = {
             ...deduction,
@@ -150,7 +152,7 @@ export default function SalaryPage() {
     const query = search.trim().toLowerCase();
     const normalizedQuery = query.replace(/[^a-z0-9]+/g, '');
     return rows.filter(row => {
-      const searchable = [row.emp.name, row.emp.email, row.emp.employeeNumber, row.emp.employee_number, row.emp.employeeId, row.emp.id]
+      const searchable = [row.emp.name, row.emp.biometricName, row.emp.ledgerName, row.emp.email, row.emp.employeeNumber, row.emp.employee_number, row.emp.employeeId, row.emp.id]
         .filter(value => value !== null && value !== undefined)
         .map(value => String(value).toLowerCase())
         .join(' ');
@@ -318,16 +320,13 @@ export default function SalaryPage() {
   };
 
   return (
-    <div className="w-full min-w-0 bg-gradient-to-br from-slate-50 to-slate-100 px-3 py-4 sm:p-6">
-      <div className="mb-4 flex flex-row items-center justify-between gap-2 sm:gap-3">
+    <div className="w-full min-w-0 overflow-x-hidden bg-gradient-to-br from-slate-50 to-slate-100 px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+      <div className="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg shadow-purple-500/30 sm:flex sm:h-12 sm:w-12 sm:rounded-2xl">
-              <span className="material-icons text-xl sm:text-2xl">payments</span>
-            </div>
-            <h1 className="min-w-0 text-2xl font-bold leading-tight text-slate-800 sm:text-3xl">Salary &amp; Loss of Pay</h1>
+          <div className="min-w-0">
+            <h1 className="min-w-0 text-[22px] font-semibold leading-tight tracking-tight text-slate-800 sm:text-[28px]">Salary &amp; Loss of Pay</h1>
+            <p className="mt-1.5 hidden text-[11px] leading-5 text-slate-500 sm:block sm:text-[13px]">Salary is calculated automatically from Employee Master and attendance records.</p>
           </div>
-          <p className="mt-2 hidden text-xs leading-relaxed text-slate-500 sm:ml-14 sm:block sm:text-sm">Salary is calculated automatically from Employee Master and attendance records.</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -335,7 +334,7 @@ export default function SalaryPage() {
             className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-2 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-50 sm:hidden"
           >
             <span className="material-icons text-sm">download</span>
-            Export
+            Export to Excel
           </button>
           <button
             onClick={() => setShowPrintOptions(true)}
@@ -357,16 +356,15 @@ export default function SalaryPage() {
         totalLopAmount={summary.totalLopAmount}
       /> */}
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-lg shadow-slate-200/50">
-        <div className="flex flex-row items-center gap-1 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white p-2 sm:flex-row sm:justify-between sm:gap-3 sm:p-3">
-          <div className="flex min-w-0 flex-1 items-center gap-1 sm:max-w-sm sm:gap-2">
+      <div className="max-w-full overflow-hidden">
+        <div className="flex flex-col items-stretch gap-3 border-b border-slate-200 p-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-3">
+          <div className="flex min-w-0 w-full items-center gap-1 sm:max-w-sm sm:gap-2">
             <div className="relative min-w-0 flex-1">
-            <span className="material-icons pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">search</span>
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search employee name, email or ID..."
-              className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-1 text-[10px] outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-sm sm:rounded-xl sm:py-2 sm:pl-12 sm:pr-4 sm:text-sm"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-[10px] outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-sm sm:rounded-xl sm:py-2 sm:px-4 sm:text-sm"
             />
             </div>
             <div className="relative w-[64px] shrink-0 sm:hidden">
@@ -385,12 +383,12 @@ export default function SalaryPage() {
               <span className="material-icons pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-base text-slate-400">expand_more</span>
             </div>
           </div>
-          <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:flex-wrap sm:gap-2">
+          <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
             <div className="relative hidden shrink-0 sm:block">
               <select
                 value={filter}
                 onChange={e => setFilter(e.target.value)}
-                className="!min-w-0 !w-[78px] appearance-none rounded-lg border border-slate-300 bg-white py-1.5 pl-1 pr-4 text-[8px] font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer hover:border-purple-400 shadow-sm sm:w-auto sm:rounded-xl sm:py-2 sm:pl-4 sm:pr-12 sm:text-sm"
+                className="h-10 w-[160px] appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-4 pr-11 text-sm font-semibold text-slate-700 shadow-sm outline-none transition-all hover:border-purple-300 hover:shadow-md focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 cursor-pointer"
               >
                 <option value="attendance">All Employees</option>
                 <option value="all">All Employees</option>
@@ -399,13 +397,13 @@ export default function SalaryPage() {
                 <option value="missing-salary">Missing Salary</option>
                 <option value="payable">Net Payable &gt; 0</option>
               </select>
-              <span className="material-icons pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">expand_more</span>
+              <span className="material-icons pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-slate-100 p-0.5 text-base text-slate-500">expand_more</span>
             </div>
-            <div className="relative w-[78px] shrink-0 sm:w-auto">
+            <div className="relative w-[176px] shrink-0">
               <select
                 value={companyFilter}
                 onChange={e => setCompanyFilter(e.target.value)}
-                className="!min-w-0 !w-full appearance-none rounded-lg border border-slate-300 bg-white py-1.5 pl-1 pr-4 text-[8px] font-semibold text-slate-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer hover:border-purple-400 shadow-sm sm:rounded-xl sm:py-2 sm:pl-4 sm:pr-12 sm:text-sm"
+                className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-4 pr-11 text-sm font-semibold text-slate-700 shadow-sm outline-none transition-all hover:border-purple-300 hover:shadow-md focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 cursor-pointer"
               >
                 <option value="All">All Departments</option>
                 <option value="Rafttar">Rafttar</option>
@@ -414,7 +412,7 @@ export default function SalaryPage() {
                 <option value="IT">IT</option>
                 <option value="Other">Other</option>
               </select>
-              <span className="material-icons pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">expand_more</span>
+              <span className="material-icons pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-slate-100 p-0.5 text-base text-slate-500">expand_more</span>
             </div>
             {hasActiveFilters && (
               <button
@@ -427,17 +425,17 @@ export default function SalaryPage() {
             )}
             <button
               onClick={exportSalarySheet}
-              className="hidden items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 sm:flex"
+                className="hidden h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md sm:flex"
             >
               <span className="material-icons text-sm">download</span>
-              Export
+              Export to Excel
             </button>
           </div>
         </div>
         {noAttendanceData && (
           <div className="flex flex-wrap items-center gap-3 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 text-xs font-medium text-amber-800">
             <span className="material-icons text-lg">info</span>
-            <span>No attendance records for {month}. Showing salary only — import an attendance file to calculate loss of pay, overtime and net payable.</span>
+            <span>No attendance records for {month}. Showing salary only — import an attendance file to calculate loss of pay and net payable.</span>
           </div>
         )}
         {hasActiveFilters && (
@@ -483,7 +481,7 @@ export default function SalaryPage() {
           />
         </div> */}
 
-        <div className="space-y-2 p-2 sm:hidden">
+        <div className="space-y-2 p-2 lg:hidden">
           {visibleRows.map(row => {
             const { emp, config: cfg, deduction: ded, hasAttendance, hasSalary } = row;
             const currentSalary = Number(cfg?.basicSalary || 0);
@@ -496,7 +494,7 @@ export default function SalaryPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0"><p className="truncate text-xs font-bold text-slate-800">{emp.name}</p><p className="truncate text-[10px] text-slate-500">{emp.email || 'No email'}</p></div>
+                      <div className="min-w-0"><p className="truncate text-xs font-bold text-slate-800">{directoryDisplayName(emp)}</p><p className="truncate text-[10px] text-slate-500">{emp.email || 'No email'}</p></div>
                       <p className="shrink-0 text-xs font-bold text-slate-700">{currentSalary > 0 ? formatINR(currentSalary) : '—'}</p>
                     </div>
                     <div className="mt-1.5 flex flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap text-[9px]">
@@ -512,12 +510,12 @@ export default function SalaryPage() {
 
         {/* A fade on the right edge whenever the table is wider than its box, so a
             column pushed off-screen is visible rather than silently cut off. */}
-        <div className="relative hidden sm:block">
-        <div className="w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100 hover:scrollbar-thumb-slate-400">
+        <div className="relative hidden max-w-full lg:block">
+        <div className="w-full max-w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100 hover:scrollbar-thumb-slate-400">
         <table className="w-full table-auto text-xs md:text-sm tabular-nums">
           <thead>
-            <tr className="bg-gradient-to-r from-slate-50 to-slate-100 border-b-2 border-slate-200">
-              <th className="z-10 min-w-[200px] bg-gradient-to-br from-slate-50 to-slate-100 px-3 py-2.5 text-left font-bold text-slate-700 text-xs md:text-sm md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">Employee</th>
+            <tr>
+              <th className="z-10 min-w-[200px] px-3 py-2.5 text-left font-bold text-slate-700 text-xs md:text-sm md:sticky md:left-0">Employee</th>
               <th className="min-w-[100px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-slate-700">Salary<br />(₹)</th>
               <th className="min-w-[90px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">Present<br />Days</th>
               <th className="min-w-[90px] px-2 py-2 md:px-3 md:py-3 text-right font-bold text-xs md:text-sm text-emerald-700">Payable<br />Days</th>
@@ -547,15 +545,15 @@ export default function SalaryPage() {
               // because a day nobody recorded is a day nobody is paid for.
               const daysMissing = ded ? Math.max(0, Number(ded.daysInMonth || 0) - Number(ded.daysCovered || 0)) : 0;
               return (
-                <tr key={emp.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-purple-50/40 hover:to-indigo-50/40 transition-all">
-                  <td className="z-[1] min-w-[180px] max-w-0 overflow-hidden bg-white px-3 py-2.5 md:sticky md:left-0 md:shadow-[4px_0_8px_-6px_rgba(15,23,42,0.35)]">
+                <tr key={emp.id} className="hover:bg-gradient-to-r hover:from-purple-50/40 hover:to-indigo-50/40 transition-all">
+                  <td className="z-[1] min-w-[180px] max-w-0 overflow-hidden px-3 py-2.5 md:sticky md:left-0">
                     <div onClick={() => setDrawerEmployee(row)} className="flex w-full items-start gap-2.5 text-left group cursor-pointer" title="View employee details">
                       <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white text-xs font-bold shadow-md ring-2 ring-purple-100">
                         {emp.name ? emp.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : 'NA'}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="break-words font-bold text-sm leading-tight text-slate-800 group-hover:text-purple-700 transition-colors" title={emp.name}>{emp.name}</p>
+                          <p className="break-words font-bold text-sm leading-tight text-slate-800 group-hover:text-purple-700 transition-colors" title={directoryDisplayName(emp)}>{directoryDisplayName(emp)}</p>
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); openAttendance(row); }}
@@ -649,7 +647,7 @@ export default function SalaryPage() {
                         onClick={() => openAttendance(row, {
                           statuses: ['Normal', 'Missed Swipe', 'Late Coming', 'Early Leaving', 'HALF_DAY'],
                           label: 'Extra Pay Dates',
-                          note: 'Dates with overtime shifts (1.5x or 2x credit) or extra pay. Shows only days where credit earned was >= 1.5 days.',
+                          note: 'Dates with non-overtime extra pay only.',
                           filterMinCredit: 1.5
                         })}
                         className="rounded-lg px-1 sm:px-1.5 md:px-2 py-1 sm:py-1.5 font-bold text-emerald-700 hover:bg-emerald-50 hover:underline transition-all text-xs md:text-sm"

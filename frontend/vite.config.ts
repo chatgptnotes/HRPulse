@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => {
     define: {
       'import.meta.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL),
       'import.meta.env.SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY),
+      'import.meta.env.ADAMRIT_SUPABASE_URL': JSON.stringify(env.ADAMRIT_SUPABASE_URL),
+      'import.meta.env.ADAMRIT_SUPABASE_ANON_KEY': JSON.stringify(env.ADAMRIT_SUPABASE_ANON_KEY),
     },
     server: {
       port: 5173,

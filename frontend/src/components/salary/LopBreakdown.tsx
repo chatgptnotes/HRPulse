@@ -245,7 +245,7 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
           )}
 
           {/* Overtime Details */}
-          {daywise.totalOvertimePay > 0 && (
+          {false && daywise.totalOvertimeHours > 0 && (
             <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4">
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-blue-200">
                 <h4 className="font-semibold text-blue-800 text-base">⏱️ Overtime Details</h4>
@@ -254,27 +254,10 @@ export default function LopBreakdown({ ded, emp, salary, month, uploadId, onClos
 
               <div className="space-y-3">
                 <div className="flex justify-between text-sm text-blue-700">
-                  <span className="font-medium">Total Overtime Payment</span>
-                  <span className="font-bold text-emerald-600">{money(daywise.totalOvertimePay)}</span>
+                  <span className="font-medium">Overtime payment</span>
+                  <span className="font-bold text-slate-600">Not paid</span>
                 </div>
 
-                {/* Individual overtime dates */}
-                {daywise.lines.filter(line => line.overtimeHours && line.overtimeHours > 0).length > 0 && (
-                  <div className="border-t border-blue-200 pt-3 mt-3">
-                    <div className="text-xs text-slate-500 mb-2">Overtime Breakdown by Date</div>
-                    <div className="space-y-1">
-                      {daywise.lines
-                        .filter(line => line.overtimeHours && line.overtimeHours > 0)
-                        .map(line => (
-                          <div key={line.date} className="flex items-center text-xs text-blue-600 bg-blue-100/50 px-3 py-2 rounded-lg">
-                            <span className="w-24 font-medium">{line.date}</span>
-                            <span className="text-blue-400">({line.day})</span>
-                            <span className="ml-auto font-bold">{line.overtimeHours!.toFixed(1)} hrs = {money(line.overtimePay!)}</span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}

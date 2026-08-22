@@ -102,7 +102,6 @@ export default function EmployeeDrawer({ isOpen, onClose, employee, month, onOpe
   const extraPayBreakdown = [
     ...(deduction?.workedWeeklyOffs > 0 ? [{ label: 'Weekly Offs Worked', value: `${deduction.workedWeeklyOffs} days`, amount: deduction.workedWeeklyOffs * dailySalary }] : []),
     ...(deduction?.unusedLeaveDays > 0 ? [{ label: 'Unused Leave Days', value: `${deduction.unusedLeaveDays} days`, amount: deduction.unusedLeaveDays * dailySalary }] : []),
-    ...(deduction?.overtimePayment > 0 ? [{ label: 'Overtime Payment', value: `Extra ${deduction.overtimePayableDays?.toFixed(1) || 0} days`, amount: deduction.overtimePayment }] : []),
   ];
 
   return (

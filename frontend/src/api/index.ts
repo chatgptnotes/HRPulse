@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
+import { adamritSupabase } from '../lib/adamritSupabase';
 
 function directClient() {
   if (!supabase) throw new Error('Supabase is not configured. Restart the frontend after checking .env.');
@@ -530,7 +531,9 @@ export const uploadAttendance = async (fileInput: UploadFile | UploadFile[]) => 
       const outMinutes = timeOut === null ? null : Math.round(timeOut * 60) + (timeOut < timeIn ? 1440 : 0);
       const inMinutes = Math.round(timeIn * 60);
       workHours = outMinutes === null ? null : (outMinutes - inMinutes) / 60;
-      overtimeHours = outMinutes !== null && employee.eligible_for_overtime ? Math.max(0, (outMinutes - inMinutes - scheduledMinutes) / 60) : 0;
+      // Overtime is disabled globally; work hours remain available for
+      // attendance and shift-status calculations only.
+      overtimeHours = 0;
       if (outMinutes === null) finalStatus = 'Missed Swipe';
       else if ((outMinutes - inMinutes) / 60 < HALF_DAY_HOURS) finalStatus = 'HALF_DAY';
       else if (inMinutes > detectedShift.start + SHIFT_LATE_GRACE_MINUTES) finalStatus = 'Late Coming';
@@ -826,44 +829,25 @@ export const getSalaryDeductions = async (uploadId: number) => {
     }
 
     const workingDay = !['absent', 'weekend', 'holiday', 'paid leave'].includes(status);
-    const contracted = contractedMap.get(row.employee_id) ?? null;
     // Pay is counted up from the days owed, so every branch below states what the
-    // day is worth and the cap is applied once, at the end. A day can never be
-    // worth more than a day: an extra shift is still recorded on presentDays and
-    // extraDays, but only an off that went untaken ever takes pay past full.
+    // day is worth and the cap is applied once, at the end. A worked date never
+    // earns more than one attendance day.
     let dayCredit = 0;
 
     if (workingDay && hours !== null) {
       if (rafttarStaff) {
-        // Standard 09:00-18:00 day. Overtime is earned only once the excess
-        // beyond eight hours passes two hours; anything less is one shift.
+        // Standard 09:00-18:00 day. Extra hours are attendance-only;
+        // overtime is not payable for any employee.
         item.presentDays++;
         dayCredit = 1;
-        if (hours - 8 > 2) item.overtimeHours += hours - 8;
         if (hours < halfBelow) item.halfDays++;
       } else {
-        // An extra shift is measured against the person's own contracted hours,
-        // not a fixed clock. A twelve-hour night guard working twelve hours has
-        // done one shift; a six-hour sister working twelve has done two. Fixed
-        // 10h and 12h thresholds credited that guard with two days every night
-        // and pushed him past forty present days in a thirty-one day month.
-        const shift = contracted || 8;
-        const credit = hours >= shift * 2 ? 2
-          : hours >= shift * 1.5 ? 1.5
-          : hours < halfBelow ? 0.5
-          : 1;
+        // A worked date counts as one attendance day regardless of extra
+        // hours. Only a short shift can reduce the credit to a half day.
+        const credit = hours < halfBelow ? 0.5 : 1;
         item.presentDays += credit;
         dayCredit = credit;
-        if (credit > 1) item.extraDays += credit - 1;
         if (credit === 0.5) item.halfDays++;
-        // Calculate overtime payment for hospital staff (not Rafttar)
-        // Overtime > 4 hours threshold, proportional to daily rate (hours/8)
-        const scheduledShift = shift;
-        const overtimeHours = Math.max(0, hours - scheduledShift);
-        if (overtimeHours > 4) {
-          const overtimeDays = overtimeHours / 8;
-          item.overtimePayableDays = (item.overtimePayableDays || 0) + overtimeDays;
-        }
       }
     } else if (statusIsOneOf(status, ['Missed Swipe'])) {
       // They were here — the punch out is simply missing. Credit the duty and
@@ -935,12 +919,10 @@ const result = [...grouped.values()].map(item => {
     const unusedLeaveDays = Math.max(0, leaveLimit - item.paidLeaveUsed - protectedAbsentDays);
     const workedWeeklyOffPay = item.workedWeeklyOffs * dailySalary;
     const unusedLeavePay = unusedLeaveDays * dailySalary;
-    // Overtime payment for hospital staff (not Rafttar) - proportional to daily rate
-    const overtimePayment = !rafttarStaff ? (item.overtimePayableDays || 0) * dailySalary : 0;
     const extraPayableDays = item.workedWeeklyOffs + unusedLeaveDays;
-    const extraPayment = workedWeeklyOffPay + unusedLeavePay + overtimePayment;
-    // An extra *shift* is still not an unavailed *off*: extraDays and
-    // overtimeHours remain measured and unpaid, and are not part of extraPayment.
+    const overtimePayment = 0;
+    const extraPayment = workedWeeklyOffPay + unusedLeavePay;
+    // Extra shifts and overtime never create overtime pay or extra payment.
 
     // Pay is counted up from the days owed rather than down from the salary.
     // Days attended, plus the offs the monthly allowance covers, at a day's pay
@@ -990,7 +972,9 @@ const result = [...grouped.values()].map(item => {
       ruleEffects: ruleOutcome.effects as PayrollRuleEffect[],
       ruleDeductions: ruleOutcome.totalDeduction,
       ruleBonus: ruleOutcome.totalBonus,
-      netPayable: basePay + extraPayment + managementAdjustment - ruleOutcome.totalDeduction + ruleOutcome.totalBonus,
+      // Rule additions and deductions stack with management adjustments, but
+      // payroll must never produce a negative amount payable.
+      netPayable: Math.max(0, basePay + extraPayment + managementAdjustment - ruleOutcome.totalDeduction + ruleOutcome.totalBonus),
       dailySalary, totalLopAmount, basicSalary };
   });
   // Debug logging to identify no-punch records and all status values
@@ -1087,17 +1071,37 @@ export interface SalaryLedger {
   id: number;
   accountName: string;
   accountCode: string;
+  accountId: string | null;
 }
 
 export const getSalaryLedgers = async () => {
-  const { data, error } = await directClient()
+  if (!adamritSupabase) throw new Error('Adamrit Supabase is not configured.');
+  const { data: adamritAccounts, error: adamritError } = await adamritSupabase
+    .from('chart_of_accounts')
+    .select('id,account_code,account_name,is_active')
+    .eq('is_active', true)
+    .order('account_name');
+  if (adamritError) throw new Error(`Adamrit chart of accounts could not be loaded: ${adamritError.message}`);
+
+  const local = directClient();
+  const { error: syncError } = await local
     .from('salary_ledgers')
-    .select('id,account_name,account_code')
+    .upsert((adamritAccounts || []).map((row: any) => ({
+      account_name: row.account_name,
+      account_code: row.account_code,
+      adamrit_account_id: row.id,
+    })), { onConflict: 'account_code' });
+  if (syncError) throw new Error(`Adamrit ledgers could not be linked in HRPulse: ${syncError.message}`);
+
+  const { data, error } = await local
+    .from('salary_ledgers')
+    .select('id,account_name,account_code,adamrit_account_id')
     .order('account_name');
   return directResult((data || []).map((row: any) => ({
     id: row.id,
     accountName: row.account_name,
     accountCode: row.account_code,
+    accountId: row.adamrit_account_id,
   } as SalaryLedger)), error);
 };
 
